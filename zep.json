@@ -1,0 +1,18 @@
+{
+  "author": "Mert Kücükhüseyin",
+  "tags": [],
+  "repo": "git.check",
+  "name": "zeP",
+  "description": "A blazingly fast package manager, for Zig.",
+  "version": "0.0.1",
+  "license": "mit",
+  "packages": [
+    "clap",
+    "art"
+  ],
+  "devPackages": [],
+  "build": {
+    "entry": "src/main.zig",
+    "target": ""
+  }
+}
