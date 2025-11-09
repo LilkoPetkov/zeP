@@ -1,1 +1,0 @@
-zig build --prefix "C:/Users/Public/AppData/Local/zeP"

@@ -9,7 +9,8 @@
     "version": "0.0.1",
     "license": "mit",
     "packages": [
-
+      "clap",
+      "art"
     ],
     "devPackages": [],
     "build": {
@@ -18,6 +19,11 @@
     }
   },
   "packages": [
-
+    {
+      "name": "clap",
+      "author": "hejsil",
+      "fingerprint": "16853597278313929526",
+      "source": "https://github.com/Hejsil/zig-clap"
+    }
   ]
 }

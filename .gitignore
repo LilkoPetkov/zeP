@@ -1,3 +1,10 @@
 .zig-cache
 .github
 .zep
+
+packages
+release
+zig-out
+
+scripts/installer/
+scripts/release.sh

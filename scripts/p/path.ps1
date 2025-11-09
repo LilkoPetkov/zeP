@@ -5,8 +5,8 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 
 $p = "C:/Users/Public/AppData/Local/"
-$zDir = Join-Path $p "zeP"
-$zigDir = Join-Path $zDir "zig"
+$zDir = Join-Path $p "zeP/"
+$zigDir = Join-Path $zDir "zig/"
 $zigExe = Join-Path $zigDir "zig.exe"
 
 # Create directories if they don't exist

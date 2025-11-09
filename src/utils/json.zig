@@ -18,7 +18,7 @@ pub const Json = struct {
     }
 
     pub fn parsePackage(self: *Json, packageName: []const u8) !?std.json.Parsed(Structs.PackageStruct) {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ Constants.PACKAGE_FOLDER, packageName });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ Constants.ROOT_ZEP_PACKAGES, packageName });
         defer self.allocator.free(path);
 
         const check = try UtilsFs.checkFileExists(path);

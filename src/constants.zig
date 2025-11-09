@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 pub const ZIG_V_JSON = "https://ziglang.org/download/index.json";
-pub const PACKAGE_FOLDER = "packages";
 
 fn getBaseDir() []const u8 {
     const os = builtin.os.tag;
@@ -15,6 +14,7 @@ fn getBaseDir() []const u8 {
 
 pub const ROOT_ZEP_FOLDER = getBaseDir() ++ "/zeP";
 pub const ROOT_ZEP_PACKAGES = ROOT_ZEP_FOLDER ++ "/ava";
+pub const ROOT_ZEP_SCRIPTS = ROOT_ZEP_FOLDER ++ "/scripts";
 pub const ROOT_ZEP_ZIG_FOLDER = ROOT_ZEP_FOLDER ++ "/zig";
 pub const ROOT_ZEP_PKG_FOLDER = ROOT_ZEP_FOLDER ++ "/pkg";
 pub const ROOT_ZEP_CACHE_FOLDER = ROOT_ZEP_FOLDER ++ "/cache";

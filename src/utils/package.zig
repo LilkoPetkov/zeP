@@ -51,7 +51,7 @@ pub const Package = struct {
     }
 
     fn getPackageNames(self: *Package) !std.ArrayList([]const u8) {
-        const dir = try UtilsFs.openDir(Constants.PACKAGE_FOLDER);
+        const dir = try UtilsFs.openDir(Constants.ROOT_ZEP_PACKAGES);
         defer dir.close();
 
         var names = std.ArrayList([]const u8).init(self.allocator);

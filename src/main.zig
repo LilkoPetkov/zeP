@@ -12,6 +12,8 @@ const Zig = @import("lib/zig/zig.zig");
 
 fn printUsage(printer: *UtilsPrinter.Printer) !void {
     try printer.append("Usage:\n");
+    try printer.append("  zeP version\n");
+    try printer.append("  zeP help\n");
     try printer.append("  zeP init\n");
     try printer.append("  zeP install [target]\n");
     try printer.append("  zeP uninstall [target]\n");
@@ -34,7 +36,7 @@ pub fn main() !void {
     const data = std.ArrayList([]const u8).init(allocator);
     var printer = try UtilsPrinter.Printer.init(data);
     defer printer.deinit();
-    // try printer.append("\n");
+    try printer.append("\n");
     // try printer.append("zeP - Zig Package Manager\n\n");
 
     const subcommand = args.next() orelse {
@@ -43,12 +45,21 @@ pub fn main() !void {
         return;
     };
 
-    inline for ([_][]const u8{ "init", "install", "uninstall", "clear", "purge", "zig" }) |cmd| {
+    inline for ([_][]const u8{ "version", "help", "init", "install", "uninstall", "clear", "purge", "zig" }) |cmd| {
         if (std.mem.eql(u8, subcommand, cmd)) break;
     } else {
         const invalidSC = try std.fmt.allocPrint(allocator, "Invalid subcommand: {s}\n\n", .{subcommand});
         try printer.append(invalidSC);
         try printUsage(&printer);
+        return;
+    }
+
+    if (std.mem.eql(u8, subcommand, "help")) {
+        try printUsage(&printer);
+        return;
+    }
+    if (std.mem.eql(u8, subcommand, "version")) {
+        try printer.append("zeP Version 0.1\n\n");
         return;
     }
 

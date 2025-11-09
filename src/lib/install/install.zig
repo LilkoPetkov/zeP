@@ -90,7 +90,6 @@ pub const Installer = struct {
 
         // create a symbolic link
         const targetPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, package.packageName });
-        std.debug.print("{s}\n", .{targetPath});
 
         defer self.allocator.free(targetPath);
         if (!try UtilsFs.checkDirExists(targetPath)) {
@@ -98,10 +97,9 @@ pub const Installer = struct {
         }
 
         const linkPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ZEP_FOLDER, package.packageName });
-        std.debug.print("{s}\n", .{linkPath});
         defer self.allocator.free(linkPath);
         if (!try UtilsFs.checkDirExists(linkPath)) {
-            _ = try std.fs.cwd().makeDir(linkPath);
+            _ = try std.fs.cwd().makePath(linkPath);
         }
 
         const tAbsPath = try std.fs.realpathAlloc(self.allocator, targetPath);
