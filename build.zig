@@ -39,8 +39,6 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/lib.zig"),
     });
     exe.root_module.addImport("lib", libMod);
-    @import(".zep/inject.zig").injectExtraImports(b, exe);
-
     b.install_prefix = "C:/Users/Public/AppData/Local/zeP";
     b.installArtifact(exe);
 }
