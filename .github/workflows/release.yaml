@@ -30,9 +30,9 @@ jobs:
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          tag: ${{ github.ref_name }}
+          tag: "0.1"
         run: |
-          gh release create "$tag" \
+          gh release create "$tag" ./release/**/*.zip \
               --repo="$GITHUB_REPOSITORY" \
-              --title="${tag#v}" \
+              --title="zep 0.1" \
               --generate-notes
