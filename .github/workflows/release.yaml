@@ -17,11 +17,11 @@ jobs:
 
       - name: Setup Zig
         run: |
+          cd
           sudo apt install wget
           wget https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz
-          tar xf zig-linux-x86_64-0.14.0.tar.xz   
-          mv zig-linux-x86_64-0.14.0 zig       
-          echo 'export PATH="$HOME/zig:$PATH"' >> ~/.bashrc
+          tar xf zig-linux-x86_64-0.14.0.tar.xz
+          sudo cp zig-linux-x86_64-0.14.0/zig.exe /usr/local/bin
 
       - name: Build Releases
         run: sh ./release.sh 0.1
