@@ -18,20 +18,20 @@ if [ $EUID != 0 ]; then
 fi
 
 
-tempZepZipDir="/tmp/zeP";
-mkdir -p "$tempZepZipDir"
+tempZepTarDir="/tmp/zeP";
+mkdir -p "$tempZepTarDir"
 
-tempZepZipVersion="$tempZepZipDir/0.1";
-mkdir -p "$tempZepZipVersion"
+tempZepTarVersion="$tempZepTarDir/0.1";
+mkdir -p "$tempZepTarVersion"
 
-tempZepZipFile="/tmp/zeP/0.1.zip";
+tempZepTarFile="/tmp/zeP/0.1.tar";
 
 
 echo "Downloading release..."
-curl -L "https://github.com/XerWoho/zeP/releases/download/0.1/linux_0.1.zip" -o "$tempZepZipFile"
+curl -L "https://github.com/XerWoho/zeP/releases/download/0.1/linux_0.1.tar" -o "$tempZepTarFile"
 
 echo "Extracting..."
-unzip -o "$tempZepZipFile" -d "$tempZepZipDir"
+tar -xvf "$tempZepTarFile" -C "$tempZepTarDir"
 
 # clear the current data
 if [ -e "$zepDir/*" ]; then
@@ -39,12 +39,12 @@ if [ -e "$zepDir/*" ]; then
 fi
 
 # Move folders
-tempZepPackagesFolder="$tempZepZipDir/packages"
+tempZepPackagesFolder="$tempZepTarDir/packages"
 destZepPackagesFolder="$zepDir/ava"
 mkdir -p "$(dirname "$destZepPackagesFolder")"
 mv -f "$tempZepPackagesFolder" "$destZepPackagesFolder"
 
-tempZepScriptsFolder="$tempZepZipDir/scripts"
+tempZepScriptsFolder="$tempZepTarDir/scripts"
 destZepScriptsFolder="$zepDir/scripts"
 mkdir -p "$(dirname "$destZepScriptsFolder")"
 mv -f "$tempZepScriptsFolder" "$destZepScriptsFolder"
@@ -55,9 +55,9 @@ if [ -e $zepExe ]; then
 fi
 
 
-tempZepExe="$tempZepZipDir/zeP"
+tempZepExe="$tempZepTarDir/zeP"
 mv -f "$tempZepExe" "$zepExe"
-rm -r $tempZepZipDir
+rm -r $tempZepTarDir
 
 chmod ugo-wrx "$zepExe"
 chmod +rx "$zepExe"

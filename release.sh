@@ -1,6 +1,6 @@
 #!/bin/bash
 zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows -p tempR/w
-zig build -Doptimize=ReleaseFast -Dtarget=aarch64-linux -p tempR/l
+zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -p tempR/l
 mkdir -p release
 mkdir -p release/w
 mkdir -p release/l
@@ -17,7 +17,7 @@ fi
 zip -j release/w/windows_$versionName.zip tempR/w/bin/zeP.exe
 zip -r release/w/windows_$versionName.zip packages/ scripts/p/
 
-zip -j release/l/linux_$versionName.zip tempR/l/bin/zeP
-zip -r release/l/linux_$versionName.zip packages/ scripts/p/
+tar -C tempR/l/bin -cvf release/l/linux_$versionName.tar zeP
+tar -rf release/l/linux_$versionName.tar packages/ scripts/p/
 
 rm -r tempR/
