@@ -17,7 +17,7 @@ fi
 zip -j release/w/windows_$versionName.zip tempR/w/bin/zeP.exe
 zip -r release/w/windows_$versionName.zip packages/ scripts/p/
 
-zip -j release/l/linux_$versionName.zip tempR/l/bin/zeP.exe
+zip -j release/l/linux_$versionName.zip tempR/l/bin/zeP
 zip -r release/l/linux_$versionName.zip packages/ scripts/p/
 
 rm -r tempR/

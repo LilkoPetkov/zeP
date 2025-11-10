@@ -2,13 +2,12 @@
 set -e
 
 usrLocalBin="/usr/local/bin"
-
 lib="/lib"
 
-zepExe="$usrLocalBin/zeP.exe"
+zepExe="$usrLocalBin/zeP"
 zepDir="$lib/zeP"
 zepZigDir="$zepDir/zig"
-zepZigExe="$zepZigDir/zig.exe"
+zepZigExe="$zepZigDir/zig"
 
 mkdir -p "$zepDir"
 mkdir -p "$zepZigDir"
@@ -29,7 +28,7 @@ tempZepZipFile="/tmp/zeP/0.1.zip";
 
 
 echo "Downloading release..."
-curl -L "https://github.com/XerWoho/zeP/releases/download/pre/0.1.zip" -o "$tempZepZipFile"
+curl -L "https://github.com/XerWoho/zeP/releases/download/0.1/linux_0.1.zip" -o "$tempZepZipFile"
 
 echo "Extracting..."
 unzip -o "$tempZepZipFile" -d "$tempZepZipDir"
@@ -56,7 +55,7 @@ if [ -e $zepExe ]; then
 fi
 
 
-tempZepExe="$tempZepZipDir/zeP.exe"
+tempZepExe="$tempZepZipDir/zeP"
 mv -f "$tempZepExe" "$zepExe"
 rm -r $tempZepZipDir
 

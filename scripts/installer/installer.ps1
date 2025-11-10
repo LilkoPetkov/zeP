@@ -28,7 +28,7 @@ $tempZepZigFile = Join-Path $tempZepZigDir "0.1.zip"
 New-Item -Path $tempZepZigFile -ItemType File -Force | Out-Null
 Write-Host $tempZepZigFile
 
-Invoke-WebRequest -uri "https://github.com/XerWoho/zeP/releases/download/pre/0.1.zip" -Method "GET"  -Outfile $tempZepZigFile
+Invoke-WebRequest -uri "https://github.com/XerWoho/zeP/releases/download/0.1/windows_0.1.zip" -Method "GET"  -Outfile $tempZepZigFile
 Expand-Archive $tempZepZigFile -DestinationPath $destZepZigDir
 Remove-Item -Path $tempZepZigDir -Force -Recurse
 Remove-Item -Path $tempZepZigFile
