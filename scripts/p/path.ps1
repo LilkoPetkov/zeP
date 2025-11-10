@@ -4,23 +4,23 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 	exit
 }
 
-$p = "C:/Users/Public/AppData/Local/"
-$zDir = Join-Path $p "zeP/"
-$zigDir = Join-Path $zDir "zig/"
-$zigExe = Join-Path $zigDir "zig.exe"
+$localAppData = "C:/Users/Public/AppData/Local/"
+$zepDir = Join-Path $localAppData "zeP/"
+$zepZigDir = Join-Path $zepDir "zig/"
+$zepZigExe = Join-Path $zepZigDir "zig.exe"
 
 # Create directories if they don't exist
-New-Item -Path $zDir -ItemType Directory -Force | Out-Null
-New-Item -Path $zigDir -ItemType Directory -Force | Out-Null
+New-Item -Path $zepDir -ItemType Directory -Force | Out-Null
+New-Item -Path $zepZigDir -ItemType Directory -Force | Out-Null
 
-$userPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-if (-not ($userPath.Split(';') -contains $zigDir)) {
-	$newPath = $zigDir + ";" + $userPath
-	[Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
-	Write-Host "$zigDir added to user PATH. You may need to restart your terminal to see the change."
+$machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+if (-not ($machinePath.Split(';') -contains $zepZigDir)) {
+	$machineNewPath = $zepZigDir + ";" + $machinePath
+	[Environment]::SetEnvironmentVariable("Path", $machineNewPath, "Machine")
+	Write-Host "$zepZigDir added to user PATH. You may need to restart your terminal to see the change."
 }
 else {
-	Write-Host "$zigDir is already in the PATH."
+	Write-Host "$zepZigDir is already in the PATH."
 }
 
 if ($args.Length -eq 0) {
@@ -28,5 +28,5 @@ if ($args.Length -eq 0) {
 }
 
 $target = $args[0]
-if (Test-Path $zigExe) { Remove-Item $zigExe -Force }
-New-Item -ItemType SymbolicLink -Target $target -Path $zigExe | Out-Null  # zigExe is the symlink
+if (Test-Path $zepZigExe) { Remove-Item $zepZigExe -Force }
+New-Item -ItemType SymbolicLink -Target $target -Path $zepZigExe | Out-Null  # zigExe is the symlink

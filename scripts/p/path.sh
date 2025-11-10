@@ -1,28 +1,28 @@
 #!/bin/bash
 
-p="/usr/local/bin"
-zDir="$p/zeP"
-zigDir="$zDir/zig"
-zigExe="$zigDir/zig.exe"
+usrLocalBin="/usr/local/bin"
+zepDir="$usrLocalBin/zeP"
+zepZigDir="$zepDir/zig"
+zepZigExe="$zepZigDir/zig.exe"
 
 if [ $EUID != 0 ]; then
 	sudo "$0" "$@"
 	currentPath=$PATH
-	if ! [[ $currentPath == *"$zigDir"* ]]; then 
+	if ! [[ $currentPath == *"$zepZigDir"* ]]; then 
 			echo "Setting PATH" 
-			export PATH="$zigDir:$PATH"
+			export PATH="$zepZigDir:$PATH"
 			echo $PATH
 	fi
 	exit $?
 fi
 
-if ! [ -e $zDir ]; then
-	mkdir $zDir
+if ! [ -e $zepDir ]; then
+	mkdir $zepDir
 			exit
 fi
 
-if ! [ -e $zigDir ]; then
-	mkdir $zigDir
+if ! [ -e $zepZigDir ]; then
+	mkdir $zepZigDir
 			exit
 fi
 
@@ -37,8 +37,8 @@ if ! [ -e $target ]; then
 			exit       
 fi
 
-if [ -e $zigExe ]; then
-	rm $zigExe
+if [ -e $zepZigExe ]; then
+	rm $zepZigExe
 fi
 
-ln -s $target $zigExe
+ln -s $target $zepZigExe

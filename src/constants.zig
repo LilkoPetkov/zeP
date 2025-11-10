@@ -8,7 +8,7 @@ fn getBaseDir() []const u8 {
     if (os == .windows) {
         return "C:/Users/Public/AppData/Local";
     } else {
-        return std.posix.getenv("HOME") orelse "/tmp";
+        return "/lib";
     }
 }
 

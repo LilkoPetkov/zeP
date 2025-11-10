@@ -1,0 +1,36 @@
+name: Release zeP
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy_production:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        run: |
+          apt install wget
+          wget https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz
+          tar xf zig-linux-x86_64-0.14.0.tar.xz          
+          echo 'export PATH="$HOME/zig-linux-x86_64-0.14.0:$PATH"' >> ~/.bashrc
+
+      - name: Build Releases
+        run: sh ./release.sh 0.1
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${tag#v}" \
+              --generate-notes
