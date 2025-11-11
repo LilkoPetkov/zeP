@@ -35,8 +35,9 @@ pub const ZigInstaller = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        const t = try std.fmt.allocPrint(self.allocator, "{s}/z/{s}/{s}.zip", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, name });
-        if (!try UtilsFs.checkFileExists(t)) {
+        const targetExtension = if (builtin.os.tag == .windows) "zip" else "tar.xz";
+        const targetCompressedFile = try std.fmt.allocPrint(self.allocator, "{s}/z/{s}/{s}.{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, name, targetExtension });
+        if (!try UtilsFs.checkFileExists(targetCompressedFile)) {
             var buf: [4096]u8 = undefined;
             try self.printer.append("Parsing URI...\n");
             const uri = try std.Uri.parse(tarball);
@@ -51,7 +52,7 @@ pub const ZigInstaller = struct {
 
             try self.printer.append("Receiving data...\n");
             var reader = req.reader();
-            var out_file = try UtilsFs.openCFile(t);
+            var out_file = try UtilsFs.openCFile(targetCompressedFile);
             defer out_file.close();
 
             try self.printer.append("\nWriting Tmp File");
@@ -82,19 +83,18 @@ pub const ZigInstaller = struct {
         } else {
             try self.printer.append("Data found in Cache!\n");
         }
-        var out_file = try UtilsFs.openCFile(t);
-        defer out_file.close();
+        var targetOutFile = try UtilsFs.openCFile(targetCompressedFile);
+        defer targetOutFile.close();
 
-        const skStream = out_file.seekableStream();
         try self.printer.append("Extracting data...\n");
         const decompressedDataPath = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version });
         var decompressedDataDir = try UtilsFs.openCDir(decompressedDataPath);
         defer decompressedDataDir.close();
 
         if (builtin.os.tag == .windows) {
-            try self.decompressW(skStream, decompressedDataPath, decompressedDataDir, target);
+            try self.decompressW(targetOutFile.seekableStream(), decompressedDataPath, decompressedDataDir, target);
         } else {
-            try self.decompressP(skStream, decompressedDataPath, decompressedDataDir, target);
+            try self.decompressP(targetOutFile.reader(), decompressedDataPath, decompressedDataDir, target);
         }
     }
 
@@ -128,13 +128,15 @@ pub const ZigInstaller = struct {
     // decompression for POSIX (linux)
     // requires a different function,
     // linux uses .tar
-    fn decompressP(self: *ZigInstaller, skStream: std.fs.File.SeekableStream, decompressedDataPath: []const u8, decompressedDataDir: std.fs.Dir, target: []const u8) !void {
-        var iter = std.tar.iterator(skStream, .{});
-        var f: []u8 = undefined;
-        while (try iter.next()) |entry| {
-            f = entry.name;
-            break;
-        }
+    fn decompressP(self: *ZigInstaller, reader: std.fs.File.Reader, decompressedDataPath: []const u8, decompressedDataDir: std.fs.Dir, target: []const u8) !void {
+        var decompressed = try std.compress.xz.decompress(self.allocator, reader);
+        defer decompressed.deinit();
+
+        var filename_buf: [std.fs.max_path_bytes]u8 = undefined;
+        var link_name_buffer: [std.fs.max_path_bytes]u8 = undefined;
+        var iter = std.tar.iterator(decompressed.reader(), .{ .file_name_buffer = &filename_buf, .link_name_buffer = &link_name_buffer });
+        const check_file = try iter.next();
+        const f = check_file.?.name;
 
         const newExtractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedDataPath, target });
         if (try UtilsFs.checkDirExists(newExtractTarget)) {
@@ -146,7 +148,8 @@ pub const ZigInstaller = struct {
             try std.fs.cwd().rename(extractTarget, newExtractTarget);
             return;
         }
-        try std.tar.pipeToFileSystem(decompressedDataDir, skStream, .{});
+
+        try std.tar.pipeToFileSystem(decompressedDataDir, decompressed.reader(), .{ .mode_mode = .ignore });
         try self.printer.append("Extracted!\n\n");
         try std.fs.cwd().rename(extractTarget, newExtractTarget);
     }
