@@ -1,7 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const Constants = @import("constants");
 const Utils = @import("utils");
 const UtilsPrinter = Utils.UtilsPrinter;
+const UtilsSetup = Utils.UtilsSetup;
+const UtilsFs = Utils.UtilsFs;
 
 const Init = @import("lib/init/init.zig");
 const Install = @import("lib/install/install.zig");
@@ -26,8 +29,6 @@ const DEFAULT_TARGET_WINDOWS = "x86_64-windows";
 const DEFAULT_TARGET_LINUX = "x86_64-linux";
 
 pub fn main() !void {
-    try Utils.UtilsSetup.setup();
-
     const allocator = std.heap.page_allocator;
     var args = try std.process.argsWithAllocator(allocator);
     defer args.deinit();
@@ -37,7 +38,8 @@ pub fn main() !void {
     var printer = try UtilsPrinter.Printer.init(data);
     defer printer.deinit();
     try printer.append("\n");
-    // try printer.append("zeP - Zig Package Manager\n\n");
+
+    try UtilsSetup.setup(&printer);
 
     const subcommand = args.next() orelse {
         try printer.append("Missing subcommand.\n\n");

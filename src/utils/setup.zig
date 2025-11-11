@@ -3,15 +3,26 @@ const builtin = @import("builtin");
 
 const Constants = @import("constants");
 const UtilsFs = @import("fs.zig");
+const UtilsPrinter = @import("printer.zig");
 
-fn mkdir(path: []const u8) !void {
+fn mkdir(path: []const u8, printer: *UtilsPrinter.Printer) !void {
     if (try UtilsFs.checkDirExists(path)) return;
-    try std.fs.cwd().makePath(path);
+    std.fs.cwd().makePath(path) catch |err| {
+        switch (err) {
+            error.AccessDenied => {
+                try printer.append("Creating ");
+                try printer.append(path);
+                try printer.append(" Failed! (Admin Privelege required)\n");
+                return;
+            },
+            else => return,
+        }
+    };
 }
 
-pub fn setup() !void {
+pub fn setup(printer: *UtilsPrinter.Printer) !void {
     const paths = [5][]const u8{ Constants.ROOT_ZEP_FOLDER, Constants.ROOT_ZEP_CACHE_FOLDER, Constants.ROOT_ZEP_PKG_FOLDER, Constants.ROOT_ZEP_ZEPPED_FOLDER, Constants.ROOT_ZEP_ZIG_FOLDER };
     for (paths) |p| {
-        try mkdir(p);
+        try mkdir(p, printer);
     }
 }
