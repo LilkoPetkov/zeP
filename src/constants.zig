@@ -31,16 +31,7 @@ pub const ZEP_INJECTOR = ZEP_FOLDER ++ "/inject.zig";
 pub const ZEP_PACKAGE_FILE = "zep.json";
 pub const ZEP_LOCK_PACKAGE_FILE = "zep.lock";
 
-pub const FILTER_PACKAGE_FOLDERS = [8][]const u8{
-    ".git/",
-    ".github/",
-    ".vscode/",
-    ".zig-cache/",
-    "test/",
-    "tests/",
-    "testdata/",
-    "example/",
-};
+pub const FILTER_PACKAGE_FOLDERS = [9][]const u8{ ".git/", ".github/", ".vscode/", ".zig-cache/", "test/", "tests/", "testdata/", "example/", "examples/" };
 
 pub const FILTER_PACKAGE_FILES = [6][]const u8{
     ".editorconfig",

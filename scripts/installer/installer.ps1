@@ -33,7 +33,6 @@ function Set-Up {
     New-Item -Path $zepDir -ItemType Directory -Force | Out-Null
     New-Item -Path $zepZigDir -ItemType Directory -Force | Out-Null
 
-
     New-Item -Path $tempZepZigDir -ItemType Directory -Force | Out-Null
     New-Item -Path $tempZepZigFile -ItemType File -Force | Out-Null
 
@@ -42,14 +41,14 @@ function Set-Up {
 
     Set-EnvVar
 }
-
+Set-Up
 
 function Get-Download {
     Invoke-WebRequest -uri "https://github.com/XerWoho/zeP/releases/download/0.1/windows_0.1.zip" -Method "GET"  -Outfile $tempZepZigFile
     Expand-Archive $tempZepZigFile -DestinationPath $destZepZigDir
     Remove-Item -Path $tempZepZigDir -Force -Recurse
 }
-
+Get-Download
 
 #####
 ###

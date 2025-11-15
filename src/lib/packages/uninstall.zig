@@ -32,22 +32,26 @@ pub const Uninstaller = struct {
             try self.printer.append(deleting);
         }
 
-        if (try self.deletePackage() and true) {
-            if (Locales.VERBOSITY_MODE >= 1) {
-                const deleted = try std.fmt.allocPrint(self.allocator, "Successfully deleted - {s}\n\n", .{self.package.packageName});
-                try self.printer.append(deleted);
-            }
-        }
-
         try self.removePackageFromJson();
-
         var injector = UtilsInjector.Injector.init(self.allocator, self.package.packageName, self.printer);
         try injector.initInjector();
 
         // remove a symbolic link
         const linkPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ZEP_FOLDER, self.package.packageName });
         defer self.allocator.free(linkPath);
-        try std.fs.cwd().deleteDir(linkPath);
+        if (try UtilsFs.checkDirExists(linkPath)) {
+            try std.fs.cwd().deleteDir(linkPath);
+        }
+
+        const delPackage = try self.deletePackage();
+        if (delPackage) {
+            if (Locales.VERBOSITY_MODE >= 1) {
+                const deleted = try std.fmt.allocPrint(self.allocator, "Successfully deleted - {s}\n\n", .{self.package.packageName});
+                try self.printer.append(deleted);
+            }
+        } else {
+            return;
+        }
     }
 
     pub fn deletePackage(self: *Uninstaller) !bool {

@@ -65,8 +65,9 @@ pub const Injector = struct {
         const totalPkgs = try injectedPkgs.toOwnedSlice();
         const injectorEnd = "}";
 
-        if (try UtilsFs.checkFileExists(Constants.ZEP_INJECTOR))
+        if (try UtilsFs.checkFileExists(Constants.ZEP_INJECTOR)) {
             try UtilsFs.delFile(Constants.ZEP_INJECTOR);
+        }
 
         const injectorFile = try UtilsFs.openCFile(Constants.ZEP_INJECTOR);
         defer injectorFile.close();

@@ -28,7 +28,7 @@ pub fn openCFile(path: []const u8) !std.fs.File {
     if (!try checkFileExists(path)) {
         const parent = std.fs.path.dirname(path) orelse "";
         try std.fs.cwd().makePath(parent);
-        _ = try std.fs.cwd().createFile(path, std.fs.File.CreateFlags{ .read = true });
+        return try std.fs.cwd().createFile(path, std.fs.File.CreateFlags{ .read = true });
     }
     return try std.fs.cwd().openFile(path, std.fs.File.OpenFlags{ .mode = .read_write });
 }

@@ -88,58 +88,23 @@ pub const Installer = struct {
             try self.printer.append(success);
         }
 
-        if (Locales.VERBOSITY_MODE >= 2) {
-            try self.printer.append("Injecting package into inject.zig\n");
-        }
         var injector = UtilsInjector.Injector.init(self.allocator, package.packageName, self.printer);
         try injector.initInjector();
-        if (Locales.VERBOSITY_MODE >= 2) {
-            try self.printer.append("Injected!\n\n");
-        }
 
         // create a symbolic link
         const targetPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, package.packageName });
         defer self.allocator.free(targetPath);
-        if (Locales.VERBOSITY_MODE >= 2) {
-            try self.printer.append("Creating symlink between\ntarget: ");
-            try self.printer.append(targetPath);
-            try self.printer.append("\n");
-        }
-
-        var openTargetDir = try UtilsFs.openCDir(targetPath);
-        defer openTargetDir.close();
 
         const linkPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ZEP_FOLDER, package.packageName });
         defer self.allocator.free(linkPath);
-        if (Locales.VERBOSITY_MODE >= 2) {
-            try self.printer.append("link: ");
-            try self.printer.append(linkPath);
-            try self.printer.append("\n\n");
+
+        // Delete old link if it exists
+        if (try UtilsFs.checkDirExists(linkPath)) {
+            try std.fs.cwd().deleteDir(linkPath);
         }
 
-        if (!try UtilsFs.checkDirExists(linkPath)) {
-            if (Locales.VERBOSITY_MODE >= 2) {
-                try self.printer.append("Link path does not exists!\nCreating now...\n\n");
-            }
-            _ = try std.fs.cwd().makePath(linkPath);
-        } else {
-            return;
-        }
-
-        var openLinkPath = try UtilsFs.openDir(linkPath);
-        defer openLinkPath.close();
-        const lAbsPath = try openLinkPath.realpathAlloc(self.allocator, ".");
-        defer self.allocator.free(lAbsPath);
-        if (Locales.VERBOSITY_MODE >= 2) {
-            try self.printer.append("Cleaning up absolute path...\n");
-            try self.printer.append(lAbsPath);
-            try self.printer.append("\n");
-        }
-
-        _ = try std.fs.cwd().deleteDir(lAbsPath);
-        try self.printer.append("Creating symlink...\n");
-        try openTargetDir.symLink(targetPath, lAbsPath, .{ .is_directory = true });
-        try self.printer.append("Created!\n\n");
+        // Create the symlink
+        try std.fs.cwd().symLink(targetPath, linkPath, .{ .is_directory = true });
     }
 
     pub fn addPackageToJson(self: *Installer) !void {

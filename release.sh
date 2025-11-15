@@ -1,5 +1,5 @@
 #!/bin/bash
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows -p tempR/w
+zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows-msvc -p tempR/w
 zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -p tempR/l
 mkdir -p release
 mkdir -p release/w

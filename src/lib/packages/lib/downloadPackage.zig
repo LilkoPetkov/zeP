@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const Locales = @import("locales");
 const Constants = @import("constants");
@@ -33,7 +34,7 @@ pub const Downloader = struct {
 
     fn cloneGit(self: *Downloader) !void {
         const url = self.package.packageParsed.value.git;
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}/", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
         defer self.allocator.free(path);
 
         if (try UtilsFs.checkDirExists(path)) {
@@ -53,6 +54,17 @@ pub const Downloader = struct {
             child.stderr_behavior = .Ignore;
         }
         _ = try child.spawnAndWait();
+        if (builtin.os.tag == .windows) {
+            const dotGit = try std.fmt.allocPrint(self.allocator, "{s}/.git/objects/pack/*", .{path});
+            defer self.allocator.free(dotGit);
+            var rmAttrChild = std.process.Child.init(&.{ "attrib", "-R", dotGit, "/S", "/D" }, self.allocator);
+            if (Locales.VERBOSITY_MODE == 0) {
+                rmAttrChild.stdin_behavior = .Ignore;
+                rmAttrChild.stdout_behavior = .Ignore;
+                rmAttrChild.stderr_behavior = .Ignore;
+            }
+            _ = try rmAttrChild.spawnAndWait();
+        }
 
         if (Locales.VERBOSITY_MODE >= 1) {
             try self.printer.append("Filtering unimportant folders...\n\n");
@@ -71,8 +83,8 @@ pub const Downloader = struct {
     }
 
     fn doesPackageExist(self: *Downloader) !bool {
-        const path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}/", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
-        defer std.heap.page_allocator.free(path);
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
+        defer self.allocator.free(path);
         return try UtilsFs.checkDirExists(path);
     }
 
@@ -92,7 +104,7 @@ pub const Downloader = struct {
                 try self.printer.append(" > CACHE MISS!\n\n");
             }
         } else {
-            const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}/", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
+            const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName });
             defer self.allocator.free(path);
             try UtilsFs.delTree(path);
         }
