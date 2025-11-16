@@ -1,6 +1,4 @@
 .zig-cache
-.zep
-.zep.lock
 
 release
 zig-out
