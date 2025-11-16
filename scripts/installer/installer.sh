@@ -97,6 +97,13 @@ setChmod()
 
 cleanUp # clean up
 
+if [ -e "$zepDir/ava" ]; then
+		rm -rf "$zepDir/ava"
+fi
+if [ -e "$zepDir/scripts" ]; then
+		rm -rf "$zepDir/scripts"
+fi
+
 safeMoveDir "$tempZepTarDir/packages" "$zepDir/ava"
 safeMoveDir "$tempZepTarDir/scripts" "$zepDir/scripts"
 mv -f "$tempZepTarDir/zeP" $zepVersionDir
