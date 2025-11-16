@@ -54,6 +54,17 @@ pub const Json = struct {
         return try std.json.parseFromSlice(Structs.PackageLockStruct, self.allocator, data, .{});
     }
 
+    pub fn parsePkgManifest(self: *Json) !?std.json.Parsed(Structs.PkgsManifest) {
+        if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_PKG_MANIFEST))
+            return null;
+
+        var file = try UtilsFs.openFile(Constants.ROOT_ZEP_PKG_MANIFEST);
+        defer file.close();
+
+        const data = try file.readToEndAlloc(self.allocator, MAX_JSON_SIZE);
+        return try std.json.parseFromSlice(Structs.PkgsManifest, self.allocator, data, .{});
+    }
+
     pub fn stringifyPkgJson(self: *Json, package: *Structs.PackageJsonStruct) ![]u8 {
         return try std.json.stringifyAlloc(self.allocator, package, .{ .whitespace = .indent_2 });
     }

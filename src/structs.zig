@@ -1,4 +1,10 @@
 const std = @import("std");
+pub const ZigManifest = struct { name: []const u8, path: []const u8 };
+
+pub const PkgManifest = struct { name: []const u8, paths: [][]const u8 };
+
+pub const PkgsManifest = struct { packages: []PkgManifest };
+
 pub const BuildPackageJsonStruct = struct {
     entry: []const u8 = "src/main.zig",
     target: []const u8 = "",

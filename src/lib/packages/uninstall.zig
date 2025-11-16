@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Locales = @import("locales");
 const Constants = @import("constants");
+const Structs = @import("structs");
 
 const Utils = @import("utils");
 const UtilsJson = Utils.UtilsJson;
@@ -40,7 +41,23 @@ pub const Uninstaller = struct {
         const linkPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ZEP_FOLDER, self.package.packageName });
         defer self.allocator.free(linkPath);
         if (try UtilsFs.checkDirExists(linkPath)) {
+            const cwd = try std.fs.cwd().realpathAlloc(self.allocator, ".");
+            defer self.allocator.free(cwd);
+            const absLinkedPath = try std.fs.path.resolve(self.allocator, &[_][]const u8{ cwd, linkPath });
+            defer self.allocator.free(absLinkedPath);
+
+            try self.removePathFromManifest(absLinkedPath);
             try std.fs.cwd().deleteDir(linkPath);
+        }
+
+        try self.removePackageFromJson();
+        const pkgManifest = try self.json.parsePkgManifest();
+        if (pkgManifest) |pkg| {
+            defer pkg.deinit();
+            for (pkg.value.packages) |p| {
+                if (!std.mem.eql(u8, p.name, self.package.packageName)) continue;
+                if (p.paths.len != 0) return; // the package is still being used by other projects
+            }
         }
 
         const delPackage = try self.deletePackage();
@@ -88,5 +105,41 @@ pub const Uninstaller = struct {
         var package = self.package;
         try package.pkgRemovePackage(&pkgJson);
         try package.lockRemovePackage(&lockJson);
+    }
+
+    pub fn removePathFromManifest(self: *Uninstaller, linkedPath: []const u8) !void {
+        const pkgManifest = try self.json.parsePkgManifest();
+        var pkgVal: Structs.PkgsManifest = Structs.PkgsManifest{ .packages = &[_]Structs.PkgManifest{} };
+        defer {
+            if (pkgManifest) |pkg| pkg.deinit();
+        }
+        if (pkgManifest) |pkg| pkgVal = pkg.value;
+
+        var list = std.ArrayList(Structs.PkgManifest).init(self.allocator);
+        defer list.deinit();
+
+        var listPath = std.ArrayList([]const u8).init(self.allocator);
+        defer listPath.deinit();
+
+        for (pkgVal.packages) |p| {
+            if (std.mem.eql(u8, p.name, self.package.packageName)) {
+                for (p.paths) |path| {
+                    if (std.mem.eql(u8, path, linkedPath)) continue;
+                    try listPath.append(path);
+                }
+                continue;
+            }
+            try list.append(p);
+        }
+
+        if (listPath.items.len > 0) {
+            try list.append(Structs.PkgManifest{ .name = self.package.packageName, .paths = listPath.items });
+        }
+
+        pkgVal.packages = list.items;
+        const str = try std.json.stringifyAlloc(self.allocator, pkgVal, .{ .whitespace = .indent_2 });
+        try std.fs.cwd().deleteFile(Constants.ROOT_ZEP_PKG_MANIFEST);
+        const wFile = try UtilsFs.openCFile(Constants.ROOT_ZEP_PKG_MANIFEST);
+        _ = try wFile.write(str);
     }
 };

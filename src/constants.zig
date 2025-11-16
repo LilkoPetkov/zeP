@@ -19,6 +19,8 @@ pub const ROOT_ZEP_PACKAGES = ROOT_ZEP_FOLDER ++ "/ava";
 pub const ROOT_ZEP_SCRIPTS = ROOT_ZEP_FOLDER ++ "/scripts";
 pub const ROOT_ZEP_ZIG_FOLDER = ROOT_ZEP_FOLDER ++ "/zig";
 pub const ROOT_ZEP_PKG_FOLDER = ROOT_ZEP_FOLDER ++ "/pkg";
+pub const ROOT_ZEP_PKG_MANIFEST = ROOT_ZEP_PKG_FOLDER ++ "/manifest.json";
+
 pub const ROOT_ZEP_CACHE_FOLDER = ROOT_ZEP_FOLDER ++ "/cache";
 pub const ROOT_ZEP_ZEPPED_FOLDER = ROOT_ZEP_FOLDER ++ "/zepped";
 pub const ROOT_ZEP_FINGERPRINTS_FILE = ROOT_ZEP_CACHE_FOLDER ++ "/fingerprints.txt";
