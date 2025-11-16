@@ -41,6 +41,7 @@ pub const Purger = struct {
         for (pkgJson.packages) |p| {
             var uninstaller = try Uninstall.Uninstaller.init(self.allocator, p, self.printer);
             try uninstaller.uninstall();
+            std.Thread.sleep(std.time.ms_per_s * 100);
         }
 
         Locales.VERBOSITY_MODE = 1;

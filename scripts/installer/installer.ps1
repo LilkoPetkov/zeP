@@ -7,8 +7,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 $localAppData = "C:/Users/Public/AppData/Local/"
 $destZepZigDir = Join-Path $localAppData "zeP/v/0.1"
 if (Test-Path $destZepZigDir -PathType Container) {
-    Write-Host "Zep Version already exists."
-    # exit
+    Remove-Item -Path $destZepZigDir -Force -Recurse
 }
 
 $zepDir = Join-Path $localAppData "zeP/"
@@ -57,10 +56,20 @@ Get-Download
 # zeP folder
 $tempZepPackagesFolder = Join-Path $destZepZigDir "packages"
 $destZepPackagesFolder = Join-Path $zepDir "ava"
+if (Test-Path $destZepPackagesFolder -PathType Container) {
+    Remove-Item -Path $destZepPackagesFolder -Force -Recurse
+    # exit
+}
+
 Move-Item -Path $tempZepPackagesFolder -Destination $destZepPackagesFolder
 ###
 $tempZepScriptsFolder = Join-Path $destZepZigDir "scripts"
 $destZepScriptsFolder = Join-Path $zepDir "scripts"
+if (Test-Path $destZepScriptsFolder -PathType Container) {
+    Remove-Item -Path $destZepScriptsFolder -Force -Recurse
+    # exit
+}
+
 Move-Item -Path $tempZepScriptsFolder -Destination $destZepScriptsFolder
 ###
 #####
