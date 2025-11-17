@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "scripts/p/*"
+      - "packages/*"
+      - "release.sh"
+      - ".zep"
+      - "zep.json"
 
 permissions:
   contents: write
