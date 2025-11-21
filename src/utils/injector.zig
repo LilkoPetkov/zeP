@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Structs = @import("structs");
 const Constants = @import("constants");
 const UtilsPackage =
     @import("package.zig");
@@ -9,6 +10,8 @@ const UtilsFs =
     @import("fs.zig");
 const UtilsPrinter =
     @import("printer.zig");
+const UtilsManifest =
+    @import("manifest.zig");
 
 pub const Injector = struct {
     allocator: std.mem.Allocator,
@@ -39,26 +42,16 @@ pub const Injector = struct {
     }
 
     pub fn initInjector(self: *Injector) !void {
-        var json = try UtilsJson.Json.init(self.allocator);
-        const pkgJsonOpt = try json.parsePkgJson();
-        if (pkgJsonOpt == null) {
-            try self.printer.append("NO PACKAGE JSON! INIT PLEASE!\n\n");
-            return;
-        }
-
-        const pkgJson = pkgJsonOpt.?;
-        defer pkgJson.deinit();
+        var packageLock = try UtilsManifest.readManifest(Structs.PackageLockStruct, self.allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
+        defer packageLock.deinit();
 
         var injectedPkgs = std.ArrayList([]u8).init(self.allocator);
         defer injectedPkgs.deinit();
 
-        for (pkgJson.value.packages) |p| {
-            const parsedPkg = try json.parsePackage(p);
-            if (parsedPkg == null) continue;
-            const parsed = parsedPkg.?;
-            defer parsed.deinit();
-
-            const inj = try self.injector(p, parsed.value.root_file);
+        for (packageLock.value.packages) |package| {
+            var split = std.mem.splitScalar(u8, package.name, '@');
+            const packageName = split.first();
+            const inj = try self.injector(packageName, package.rootFile);
             try injectedPkgs.append(inj);
         }
 
@@ -89,14 +82,14 @@ pub const Injector = struct {
     pub fn injectIntoBuildZig(self: *Injector) !void {
         const path = "build.zig";
         if (!try UtilsFs.checkFileExists(path)) {
-            try self.printer.append("\nbuild.zig does not exist! Initting zig project\n(Make sure zig is installed [zeP zig install x.x.x])\n");
+            try self.printer.append("\nbuild.zig does not exist! Initting zig project\n(Make sure zig is installed [zeP zig install x.x.x])\n", .{}, .{});
             // init zig
             const argv = &[2][]const u8{ "zig", "init" };
             var process = std.process.Child.init(argv, self.allocator);
             try process.spawn();
             _ = try process.wait();
             _ = try process.kill();
-            try self.printer.append("Initted!\n\n");
+            try self.printer.append("Initted!\n\n", .{}, .{});
         }
 
         var file = try std.fs.cwd().openFile(path, .{ .mode = .read_write });
@@ -106,7 +99,9 @@ pub const Injector = struct {
         defer self.allocator.free(content);
 
         const injectLine = "    @import(\".zep/inject.zig\").injectExtraImports(b, exe);\n";
-        if (std.mem.containsAtLeast(u8, content, 1, injectLine))
+        const clearedInjectLine = std.mem.trimLeft(u8, injectLine, " ");
+        const clearedContent = std.mem.trimLeft(u8, content, " ");
+        if (std.mem.containsAtLeast(u8, clearedContent, 1, clearedInjectLine))
             return;
 
         const insertBefore = "    b.installArtifact(exe);";

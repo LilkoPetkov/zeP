@@ -31,15 +31,13 @@ pub const ZepUninstaller = struct {
     // Uninstall a Zep version by deleting its folder
     // ------------------------
     pub fn uninstall(self: *ZepUninstaller, version: []const u8) !void {
-        try self.printer.append("Deleting Zep version ");
-        try self.printer.append(version);
-        try self.printer.append(" now...\n");
+        try self.printer.append("Deleting Zep version {s} now...\n", .{version}, .{});
 
         // Recursively delete folder
         const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, version });
         defer self.allocator.free(path);
         try UtilsFs.delTree(path);
 
-        try self.printer.append("Zep version deleted successfully.\n\n");
+        try self.printer.append("Zep version deleted successfully.\n\n", .{}, .{ .color = 32 });
     }
 };

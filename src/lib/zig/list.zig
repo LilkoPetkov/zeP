@@ -1,10 +1,11 @@
 const std = @import("std");
-const Manifest = @import("lib/manifest.zig");
 
+const Structs = @import("structs");
 const Constants = @import("constants");
 const Utils = @import("utils");
 const UtilsPrinter = Utils.UtilsPrinter;
 const UtilsFs = Utils.UtilsFs;
+const UtilsManifest = Utils.UtilsManifest;
 
 /// Lists installed Zig versions
 pub const ZigLister = struct {
@@ -30,17 +31,17 @@ pub const ZigLister = struct {
     // Marks the version currently in use
     // ------------------------
     pub fn listVersions(self: *ZigLister) !void {
-        try self.printer.append("\nAvailable Zig Versions:\n");
+        try self.printer.append("\nAvailable Zig Versions:\n", .{}, .{});
 
         const versionsDir = try std.fmt.allocPrint(self.allocator, "{s}/d/", .{Constants.ROOT_ZEP_ZIG_FOLDER});
         defer self.allocator.free(versionsDir);
 
         if (!try UtilsFs.checkDirExists(versionsDir)) {
-            try self.printer.append("No versions installed!\n\n");
+            try self.printer.append("No versions installed!\n\n", .{}, .{});
             return;
         }
 
-        const manifest = try Manifest.getManifest();
+        const manifest = try UtilsManifest.readManifest(Structs.ZigManifest, self.allocator, Constants.ROOT_ZEP_ZIG_MANIFEST);
         defer manifest.deinit();
 
         const dir = try std.fs.cwd().openDir(versionsDir, std.fs.Dir.OpenDirOptions{ .iterate = true });
@@ -49,15 +50,14 @@ pub const ZigLister = struct {
             if (entry.kind != .directory) continue;
 
             const versionName = try self.allocator.dupe(u8, entry.name);
-            try self.printer.append(versionName);
-
             // Mark version as in-use if it matches the manifest
             if (std.mem.containsAtLeast(u8, manifest.value.path, 1, versionName)) {
-                try self.printer.append(" (in-use)");
+                try self.printer.append("{s} (in-use)\n", .{versionName}, .{});
+            } else {
+                try self.printer.append("{s}\n", .{versionName}, .{});
             }
-            try self.printer.append("\n");
         }
 
-        try self.printer.append("\n");
+        try self.printer.append("\n", .{}, .{});
     }
 };

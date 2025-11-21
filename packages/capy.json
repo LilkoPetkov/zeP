@@ -1,0 +1,14 @@
+{
+  "name": "capy",
+  "author": "capy-ui",
+  "docs": "",
+  "versions": [
+    {
+      "version": "latest",
+      "url": "https://github.com/capy-ui/capy/archive/refs/heads/master.zip",
+      "rootFile": "/src/capy.zig",
+      "zigVersion": "0.14.1",
+      "sha256sum": "1990874f6b0b8b4799bc6a8ebbabeaf759a6119c538210b1aa4b28808f92184d"
+    }
+  ]
+}

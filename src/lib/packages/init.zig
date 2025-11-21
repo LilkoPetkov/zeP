@@ -29,7 +29,6 @@ pub const Init = struct {
     }
 
     fn createFiles(self: *Init) !void {
-        const cwd = std.fs.cwd();
         const pkg = Structs.PackageJsonStruct{
             .build = Structs.BuildPackageJsonStruct{},
         };
@@ -40,23 +39,11 @@ pub const Init = struct {
         };
 
         if (!try UtilsFs.checkFileExists(Constants.ZEP_PACKAGE_FILE)) {
-            const pkgString = try std.json.stringifyAlloc(self.allocator, pkg, .{ .whitespace = .indent_2 });
-            _ = cwd.createFile(Constants.ZEP_PACKAGE_FILE, .{}) catch |err| switch (err) {
-                error.PathAlreadyExists => {},
-                else => return err,
-            };
-            const pFile = try cwd.openFile(Constants.ZEP_PACKAGE_FILE, .{ .mode = .read_write });
-            _ = try pFile.write(pkgString);
+            try self.json.writePretty(Constants.ZEP_PACKAGE_FILE, pkg);
         }
 
         if (!try UtilsFs.checkFileExists(Constants.ZEP_LOCK_PACKAGE_FILE)) {
-            const lockString = try std.json.stringifyAlloc(self.allocator, lock, .{ .whitespace = .indent_2 });
-            _ = cwd.createFile(Constants.ZEP_LOCK_PACKAGE_FILE, .{}) catch |err| switch (err) {
-                error.PathAlreadyExists => {},
-                else => return err,
-            };
-            const lFile = try cwd.openFile(Constants.ZEP_LOCK_PACKAGE_FILE, .{ .mode = .read_write });
-            _ = try lFile.write(lockString);
+            try self.json.writePretty(Constants.ZEP_LOCK_PACKAGE_FILE, lock);
         }
     }
 };

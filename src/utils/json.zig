@@ -17,16 +17,38 @@ pub const Json = struct {
         return Json{ .allocator = allocator };
     }
 
-    fn parse(self: *Json, path: []const u8) !?std.json.Parsed(Structs.PackageStruct) {
-        const check = try UtilsFs.checkFileExists(path);
-        if (!check) return null;
+    pub fn parseJsonFromFile(
+        self: *Json,
+        comptime T: type,
+        path: []const u8,
+        max: usize,
+    ) !?std.json.Parsed(T) {
+        if (!try UtilsFs.checkFileExists(path))
+            return null;
 
         var file = try std.fs.cwd().openFile(path, .{});
         defer file.close();
 
-        const data = try file.readToEndAlloc(self.allocator, MAX_JSON_SIZE);
-        const parsedData = try std.json.parseFromSlice(Structs.PackageStruct, self.allocator, data, .{});
-        return parsedData;
+        const data = try file.readToEndAlloc(self.allocator, max);
+        return try std.json.parseFromSlice(T, self.allocator, data, .{});
+    }
+
+    pub fn writePretty(
+        self: *Json,
+        path: []const u8,
+        data: anytype,
+    ) !void {
+        const str = try std.json.stringifyAlloc(
+            self.allocator,
+            data,
+            .{ .whitespace = .indent_2 },
+        );
+
+        // create or truncate
+        const file = try std.fs.cwd().createFile(path, .{});
+        defer file.close();
+
+        _ = try file.write(str);
     }
 
     pub fn parsePackage(self: *Json, packageName: []const u8) !?std.json.Parsed(Structs.PackageStruct) {
@@ -41,46 +63,6 @@ pub const Json = struct {
         const localPath = try std.fmt.allocPrint(self.allocator, "{s}/packages/{s}.json", .{ parsedManifest.value.path, packageName });
         defer self.allocator.free(localPath);
 
-        const customPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ Constants.ROOT_ZEP_CUSTOM_PACKAGES, packageName });
-        defer self.allocator.free(customPath);
-
-        const localParsed = try self.parse(localPath);
-        if (localParsed) |l| return l;
-        const customParsed = try self.parse(customPath);
-        if (customParsed) |c| return c;
-        return null;
-    }
-
-    pub fn parsePkgJson(self: *Json) !?std.json.Parsed(Structs.PackageJsonStruct) {
-        if (!try UtilsFs.checkFileExists(Constants.ZEP_PACKAGE_FILE))
-            return null;
-
-        var file = try UtilsFs.openFile(Constants.ZEP_PACKAGE_FILE);
-        defer file.close();
-
-        const data = try file.readToEndAlloc(self.allocator, MAX_JSON_SIZE);
-        return try std.json.parseFromSlice(Structs.PackageJsonStruct, self.allocator, data, .{});
-    }
-
-    pub fn parseLockJson(self: *Json) !?std.json.Parsed(Structs.PackageLockStruct) {
-        if (!try UtilsFs.checkFileExists(Constants.ZEP_LOCK_PACKAGE_FILE))
-            return null;
-
-        var file = try UtilsFs.openFile(Constants.ZEP_LOCK_PACKAGE_FILE);
-        defer file.close();
-
-        const data = try file.readToEndAlloc(self.allocator, MAX_JSON_SIZE);
-        return try std.json.parseFromSlice(Structs.PackageLockStruct, self.allocator, data, .{});
-    }
-
-    pub fn parsePkgManifest(self: *Json) !?std.json.Parsed(Structs.PkgsManifest) {
-        if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_PKG_MANIFEST))
-            return null;
-
-        var file = try UtilsFs.openFile(Constants.ROOT_ZEP_PKG_MANIFEST);
-        defer file.close();
-
-        const data = try file.readToEndAlloc(self.allocator, MAX_JSON_SIZE);
-        return try std.json.parseFromSlice(Structs.PkgsManifest, self.allocator, data, .{});
+        return try self.parseJsonFromFile(Structs.PackageStruct, localPath, MAX_JSON_SIZE);
     }
 };

@@ -1,4 +1,4 @@
-$Target = "0.2" # latest version
+$Target = "0.3" # latest version
 if (-not ($args.Length -eq 0)) {
     $Target = $args[0]
 }
@@ -23,6 +23,11 @@ $ManifestZep = Join-Path $ZepDir "zep/manifest.json"
 $ExeZepDir = Join-Path $ZepDir "zep/e/"
 $ExeZepFile = Join-Path $ExeZepDir "zeP.exe"
 
+$ExeZigDir = Join-Path $ZepDir "zig/e/"
+$ExeZigFile = Join-Path $ExeZigDir "zig.exe"
+
+
+
 $DestZepZigDir = Join-Path $ZepDir "zep/v/$Target"
 if (Test-Path $DestZepZigDir -PathType Container) {
     Remove-Item -Path $DestZepZigDir -Force -Recurse
@@ -37,17 +42,25 @@ function Set-EnvVar {
         [Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
         Write-Host "$ExeZepDir added to user PATH. You may need to restart your terminal to see the change."
     }
+    if (-not ($UserPath.Split(';') -contains $ExeZigDir)) {    
+        $NewPath = $ExeZigDir + ";" + $UserPath
+        [Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+        Write-Host "$ExeZigDir added to user PATH. You may need to restart your terminal to see the change."
+    }
 }
 
 function Set-Up {
     New-Item -Path $ZepDir -ItemType Directory -Force | Out-Null
     New-Item -Path $ZepZigDir -ItemType Directory -Force | Out-Null
 
+
     New-Item -Path $TempZepZigDir -ItemType Directory -Force | Out-Null
     New-Item -Path $TempZepZigFile -ItemType File -Force | Out-Null
 
     New-Item -Path $DestZepZigDir -ItemType Directory -Force | Out-Null
     New-Item -Path $ExeZepDir -ItemType Directory -Force | Out-Null
+
+    New-Item -Path $ExeZigDir -ItemType Directory -Force | Out-Null
 
     New-Item -Path $ManifestZep -ItemType File -Force | Out-Null
 

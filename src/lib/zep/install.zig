@@ -1,8 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Manifest = @import("lib/manifest.zig");
-
 const Constants = @import("constants");
 const Utils = @import("utils");
 const UtilsFs = Utils.UtilsFs;

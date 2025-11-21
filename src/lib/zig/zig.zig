@@ -12,8 +12,6 @@ const ZigUninstaller = @import("uninstall.zig");
 const ZigLister = @import("list.zig");
 const ZigSwitcher = @import("switch.zig");
 
-const Manifest = @import("lib/manifest.zig");
-
 // ------------------------
 // Version Data
 // ------------------------
@@ -93,17 +91,17 @@ pub const Zig = struct {
     // Get structured version info
     // ------------------------
     pub fn getVersion(self: *Zig, targetVersion: []const u8, target: []const u8) !Version {
-        try self.printer.append("Getting target version...\n");
+        try self.printer.append("Getting target version...\n", .{}, .{});
 
         const versionData = self.fetchVersion(targetVersion) catch {
-            try self.printer.append("Version not found...\n\n");
+            try self.printer.append("Version not found...\n\n", .{}, .{});
             std.process.exit(0);
         };
 
         const obj = versionData.object;
         const urlVal = obj.get(target);
         if (urlVal == null) {
-            try self.printer.append("Target not found...\n\n");
+            try self.printer.append("Target not found...\n\n", .{}, .{});
             return Version{ .name = "", .path = "", .tarball = "", .version = "" };
         }
 
@@ -138,65 +136,62 @@ pub const Zig = struct {
     // Install a Zig version
     // ------------------------
     pub fn install(self: *Zig, targetVersion: []const u8, target: []const u8) !void {
-        try self.printer.append("Installing version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\nWith target: ");
-        try self.printer.append(target);
-        try self.printer.append("\n\n");
-
+        try self.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ targetVersion, target }, .{});
         const version = try self.getVersion(targetVersion, target);
         if (version.path.len == 0) return;
 
         if (try UtilsFs.checkDirExists(version.path)) {
-            try self.printer.append("Zig version already installed.\n");
-            try self.printer.append("Use 'zeP zig switch x.x.x' to update.\n\n");
+            try self.printer.append("Zig version already installed.\n", .{}, .{});
+            try self.printer.append("Use 'zeP zig switch x.x.x' to update.\n\n", .{}, .{});
             return;
         }
-        try self.installer.install(version.name, version.tarball, version.version, target);
+        self.installer.install(version.name, version.tarball, version.version, target) catch {
+            try self.printer.append("Installing {s} failed...\n\n", .{version.version}, .{ .color = 31 });
+            return;
+        };
     }
 
     // ------------------------
     // Uninstall a Zig version
     // ------------------------
     pub fn uninstall(self: *Zig, targetVersion: []const u8, target: []const u8) !void {
-        try self.printer.append("Uninstalling version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\nWith target: ");
-        try self.printer.append(target);
-        try self.printer.append("\n\n");
-
+        try self.printer.append("Uninstalling version: {s}\nWith target: {s}\n\n", .{ targetVersion, target }, .{});
         const version = try self.getVersion(targetVersion, target);
         if (!try UtilsFs.checkDirExists(version.path)) {
-            try self.printer.append("Zig version is not installed.\n\n");
+            try self.printer.append("Zig version is not installed.\n\n", .{}, .{});
             return;
         }
 
-        try self.uninstaller.uninstall(version.path);
+        self.uninstaller.uninstall(version.path) catch {
+            try self.printer.append("Uninstalling {s} failed...\n\n", .{version.version}, .{ .color = 31 });
+            return;
+        };
     }
 
     // ------------------------
     // Switch active Zig version
     // ------------------------
     pub fn switchVersion(self: *Zig, targetVersion: []const u8, target: []const u8) !void {
-        try self.printer.append("Switching version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\nWith target: ");
-        try self.printer.append(target);
-        try self.printer.append("\n\n");
-
+        try self.printer.append("Switching version: {s}\nWith target: {s}\n\n", .{ targetVersion, target }, .{});
         const version = try self.getVersion(targetVersion, target);
         if (!try UtilsFs.checkDirExists(version.path)) {
-            try self.printer.append("Zig version not installed.\n\n");
+            try self.printer.append("Zig version not installed.\n\n", .{}, .{});
             return;
         }
 
-        try self.switcher.switchVersion(version.name, version.version, target);
+        self.switcher.switchVersion(version.name, version.version, target) catch {
+            try self.printer.append("Switching to {s} failed...\n\n", .{version.version}, .{ .color = 31 });
+            return;
+        };
     }
 
     // ------------------------
     // List installed Zig versions
     // ------------------------
     pub fn list(self: *Zig) !void {
-        try self.lister.listVersions();
+        self.lister.listVersions() catch {
+            try self.printer.append("Listing versions failed...\n\n", .{}, .{ .color = 31 });
+            return;
+        };
     }
 };

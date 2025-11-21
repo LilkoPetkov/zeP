@@ -52,63 +52,64 @@ pub const Zep = struct {
     // Install a Zep version
     // ------------------------
     pub fn install(self: *Zep, targetVersion: []const u8) !void {
-        try self.printer.append("Installing version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\n\n");
+        try self.printer.append("Installing version: {s}\n\n", .{targetVersion}, .{});
 
         const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
         defer self.allocator.free(path);
         if (try UtilsFs.checkDirExists(path)) {
-            try self.printer.append("Zep version already installed.\n");
-            try self.printer.append("Use 'zeP zep switch x.x.x' to update.\n\n");
+            try self.printer.append("Zep version already installed.\n", .{}, .{});
+            try self.printer.append("Use 'zeP zep switch x.x.x' to update.\n\n", .{}, .{});
             return;
         }
 
-        try self.installer.install(targetVersion);
+        self.installer.install(targetVersion) catch {
+            try self.printer.append("Installing {s} failed...\n\n", .{targetVersion}, .{ .color = 31 });
+        };
     }
 
     // ------------------------
     // Uninstall a Zep version
     // ------------------------
     pub fn uninstall(self: *Zep, targetVersion: []const u8) !void {
-        try self.printer.append("Uninstalling version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\n\n");
-
+        try self.printer.append("Uninstalling version: {s}\n\n", .{targetVersion}, .{});
         const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
         defer self.allocator.free(path);
 
         if (!try UtilsFs.checkDirExists(path)) {
-            try self.printer.append("Zep version is not installed.\n\n");
+            try self.printer.append("Zep version is not installed.\n\n", .{}, .{});
             return;
         }
 
-        try self.uninstaller.uninstall(targetVersion);
+        self.uninstaller.uninstall(targetVersion) catch {
+            try self.printer.append("Uninstalling {s} failed...\n\n", .{targetVersion}, .{ .color = 31 });
+        };
     }
 
     // ------------------------
     // Switch active Zep version
     // ------------------------
     pub fn switchVersion(self: *Zep, targetVersion: []const u8) !void {
-        try self.printer.append("Switching version: ");
-        try self.printer.append(targetVersion);
-        try self.printer.append("\n\n");
+        try self.printer.append("Switching version: {s}\n\n", .{targetVersion}, .{});
 
         const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
         defer self.allocator.free(path);
 
         if (!try UtilsFs.checkDirExists(path)) {
-            try self.printer.append("Zep version not installed.\n\n");
+            try self.printer.append("Zep version not installed.\n\n", .{}, .{});
             return;
         }
 
-        try self.switcher.switchVersion(targetVersion);
+        self.switcher.switchVersion(targetVersion) catch {
+            try self.printer.append("Switching to {s} failed...\n\n", .{targetVersion}, .{ .color = 31 });
+        };
     }
 
     // ------------------------
     // List installed Zep versions
     // ------------------------
     pub fn list(self: *Zep) !void {
-        try self.lister.listVersions();
+        self.lister.listVersions() catch {
+            try self.printer.append("Listing versions failed...\n\n", .{}, .{ .color = 31 });
+        };
     }
 };

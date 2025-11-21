@@ -27,8 +27,6 @@ fn getBaseDir() []const u8 {
 pub const ROOT_ZEP_FOLDER = getBaseDir() ++ "/zeP";
 pub const ROOT_ZEP_PREBUILT_FOLDER = ROOT_ZEP_FOLDER ++ "/prebuilt";
 
-// pub const ROOT_ZEP_PACKAGES = ROOT_ZEP_FOLDER ++ "/ava";
-
 pub const ROOT_ZEP_CUSTOM_PACKAGES = ROOT_ZEP_FOLDER ++ "/customPackages";
 
 pub const ROOT_ZEP_PKG_FOLDER = ROOT_ZEP_FOLDER ++ "/pkg";
@@ -45,9 +43,7 @@ pub const ROOT_ZEP_ZEP_MANIFEST = ROOT_ZEP_ZEP_FOLDER ++ "/manifest.json";
 // ------------------------
 // Cache & Metadata
 // ------------------------
-pub const ROOT_ZEP_CACHE_FOLDER = ROOT_ZEP_FOLDER ++ "/cache";
-pub const ROOT_ZEP_ZEPPED_FOLDER = ROOT_ZEP_CACHE_FOLDER ++ "/zepped";
-pub const ROOT_ZEP_FINGERPRINTS_FILE = ROOT_ZEP_CACHE_FOLDER ++ "/fingerprints.txt";
+pub const ROOT_ZEP_ZEPPED_FOLDER = ROOT_ZEP_FOLDER ++ "/zepped";
 
 // ------------------------
 // Local Zep Files / Folders
@@ -60,6 +56,7 @@ pub const ZEP_INJECTOR = ZEP_FOLDER ++ "/inject.zig";
 // ------------------------
 pub const ZEP_PACKAGE_FILE = "zep.json";
 pub const ZEP_LOCK_PACKAGE_FILE = "zep.lock";
+pub const ZEP_LOCK_SCHEMA_VERSION = 2;
 
 // ------------------------
 // Filtering Rules
