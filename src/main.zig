@@ -76,11 +76,18 @@ pub fn main() !void {
     // ------------------------
     // Schema check
     // ------------------------
-    const lock = try UtilsManifest.readManifest(Structs.PackageLockStruct, allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
-    defer lock.deinit();
-    if (lock.value.schema != Constants.ZEP_LOCK_SCHEMA_VERSION) {
-        try printer.append("Lock file schema is NOT matching with zeP version.\nConsider removing them, and re-initing!\n", .{}, .{});
-        return;
+    // First verify that we are in zeP project
+    //-------------------------
+    if (try UtilsFs.checkFileExists(Constants.ZEP_LOCK_PACKAGE_FILE) and
+        try UtilsFs.checkFileExists(Constants.ZEP_PACKAGE_FILE) and
+        try UtilsFs.checkDirExists(Constants.ZEP_FOLDER))
+    {
+        const lock = try UtilsManifest.readManifest(Structs.PackageLockStruct, allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
+        defer lock.deinit();
+        if (lock.value.schema != Constants.ZEP_LOCK_SCHEMA_VERSION) {
+            try printer.append("Lock file schema is NOT matching with zeP version.\nConsider removing them, and re-initing!\n", .{}, .{});
+            return;
+        }
     }
 
     // ------------------------

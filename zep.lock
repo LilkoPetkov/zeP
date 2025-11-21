@@ -7,7 +7,7 @@
     "repo": "https://github.com/XerWoho/zeP",
     "name": "zeP",
     "description": "",
-    "version": "0.2",
+    "version": "0.3",
     "license": "A new zig Package manager, and version manager for zig.",
     "packages": [],
     "devPackages": [],
