@@ -94,21 +94,6 @@ pub const Uninstaller = struct {
             try std.fs.cwd().deleteDir(linkPath);
         }
         try self.removePackageFromJson();
-
-        // Check if package is used by other projects
-        if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_PKG_MANIFEST)) {
-            try self.printer.append("No package manifest...\n", .{}, .{ .color = 33 });
-            try self.printer.append("Creating now...\n", .{}, .{ .color = 33 });
-            try std.fs.cwd().makeDir(Constants.ROOT_ZEP_PKG_MANIFEST);
-        } else {
-            const packageManifest = try UtilsManifest.readManifest(Structs.PackagesManifest, self.allocator, Constants.ROOT_ZEP_PKG_MANIFEST);
-            defer packageManifest.deinit();
-            for (packageManifest.value.packages) |package| {
-                if (!std.mem.eql(u8, package.name, self.packageName)) continue;
-                if (package.paths.len != 0) return;
-            }
-        }
-
         try self.printer.append("Successfully deleted - {s}\n\n", .{self.packageName}, .{ .color = 32 });
     }
 

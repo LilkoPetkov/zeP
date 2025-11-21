@@ -82,10 +82,6 @@ pub fn removePathFromManifest(
 ) !void {
     const allocator = std.heap.page_allocator;
 
-    if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_PKG_MANIFEST)) {
-        _ = try std.fs.cwd().createFile(Constants.ROOT_ZEP_PKG_MANIFEST, .{});
-    }
-
     var packageManifest = try UtilsManifest.readManifest(Structs.PackagesManifest, allocator, Constants.ROOT_ZEP_PKG_MANIFEST);
     defer packageManifest.deinit();
 
