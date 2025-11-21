@@ -31,13 +31,10 @@ pub const ZigUninstaller = struct {
     // Uninstall a Zig version by deleting its folder
     // ------------------------
     pub fn uninstall(self: *ZigUninstaller, path: []const u8) !void {
-        try self.printer.append("Deleting Zig version at path: ");
-        try self.printer.append(path);
-        try self.printer.append("\n");
+        try self.printer.append("Deleting Zig version at path: {s}\n", .{path}, .{});
 
         // Recursively delete folder
         try UtilsFs.delTree(path);
-
-        try self.printer.append("Zig version deleted successfully.\n\n");
+        try self.printer.append("Zig version deleted successfully.\n\n", .{}, .{ .color = 32 });
     }
 };

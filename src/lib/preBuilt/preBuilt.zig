@@ -32,27 +32,22 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (!try UtilsFs.checkFileExists(path)) {
-            try self.printer.append("Pre-Built does NOT exist!\n\n");
+            try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{});
             return;
         }
 
-        try self.printer.append("Pre-Built found!\n");
+        try self.printer.append("Pre-Built found!\n", .{}, .{});
 
         if (!try UtilsFs.checkDirExists(targetPath)) {
-            try self.printer.append("Creating target path...\n");
+            try self.printer.append("Creating target path...\n", .{}, .{});
             try std.fs.cwd().makePath(targetPath);
-            try self.printer.append("Created!\n\n");
+            try self.printer.append("Created!\n\n", .{}, .{});
         }
 
-        try self.printer.append("Decompressing ");
-        try self.printer.append(path);
-        try self.printer.append(" into ");
-        try self.printer.append(targetPath);
-        try self.printer.append(" ...\n");
-
+        try self.printer.append("Decompressing {s} into {s}...\n", .{ path, targetPath }, .{});
         _ = try self.compressor.decompress(path, targetPath);
 
-        try self.printer.append("Decompressed!\n\n");
+        try self.printer.append("Decompressed!\n\n", .{}, .{});
     }
 
     /// Compresses a folder into a pre-built package, overwriting if it exists
@@ -61,17 +56,18 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (try UtilsFs.checkFileExists(path)) {
-            try self.printer.append("Pre-Built already exists! Overwriting it now...\n\n");
+            try self.printer.append("Pre-Built already exists! Overwriting it now...\n\n", .{}, .{});
             try std.fs.cwd().deleteFile(path);
         }
 
-        try self.printer.append("Compressing ");
-        try self.printer.append(targetPath);
-        try self.printer.append(" now...\n");
+        try self.printer.append("Compressing {s} now...", .{targetPath}, .{});
 
-        try self.compressor.compress(targetPath, path);
-
-        try self.printer.append("Compressed!\n\n");
+        const isCompressed = try self.compressor.compress(targetPath, path);
+        if (isCompressed) {
+            try self.printer.append("Compressed!\n\n", .{}, .{});
+        } else {
+            try self.printer.append("Compression failed...\n\n", .{}, .{});
+        }
     }
 
     /// Deletes a pre-built package if it exists
@@ -80,9 +76,9 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (try UtilsFs.checkFileExists(path)) {
-            try self.printer.append("Pre-Built found!\n");
+            try self.printer.append("Pre-Built found!\n", .{}, .{});
             try std.fs.cwd().deleteFile(path);
-            try self.printer.append("Deleted.\n\n");
+            try self.printer.append("Deleted.\n\n", .{}, .{});
         }
     }
 };

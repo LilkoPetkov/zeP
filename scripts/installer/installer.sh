@@ -5,7 +5,7 @@ USR_LOCAL_BIN="/usr/local/bin"
 LIB="/lib"
 
 
-TARGET="0.2" # latest version
+TARGET="0.3" # latest version
 if [ $# -eq 0 ]; then
 	TARGET="$1"
 fi

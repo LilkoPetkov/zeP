@@ -6,48 +6,116 @@ const Structs = @import("structs");
 
 const UtilsFs =
     @import("fs.zig");
+const UtilsHash =
+    @import("hash.zig");
 const UtilsJson =
     @import("json.zig");
 const UtilsPrinter =
     @import("printer.zig");
+const UtilsManifest =
+    @import("manifest.zig");
 
 pub const Package = struct {
     allocator: std.mem.Allocator,
     json: UtilsJson.Json,
 
-    packageFingerprint: []u8,
+    packageHash: []u8,
     packageName: []const u8,
-    packageParsed: std.json.Parsed(Structs.PackageStruct),
+    packageVersion: []const u8,
+    package: Structs.PackageVersions,
+
+    id: []u8, // <-- packageName@packageVersion
+
     printer: *UtilsPrinter.Printer,
 
-    pub fn init(allocator: std.mem.Allocator, packageName: []const u8, printer: *UtilsPrinter.Printer) !?Package {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        packageName: []const u8,
+        packageVersion: ?[]const u8,
+        printer: *UtilsPrinter.Printer,
+    ) !?Package {
+        try printer.append("\nFinding the package...\n", .{}, .{});
+
+        // JSON context
         var json = try UtilsJson.Json.init(allocator);
-        if (Locales.VERBOSITY_MODE >= 1) {
-            try printer.append("\nFinding the package...\n\n");
-        }
-        const parsePackage = try json.parsePackage(packageName);
-        if (parsePackage == null) {
-            if (Locales.VERBOSITY_MODE >= 1) {
-                try printer.append("\nPackage not found...\n\n");
-            }
+
+        // Load package manifest
+        const parsedPkg = try json.parsePackage(packageName);
+        if (parsedPkg == null) {
+            try printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
             return null;
+        }
+        defer parsedPkg.?.deinit();
+
+        try printer.append("Package Found! - {s}.json\n\n", .{packageName}, .{ .color = 32 });
+
+        const versions = parsedPkg.?.value.versions;
+        if (versions.len == 0) {
+            @panic("Package has no versions!");
+        }
+
+        // Pick target version
+        const targetVersion = packageVersion orelse versions[0].version;
+
+        try printer.append("Getting the package version...\n", .{}, .{});
+        try printer.append("Target Version: ", .{}, .{});
+
+        if (packageVersion) |v| {
+            try printer.append("{s}", .{v}, .{});
         } else {
-            if (Locales.VERBOSITY_MODE >= 1) {
-                const find = try std.fmt.allocPrint(allocator, "Package Found! - {s}.json\n\n", .{packageName});
-                try printer.append(find);
+            try printer.append("/ (no version specified, using latest)", .{}, .{});
+        }
+        try printer.append("\n\n", .{}, .{});
+
+        // Find version struct
+        var selected: ?Structs.PackageVersions = null;
+        for (versions) |v| {
+            if (std.mem.eql(u8, v.version, targetVersion)) {
+                selected = v;
+                break;
             }
         }
 
-        const fingerprint = try hashData(parsePackage.?.value);
+        if (selected == null) {
+            try printer.append("Package version was not found...\n\n", .{}, .{ .color = 31 });
+            std.process.exit(0);
+        }
 
-        return Package{ .allocator = allocator, .json = json, .packageFingerprint = fingerprint, .packageName = packageName, .packageParsed = parsePackage.?, .printer = printer };
+        try printer.append("Package version found!\n\n", .{}, .{ .color = 32 });
+
+        // Create hash
+        const hash = try UtilsHash.hashData(allocator, selected.?.url);
+
+        // Compute id
+        const id = try std.fmt.allocPrint(allocator, "{s}@{s}", .{
+            packageName,
+            targetVersion,
+        });
+
+        return Package{
+            .allocator = allocator,
+            .json = json,
+            .packageName = packageName,
+            .packageVersion = targetVersion,
+            .packageHash = hash,
+            .package = selected.?,
+            .printer = printer,
+            .id = id,
+        };
     }
 
-    pub fn deinit(self: *Package) void {
-        self.packageParsed.deinit();
-    }
+    pub fn deinit(_: *Package) void {}
 
     fn getPackageNames(self: *Package) !std.ArrayList([]const u8) {
+        if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_ZEP_MANIFEST)) {
+            var tmp = try std.fs.cwd().createFile(Constants.ROOT_ZEP_ZEP_MANIFEST, .{});
+            defer tmp.close();
+            try self.json.writePretty(Constants.ROOT_ZEP_ZEP_MANIFEST, Structs.ZepManifest{
+                .path = "",
+                .version = "",
+            });
+        }
+
         const manifestTarget = Constants.ROOT_ZEP_ZEP_MANIFEST;
         const openManifest = try UtilsFs.openFile(manifestTarget);
         defer openManifest.close();
@@ -111,7 +179,7 @@ pub const Package = struct {
             customPackageNames.deinit();
         }
 
-        try self.printer.append(try customPackageNames.toOwnedSlice());
+        try self.printer.append(try customPackageNames.toOwnedSlice(), .{}, .{});
         var customSuggestions = std.ArrayList([]const u8).init(self.allocator);
         defer customSuggestions.deinit();
         for (customPackageNames.items) |pn| {
@@ -124,227 +192,171 @@ pub const Package = struct {
             }
         }
 
-        if (Locales.VERBOSITY_MODE >= 1) {
-            if (localSuggestions.items.len == 0 and customSuggestions.items.len == 0) {
-                const noPkg = try std.fmt.allocPrint(self.printer.allocator, "(404) No package named '{s}' found.\nCheck for typos!\n", .{self.packageName});
-                try self.printer.append(noPkg);
-                return null;
-            }
-            const noPkg = try std.fmt.allocPrint(self.printer.allocator, "(404) No package named '{s}' found.\nDid you mean:\n", .{self.packageName});
-            try self.printer.append(noPkg);
-            for (localSuggestions.items) |s| {
-                const pkg = try std.fmt.allocPrint(self.printer.allocator, "- {s} (local)\n", .{s});
-                try self.printer.append(pkg);
-            }
-            try self.printer.append("\n");
-            for (customSuggestions.items) |s| {
-                const pkg = try std.fmt.allocPrint(self.printer.allocator, "- {s} (custom)\n", .{s});
-                try self.printer.append(pkg);
-            }
-            try self.printer.append("\n");
+        if (localSuggestions.items.len == 0 and customSuggestions.items.len == 0) {
+            const noPkg = try std.fmt.allocPrint(self.printer.allocator, "(404) No package named '{s}' found.\nCheck for typos!\n", .{self.packageName});
+            try self.printer.append(noPkg, .{}, .{});
+            return null;
         }
+        const noPkg = try std.fmt.allocPrint(self.printer.allocator, "(404) No package named '{s}' found.\nDid you mean:\n", .{self.packageName});
+        try self.printer.append(noPkg, .{}, .{});
+        for (localSuggestions.items) |s| {
+            const pkg = try std.fmt.allocPrint(self.printer.allocator, "- {s} (local)\n", .{s});
+            try self.printer.append(pkg, .{}, .{});
+        }
+        try self.printer.append("\n", .{}, .{});
+        for (customSuggestions.items) |s| {
+            const pkg = try std.fmt.allocPrint(self.printer.allocator, "- {s} (custom)\n", .{s});
+            try self.printer.append(pkg, .{}, .{});
+        }
+        try self.printer.append("\n", .{}, .{});
 
         return null;
     }
 
-    fn setFingerprint(self: *Package) !void {
-        if (!try UtilsFs.checkFileExists(Constants.ROOT_ZEP_FINGERPRINTS_FILE)) {
-            _ = try std.fs.cwd().createFile(Constants.ROOT_ZEP_FINGERPRINTS_FILE, .{});
-        }
+    // --- PACKAGE-FILES ---
 
-        var file = try std.fs.cwd().openFile(Constants.ROOT_ZEP_FINGERPRINTS_FILE, .{ .mode = .read_write });
-        defer file.close();
+    pub fn manifestAdd(self: *Package, pkg: *Structs.PackageJsonStruct) !void {
+        pkg.packages = try filterOut(
+            self.allocator,
+            pkg.packages,
+            self.packageName,
+            []const u8,
+            struct {
+                fn match(a: []const u8, b: []const u8) bool {
+                    return std.mem.startsWith(u8, a, b); // first remove the previous package Name
+                }
+            }.match,
+        );
 
-        const entry = try std.fmt.allocPrint(self.allocator, "{s}:{s}\n", .{ self.packageName, self.packageFingerprint });
-        defer self.allocator.free(entry);
+        pkg.packages = try appendUnique(
+            []const u8,
+            pkg.packages,
+            self.id,
+            self.allocator,
+            struct {
+                fn match(a: []const u8, b: []const u8) bool {
+                    return std.mem.startsWith(u8, a, b);
+                }
+            }.match,
+        );
 
-        _ = try file.seekTo(try file.getEndPos());
-        _ = try file.write(entry);
+        try self.json.writePretty(Constants.ZEP_PACKAGE_FILE, pkg);
     }
 
-    pub fn getFingerprint(self: *Package) !?[]u8 {
-        var file = try UtilsFs.openCFile(Constants.ROOT_ZEP_FINGERPRINTS_FILE);
-        defer file.close();
+    pub fn manifestRemove(self: *Package, pkg: *Structs.PackageJsonStruct) !void {
+        pkg.packages = try filterOut(
+            self.allocator,
+            pkg.packages,
+            self.id,
+            []const u8,
+            struct {
+                fn match(item: []const u8, ctx: []const u8) bool {
+                    return std.mem.startsWith(u8, item, ctx);
+                }
+            }.match,
+        );
 
-        const reader = file.reader();
-        while (try reader.readUntilDelimiterOrEofAlloc(self.allocator, '\n', 1028 * 1028)) |line| {
-            defer self.allocator.free(line);
-            var it = std.mem.splitScalar(u8, line, ':');
-            if (std.mem.eql(u8, it.first(), self.packageName)) {
-                const cHash = it.next() orelse return "";
-                return try self.allocator.dupe(u8, cHash);
-            }
-        }
-        return null;
+        try self.json.writePretty(Constants.ZEP_PACKAGE_FILE, pkg);
     }
 
-    pub fn delFingerprint(self: *Package) !void {
-        var file = try std.fs.cwd().openFile(Constants.ROOT_ZEP_FINGERPRINTS_FILE, .{ .mode = .read_write });
-        defer file.close();
-
-        const reader = file.reader();
-        var remaining = std.ArrayList([]u8).init(self.allocator);
-        defer remaining.deinit();
-
-        while (try reader.readUntilDelimiterOrEofAlloc(self.allocator, '\n', 1028 * 1028)) |line| {
-            var it = std.mem.splitScalar(u8, line, ':');
-            if (!std.mem.eql(u8, it.first(), self.packageName)) {
-                try remaining.append(line);
-            } else {
-                self.allocator.free(line);
-            }
-        }
-
-        const tmpPath = "fingerprint.tmp";
-        var tmpFile = try std.fs.cwd().createFile(tmpPath, .{ .truncate = true });
-        defer tmpFile.close();
-
-        for (remaining.items) |line| {
-            _ = try tmpFile.write(line);
-            _ = try tmpFile.write("\n");
-            self.allocator.free(line);
-        }
-
-        try std.fs.cwd().deleteFile(Constants.ROOT_ZEP_FINGERPRINTS_FILE);
-        try std.fs.cwd().rename(tmpPath, Constants.ROOT_ZEP_FINGERPRINTS_FILE);
-    }
-
-    fn compareFingerprint(self: *Package) !bool {
-        if (try self.getFingerprint()) |existing| {
-            defer self.allocator.free(existing);
-            if (std.mem.eql(u8, existing, self.packageFingerprint)) {
-                if (Locales.VERBOSITY_MODE >= 1)
-                    try self.printer.append(" > FINGERPRINT ALREADY EXISTS!\n");
-                return true;
-            }
-            try self.delFingerprint();
-            if (Locales.VERBOSITY_MODE >= 1)
-                try self.printer.append(" > DELETED PREVIOUS FINGERPRINT\n");
-        }
-        return false;
-    }
-
-    pub fn checkFingerprint(self: *Package) !bool {
-        if (try self.compareFingerprint()) return true;
-        try self.setFingerprint();
-        if (Locales.VERBOSITY_MODE >= 1)
-            try self.printer.append(" > FINGERPRINT SET\n\n");
-
-        return false;
-    }
-
-    // ----
-
-    fn updatePkgFile(self: *Package, pkg: *Structs.PackageJsonStruct) !void {
-        const str = try std.json.stringifyAlloc(self.allocator, pkg, .{ .whitespace = .indent_2 });
-        try self.writePkg(str);
-    }
-
-    fn updateLockFile(self: *Package, lock: *Structs.PackageLockStruct) !void {
-        const str = try std.json.stringifyAlloc(self.allocator, lock, .{ .whitespace = .indent_2 });
-        try self.writeLock(str);
-    }
-
-    fn writePkg(_: *Package, pkgString: []const u8) !void {
-        _ = std.fs.cwd().createFile(Constants.ZEP_PACKAGE_FILE, .{}) catch |err| switch (err) {
-            error.PathAlreadyExists => {},
-            else => return err,
+    pub fn lockAdd(self: *Package, lock: *Structs.PackageLockStruct) !void {
+        const new_entry = Structs.LockPackageStruct{
+            .name = self.id,
+            .hash = self.packageHash,
+            .source = self.package.url,
+            .zigVersion = self.package.zigVersion,
+            .rootFile = self.package.rootFile,
         };
-        const pFile = try std.fs.cwd().openFile(Constants.ZEP_PACKAGE_FILE, std.fs.File.OpenFlags{ .mode = .read_write });
-        _ = try pFile.write(pkgString);
+
+        lock.packages = try filterOut(
+            self.allocator,
+            lock.packages,
+            self.packageName,
+            Structs.LockPackageStruct,
+            struct {
+                fn match(item: Structs.LockPackageStruct, ctx: []const u8) bool {
+                    return std.mem.startsWith(u8, item.name, ctx);
+                }
+            }.match,
+        );
+
+        lock.packages = try appendUnique(
+            Structs.LockPackageStruct,
+            lock.packages,
+            new_entry,
+            self.allocator,
+            struct {
+                fn match(item: Structs.LockPackageStruct, ctx: Structs.LockPackageStruct) bool {
+                    return std.mem.startsWith(u8, item.name, ctx.name);
+                }
+            }.match,
+        );
+
+        var packageJson = try UtilsManifest.readManifest(Structs.PackageJsonStruct, self.allocator, Constants.ZEP_PACKAGE_FILE);
+        defer packageJson.deinit();
+        lock.root = packageJson.value;
+
+        try self.json.writePretty(Constants.ZEP_LOCK_PACKAGE_FILE, lock);
     }
 
-    fn writeLock(_: *Package, lockString: []const u8) !void {
-        _ = std.fs.cwd().createFile(Constants.ZEP_LOCK_PACKAGE_FILE, .{}) catch |err| switch (err) {
-            error.PathAlreadyExists => {},
-            else => return err,
-        };
-        const lFile = try std.fs.cwd().openFile(Constants.ZEP_LOCK_PACKAGE_FILE, std.fs.File.OpenFlags{ .mode = .read_write });
-        _ = try lFile.write(lockString);
-    }
+    pub fn lockRemove(self: *Package, lock: *Structs.PackageLockStruct) !void {
+        lock.packages = try filterOut(
+            self.allocator,
+            lock.packages,
+            self.packageName,
+            Structs.LockPackageStruct,
+            struct {
+                fn match(item: Structs.LockPackageStruct, ctx: []const u8) bool {
+                    return std.mem.startsWith(u8, item.name, ctx);
+                }
+            }.match,
+        );
 
-    pub fn pkgAppendPackage(self: *Package, pkg: *Structs.PackageJsonStruct) !void {
-        var list = std.ArrayList([]const u8).init(self.allocator);
-        defer list.deinit();
+        var packageJson = try UtilsManifest.readManifest(Structs.PackageJsonStruct, self.allocator, Constants.ZEP_PACKAGE_FILE);
+        defer packageJson.deinit();
+        lock.root = packageJson.value;
 
-        for (pkg.packages) |p| {
-            try list.append(p);
-            if (std.mem.eql(u8, p, self.packageName))
-                return;
-        }
-
-        try list.append(self.packageName);
-        pkg.packages = list.items;
-        try self.updatePkgFile(pkg);
-    }
-
-    pub fn pkgRemovePackage(self: *Package, pkg: *Structs.PackageJsonStruct) !void {
-        var list = std.ArrayList([]const u8).init(self.allocator);
-        defer list.deinit();
-
-        for (pkg.packages) |p| {
-            if (!std.mem.eql(u8, p, self.packageName))
-                try list.append(p);
-        }
-
-        pkg.packages = list.items;
-        try self.updatePkgFile(pkg);
-    }
-
-    pub fn lockAppendPackage(self: *Package, lock: *Structs.PackageLockStruct) !void {
-        var list = std.ArrayList(Structs.LockPackageStruct).init(self.allocator);
-        defer list.deinit();
-
-        for (lock.packages) |p| {
-            try list.append(p);
-            if (std.mem.eql(u8, p.name, self.packageName))
-                return;
-        }
-
-        try list.append(.{
-            .name = self.packageName,
-            .fingerprint = self.packageFingerprint,
-            .author = self.packageParsed.value.author,
-            .source = self.packageParsed.value.git,
-        });
-
-        const pkg = try self.json.parsePkgJson();
-        defer {
-            if (pkg) |p| {
-                p.deinit();
-            }
-        }
-        if (pkg) |p| {
-            lock.root = p.value;
-        }
-
-        lock.packages = list.items;
-        try self.updateLockFile(lock);
-    }
-
-    pub fn lockRemovePackage(self: *Package, lock: *Structs.PackageLockStruct) !void {
-        var list = std.ArrayList(Structs.LockPackageStruct).init(self.allocator);
-        defer list.deinit();
-
-        for (lock.packages) |p| {
-            if (!std.mem.eql(u8, p.name, self.packageName))
-                try list.append(p);
-        }
-
-        const pkg = try self.json.parsePkgJson();
-        defer {
-            if (pkg) |p| {
-                p.deinit();
-            }
-        }
-        if (pkg) |p| {
-            lock.root = p.value;
-        }
-
-        lock.packages = list.items;
-        try self.updateLockFile(lock);
+        try self.json.writePretty(Constants.ZEP_LOCK_PACKAGE_FILE, lock);
     }
 };
+
+fn filterOut(
+    allocator: std.mem.Allocator,
+    list: anytype,
+    filter: []const u8,
+    comptime T: type,
+    matchFn: fn (a: T, b: []const u8) bool,
+) ![]T {
+    var out = std.ArrayList(T).init(allocator);
+    defer out.deinit();
+
+    for (list) |item| {
+        if (!matchFn(item, filter))
+            try out.append(item);
+    }
+
+    return out.toOwnedSlice();
+}
+
+fn appendUnique(
+    comptime T: type,
+    list: []const T,
+    new_item: T,
+    allocator: std.mem.Allocator,
+    matchFn: fn (a: T, b: T) bool,
+) ![]T {
+    var arr = std.ArrayList(T).init(allocator);
+    defer arr.deinit();
+
+    for (list) |item| {
+        try arr.append(item);
+        if (matchFn(item, new_item))
+            return arr.toOwnedSlice();
+    }
+
+    try arr.append(new_item);
+    return arr.toOwnedSlice();
+}
 
 fn absDiff(x: usize, y: usize) usize {
     return @as(usize, @abs(@as(i64, @intCast(x)) - @as(i64, @intCast(y))));
@@ -358,12 +370,4 @@ fn hammingDistance(s1: []const u8, s2: []const u8) usize {
         if (s1[i] != s2[i]) dist += 1;
     }
     return dist;
-}
-
-fn hashData(data: Structs.PackageStruct) ![]u8 {
-    const allocator = std.heap.page_allocator;
-    const jsonData = try std.json.stringifyAlloc(allocator, data, .{});
-    defer allocator.free(jsonData);
-    const hash = std.hash.murmur.Murmur2_64.hash(jsonData);
-    return try std.fmt.allocPrint(allocator, "{d}", .{hash});
 }

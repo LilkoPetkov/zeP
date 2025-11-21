@@ -1,12 +1,12 @@
 const std = @import("std");
-const Manifest = @import("lib/manifest.zig");
-// const Path = @import("lib/path.zig");
+const Link = @import("lib/link.zig");
 
 const Structs = @import("structs");
 const Constants = @import("constants");
 const Utils = @import("utils");
 const UtilsPrinter = Utils.UtilsPrinter;
 const UtilsFs = Utils.UtilsFs;
+const UtilsManifest = Utils.UtilsManifest;
 
 /// Handles switching between installed Zep versions
 pub const ZepSwitcher = struct {
@@ -33,14 +33,26 @@ pub const ZepSwitcher = struct {
     // ------------------------
     pub fn switchVersion(self: *ZepSwitcher, version: []const u8) !void {
         // Update manifest with new version
-        try self.printer.append("Modifying Manifest...\n");
-        try Manifest.modifyManifest(version);
+        try self.printer.append("Modifying Manifest...\n", .{}, .{});
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}/", .{ Constants.ROOT_ZEP_ZEP_FOLDER, version });
+        try UtilsManifest.writeManifest(
+            Structs.ZepManifest,
+            self.allocator,
+            Constants.ROOT_ZEP_ZEP_MANIFEST,
+            Structs.ZepManifest{
+                .version = version,
+                .path = path,
+            },
+        );
+
         self.printer.pop(1); // Remove temporary log
-        try self.printer.append("Manifest up to date!\n");
+        try self.printer.append("Manifest up to date!\n", .{}, .{ .color = 32 });
 
         // Update system PATH to point to new version
-        try self.printer.append("Switching to installed version...\n");
+        try self.printer.append("Switching to installed version...\n", .{}, .{});
+        try Link.updateLink();
         self.printer.pop(1); // Remove temporary log
-        try self.printer.append("Switched to installed version successfully!\n");
+        try self.printer.append("Switched to installed version successfully!\n", .{}, .{ .color = 32 });
     }
 };

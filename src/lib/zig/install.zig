@@ -1,13 +1,14 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Manifest = @import("lib/manifest.zig");
 const Link = @import("lib/link.zig");
 
+const Structs = @import("structs");
 const Constants = @import("constants");
 const Utils = @import("utils");
 const UtilsFs = Utils.UtilsFs;
 const UtilsPrinter = Utils.UtilsPrinter;
+const UtilsManifest = Utils.UtilsManifest;
 
 /// Installer for Zig versions
 pub const ZigInstaller = struct {
@@ -49,14 +50,14 @@ pub const ZigInstaller = struct {
         if (!try UtilsFs.checkFileExists(targetFile)) {
             try self.downloadFile(tarball, targetFile);
         } else {
-            try self.printer.append("Data found in cache!\n");
+            try self.printer.append("Data found in cache!\n", .{}, .{});
         }
 
         // Open the downloaded file
         var compressedFile = try UtilsFs.openCFile(targetFile);
         defer compressedFile.close();
 
-        try self.printer.append("Extracting data...\n");
+        try self.printer.append("Extracting data...\n", .{}, .{});
 
         const decompressedDir = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version });
         if (builtin.os.tag == .windows) {
@@ -70,7 +71,7 @@ pub const ZigInstaller = struct {
     // Download file via HTTP
     // ------------------------
     fn downloadFile(self: *ZigInstaller, uriStr: []const u8, outPath: []const u8) !void {
-        try self.printer.append("Parsing URI...\n");
+        try self.printer.append("Parsing URI...\n", .{}, .{});
         const uri = try std.Uri.parse(uriStr);
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
@@ -79,17 +80,16 @@ pub const ZigInstaller = struct {
         var req = try client.open(.GET, uri, .{ .server_header_buffer = &buf });
         defer req.deinit();
 
-        try self.printer.append("Sending request...\n");
+        try self.printer.append("Sending request...\n", .{}, .{});
         try req.send();
         try req.finish();
-        try self.printer.append("Waiting for response...\n");
+        try self.printer.append("Waiting for response...\n", .{}, .{});
         try req.wait();
 
         var reader = req.reader();
         var outFile = try UtilsFs.openCFile(outPath);
         defer outFile.close();
 
-        try self.printer.append("\nWriting temp file");
         var bufferedWriter = std.io.bufferedWriter(outFile.writer());
         defer {
             bufferedWriter.flush() catch {
@@ -111,12 +111,12 @@ pub const ZigInstaller = struct {
                     self.printer.pop(3);
                     dotCounter = 0;
                 }
-                try self.printer.append(".");
+                try self.printer.append(".", .{}, .{});
                 dotCounter += 1;
                 lineCounter = 0;
             }
         }
-        try self.printer.append("\n");
+        try self.printer.append("\n", .{}, .{});
     }
 
     // ------------------------
@@ -125,7 +125,7 @@ pub const ZigInstaller = struct {
     fn decompressWindows(self: *ZigInstaller, skStream: std.fs.File.SeekableStream, decompressedPath: []const u8, target: []const u8) !void {
         const newTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, target });
         if (try UtilsFs.checkDirExists(newTarget)) {
-            try self.printer.append("Already installed!\n");
+            try self.printer.append("Already installed!\n", .{}, .{});
             return;
         }
 
@@ -135,7 +135,6 @@ pub const ZigInstaller = struct {
         var iter = try std.zip.Iterator(@TypeOf(skStream)).init(skStream);
         var filenameBuf: [std.fs.max_path_bytes]u8 = undefined;
         var selectedFile: []u8 = undefined;
-
         while (try iter.next()) |entry| {
             const crc = try entry.extract(skStream, .{}, &filenameBuf, dir);
             if (crc != entry.crc32) continue;
@@ -145,9 +144,7 @@ pub const ZigInstaller = struct {
 
         const extractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, selectedFile });
         try std.zip.extract(dir, skStream, .{});
-        try self.printer.append("Extracted to ");
-        try self.printer.append(decompressedPath);
-        try self.printer.append("!\n");
+        try self.printer.append("Extracted to {s}!\n", .{decompressedPath}, .{});
         try std.fs.cwd().rename(extractTarget, newTarget);
     }
 
@@ -170,13 +167,13 @@ pub const ZigInstaller = struct {
 
         const newTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, target });
         if (try UtilsFs.checkDirExists(newTarget)) {
-            try self.printer.append("Already installed!\n");
+            try self.printer.append("Already installed!\n", .{}, .{});
             return;
         }
 
         const extractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, extractedName });
         try std.tar.pipeToFileSystem(dir, decompressed.reader(), .{ .mode_mode = .ignore });
-        try self.printer.append("Extracted!\n\n");
+        try self.printer.append("Extracted!\n\n", .{}, .{});
         try std.fs.cwd().rename(extractTarget, newTarget);
     }
 
@@ -186,14 +183,25 @@ pub const ZigInstaller = struct {
     pub fn install(self: *ZigInstaller, name: []const u8, tarball: []const u8, version: []const u8, target: []const u8) !void {
         try self.fetchData(name, tarball, version, target);
 
-        try self.printer.append("Modifying Manifest...\n");
-        try Manifest.modifyManifest(name, version, target);
-        self.printer.pop(1);
-        try self.printer.append("Manifest Up to Date!\n");
+        try self.printer.append("Modifying Manifest...\n", .{}, .{});
 
-        try self.printer.append("Switching to installed version...\n");
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, target });
+        try UtilsManifest.writeManifest(
+            Structs.ZigManifest,
+            self.allocator,
+            Constants.ROOT_ZEP_ZIG_MANIFEST,
+            Structs.ZigManifest{
+                .name = name,
+                .path = path,
+            },
+        );
+
+        self.printer.pop(1);
+        try self.printer.append("Manifest Up to Date!\n", .{}, .{});
+
+        try self.printer.append("Switching to installed version...\n", .{}, .{});
         try Link.updateLink();
         self.printer.pop(1);
-        try self.printer.append("Switched to installed version!\n");
+        try self.printer.append("Switched to installed version!\n", .{}, .{});
     }
 };

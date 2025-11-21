@@ -52,8 +52,8 @@ pub const Compressor = struct {
         }
     }
 
-    pub fn compress(self: *Compressor, targetFolder: []const u8, tarPath: []const u8) !void {
-        if (!try UtilsFs.checkDirExists(targetFolder)) return;
+    pub fn compress(self: *Compressor, targetFolder: []const u8, tarPath: []const u8) !bool {
+        if (!try UtilsFs.checkDirExists(targetFolder)) return false;
         if (!try UtilsFs.checkDirExists(Constants.ROOT_ZEP_ZEPPED_FOLDER)) {
             try std.fs.cwd().makeDir(Constants.ROOT_ZEP_ZEPPED_FOLDER);
         }
@@ -65,10 +65,13 @@ pub const Compressor = struct {
         defer tmpFile.close();
         var outFile = try UtilsFs.openFile(tarPath);
         defer outFile.close();
-        try std.compress.zlib.compress(tmpFile.reader(), outFile.writer(), .{});
-        std.fs.cwd().deleteFile(tmpTarPath) catch {
-            @panic("Failed to delete temporary compression file");
+        std.compress.zlib.compress(tmpFile.reader(), outFile.writer(), .{}) catch {
+            return false;
         };
+        std.fs.cwd().deleteFile(tmpTarPath) catch {
+            @panic("failed to delete tmp file!");
+        };
+        return true;
     }
 
     pub fn decompress(self: *Compressor, zepPath: []const u8, extractPath: []const u8) !bool {
