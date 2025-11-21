@@ -56,6 +56,11 @@ pub const ZigSwitcher = struct {
 
         // Update zep.json and zep.lock
         blk: {
+            // all need to match for it to be in a zeP project
+            if (!try UtilsFs.checkFileExists(Constants.ZEP_LOCK_PACKAGE_FILE) or
+                !try UtilsFs.checkFileExists(Constants.ZEP_PACKAGE_FILE) or
+                !try UtilsFs.checkDirExists(Constants.ZEP_FOLDER)) break :blk;
+
             var pkg = try UtilsManifest.readManifest(Structs.PackageJsonStruct, self.allocator, Constants.ZEP_PACKAGE_FILE);
             defer pkg.deinit();
             var lock = try UtilsManifest.readManifest(Structs.PackageLockStruct, self.allocator, Constants.ZEP_LOCK_PACKAGE_FILE);

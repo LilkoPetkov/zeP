@@ -34,8 +34,8 @@ default_setup()
 
         JSON_STRING="{
         \"version\":\"${TARGET}\",
-        \"path\":\"${ZEP_VERSION_DIR}\",
-        }"
+        \"path\":\"${ZEP_VERSION_DIR}\"
+}"
 
         echo "$JSON_STRING" > $MANIFEST_ZEP
 }

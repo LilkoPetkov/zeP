@@ -83,7 +83,7 @@ pub const ZigInstaller = struct {
         try self.printer.append("Sending request...\n", .{}, .{});
         try req.send();
         try req.finish();
-        try self.printer.append("Waiting for response...\n", .{}, .{});
+        try self.printer.append("Waiting for response", .{}, .{});
         try req.wait();
 
         var reader = req.reader();
