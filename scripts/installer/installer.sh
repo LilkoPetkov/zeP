@@ -25,7 +25,7 @@ mkdir -p "$TEMP_DIR"
 # Clear everything FIRST
 ###
 clean_up() {
-    rm -rf "$ZEP_DIR"
+    rm -rf "$ZEP_VERSION_DIR"
     rm -f "$ZEP_EXE"
     rm -f "$ZIG_EXE"
 }
