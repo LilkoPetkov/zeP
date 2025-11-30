@@ -3,20 +3,19 @@ const Link = @import("lib/link.zig");
 
 const Structs = @import("structs");
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsFs = Utils.UtilsFs;
-const UtilsManifest = Utils.UtilsManifest;
+
+const Printer = @import("cli").Printer;
+const Manifest = @import("core").Manifest;
 
 /// Handles switching between installed Zep versions
 pub const ZepSwitcher = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZepSwitcher
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !ZepSwitcher {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ZepSwitcher {
         return ZepSwitcher{ .allocator = allocator, .printer = printer };
     }
 
@@ -34,12 +33,16 @@ pub const ZepSwitcher = struct {
     pub fn switchVersion(self: *ZepSwitcher, version: []const u8) !void {
         // Update manifest with new version
         try self.printer.append("Modifying Manifest...\n", .{}, .{});
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}/", .{ Constants.ROOT_ZEP_ZEP_FOLDER, version });
-        UtilsManifest.writeManifest(
-            Structs.ZepManifest,
+
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}/", .{ paths.zep_root, version });
+        Manifest.writeManifest(
+            Structs.Manifests.ZepManifest,
             self.allocator,
-            Constants.ROOT_ZEP_ZEP_MANIFEST,
-            Structs.ZepManifest{
+            paths.zep_manifest,
+            Structs.Manifests.ZepManifest{
                 .version = version,
                 .path = path,
             },

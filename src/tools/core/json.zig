@@ -3,12 +3,11 @@ const std = @import("std");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
-const UtilsFs = @import("fs.zig");
-const UtilsPackage = @import("package.zig");
-const UtilsManifest = @import("manifest.zig");
+const Fs = @import("io").Fs;
+const Manifest = @import("manifest.zig");
 
-const MAX_JSON_SIZE = 10 * 1024 * 1024; // 10 MB
-
+/// Simple Json parsing and
+/// writing into files.
 pub const Json = struct {
     allocator: std.mem.Allocator,
 
@@ -22,7 +21,7 @@ pub const Json = struct {
         path: []const u8,
         max: usize,
     ) !?std.json.Parsed(T) {
-        if (!UtilsFs.checkFileExists(path))
+        if (!Fs.existsFile(path))
             return null;
 
         var file = try std.fs.cwd().openFile(path, .{});
@@ -50,8 +49,10 @@ pub const Json = struct {
         _ = try file.write(str);
     }
 
-    pub fn parsePackage(self: *Json, packageName: []const u8) !?std.json.Parsed(Structs.PackageStruct) {
-        const manifest = try UtilsManifest.readManifest(Structs.ZepManifest, self.allocator, Constants.ROOT_ZEP_ZEP_MANIFEST);
+    pub fn parsePackage(self: *Json, package_name: []const u8) !?std.json.Parsed(Structs.Packages.PackageStruct) {
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+        const manifest = try Manifest.readManifest(Structs.Manifests.ZepManifest, self.allocator, paths.zep_manifest);
         defer manifest.deinit();
         if (manifest.value.path.len == 0) {
             std.debug.print("\nManifest path is not defined! Use\n $ zep zep switch <current-version>\nOr re-install to fix!\n", .{});
@@ -59,9 +60,13 @@ pub const Json = struct {
             return null;
         }
 
-        const localPath = try std.fmt.allocPrint(self.allocator, "{s}/packages/{s}.json", .{ manifest.value.path, packageName });
-        defer self.allocator.free(localPath);
+        var local_path = try std.fmt.allocPrint(self.allocator, "{s}/packages/{s}.json", .{ manifest.value.path, package_name });
+        defer self.allocator.free(local_path);
+        if (!Fs.existsFile(local_path)) {
+            local_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ paths.custom, package_name });
+            if (!Fs.existsFile(local_path)) return error.PackageNotFound;
+        }
 
-        return try self.parseJsonFromFile(Structs.PackageStruct, localPath, MAX_JSON_SIZE);
+        return try self.parseJsonFromFile(Structs.Packages.PackageStruct, local_path, Constants.Default.mb * 10);
     }
 };

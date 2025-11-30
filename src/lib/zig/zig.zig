@@ -1,12 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const MAX_JSON_SIZE = 1028 * 1028 * 50; // Maximum size for JSON download
-
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
 
 const ZigInstaller = @import("install.zig");
 const ZigUninstaller = @import("uninstall.zig");
@@ -28,7 +26,7 @@ pub const Version = struct {
 // ------------------------
 pub const Zig = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     installer: ZigInstaller.ZigInstaller,
     uninstaller: ZigUninstaller.ZigUninstaller,
@@ -38,7 +36,7 @@ pub const Zig = struct {
     // ------------------------
     // Initialize all submodules
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !Zig {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !Zig {
         const installer = try ZigInstaller.ZigInstaller.init(allocator, printer);
         const uninstaller = try ZigUninstaller.ZigUninstaller.init(allocator, printer);
         const lister = try ZigLister.ZigLister.init(allocator, printer);
@@ -68,18 +66,22 @@ pub const Zig = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var buffer: [4096]u8 = undefined;
-        const uri = try std.Uri.parse(Constants.ZIG_V_JSON);
-        var req = try client.open(.GET, uri, .{ .server_header_buffer = &buffer });
+        const uri = try std.Uri.parse(Constants.Default.zig_download_index);
+
+        var server_buf: [4096 * 4]u8 = undefined;
+        var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_buf });
         defer req.deinit();
 
+        try self.printer.append("Sending request...\n", .{}, .{});
         try req.send();
         try req.finish();
+        try self.printer.append("Waiting for response...\n", .{}, .{});
         try req.wait();
 
         var reader = req.reader();
-        const body = try reader.readAllAlloc(self.allocator, MAX_JSON_SIZE);
-        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, body, .{});
+        const data = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 10);
+        defer self.allocator.free(data);
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, data, .{});
         const obj = parsed.value.object;
 
         if (std.mem.eql(u8, targetVersion, "latest") or targetVersion.len == 0) {
@@ -93,42 +95,45 @@ pub const Zig = struct {
     // ------------------------
     pub fn getVersion(self: *Zig, targetVersion: []const u8, target: []const u8) !Version {
         try self.printer.append("Getting target version...\n", .{}, .{});
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
 
-        const versionData = self.fetchVersion(targetVersion) catch {
+        const version_data = self.fetchVersion(targetVersion) catch {
             try self.printer.append("Version not found...\n\n", .{}, .{});
             std.process.exit(0);
         };
 
-        const obj = versionData.object;
-        const urlVal = obj.get(target);
-        if (urlVal == null) {
+        const obj = version_data.object;
+        const url_value = obj.get(target) orelse {
             try self.printer.append("Target not found...\n\n", .{}, .{});
             return Version{ .name = "", .path = "", .tarball = "", .version = "" };
-        }
+        };
 
-        const tarballVal = urlVal.?.object.get("tarball");
-        const tarball = tarballVal.?.string;
-
-        var resolvedVersion: []const u8 = targetVersion;
+        const tarball_value = url_value.object.get("tarball") orelse {
+            try self.printer.append("Tarball not found...\n\n", .{}, .{});
+            return Version{ .name = "", .path = "", .tarball = "", .version = "" };
+        };
+        const tarball = tarball_value.string;
+        var resolved_version: []const u8 = targetVersion;
         if (obj.get("version")) |v| {
-            resolvedVersion = v.string;
+            resolved_version = v.string;
         }
 
         // Parse name from tarball URL
         const prefix = "https://ziglang.org/download/";
-        const skipLen = prefix.len + targetVersion.len + 1;
-        const name = if (builtin.os.tag == .windows) tarball[skipLen .. tarball.len - 4] else tarball[skipLen .. tarball.len - 7];
+        const skip_length = prefix.len + targetVersion.len + 1;
+        const name = if (builtin.os.tag == .windows) tarball[skip_length .. tarball.len - 4] else tarball[skip_length .. tarball.len - 7];
 
         const path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/d/{s}/{s}",
-            .{ Constants.ROOT_ZEP_ZIG_FOLDER, resolvedVersion, target },
+            .{ paths.zig_root, resolved_version, target },
         );
 
         return Version{
             .path = path,
             .name = name,
-            .version = resolvedVersion,
+            .version = resolved_version,
             .tarball = tarball,
         };
     }
@@ -141,7 +146,7 @@ pub const Zig = struct {
         const version = try self.getVersion(targetVersion, target);
         if (version.path.len == 0) return;
 
-        if (UtilsFs.checkDirExists(version.path)) {
+        if (Fs.existsDir(version.path)) {
             try self.printer.append("Zig version already installed.\n", .{}, .{});
             try self.printer.append("Use 'zeP zig switch x.x.x' to update.\n\n", .{}, .{});
             return;
@@ -158,7 +163,7 @@ pub const Zig = struct {
     pub fn uninstall(self: *Zig, targetVersion: []const u8, target: []const u8) !void {
         try self.printer.append("Uninstalling version: {s}\nWith target: {s}\n\n", .{ targetVersion, target }, .{});
         const version = try self.getVersion(targetVersion, target);
-        if (!UtilsFs.checkDirExists(version.path)) {
+        if (!Fs.existsDir(version.path)) {
             try self.printer.append("Zig version is not installed.\n\n", .{}, .{});
             return;
         }
@@ -175,7 +180,7 @@ pub const Zig = struct {
     pub fn switchVersion(self: *Zig, targetVersion: []const u8, target: []const u8) !void {
         try self.printer.append("Switching version: {s}\nWith target: {s}\n\n", .{ targetVersion, target }, .{});
         const version = try self.getVersion(targetVersion, target);
-        if (!UtilsFs.checkDirExists(version.path)) {
+        if (!Fs.existsDir(version.path)) {
             try self.printer.append("Zig version not installed.\n\n", .{}, .{});
             return;
         }

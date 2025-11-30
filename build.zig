@@ -14,32 +14,35 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
 
-    const localesMod = b.createModule(.{
-        .root_source_file = b.path("src/locales.zig"),
-    });
-    exe.root_module.addImport("locales", localesMod);
+    const localesMod = b.createModule(.{ .root_source_file = b.path("src/locales.zig") });
+    const constantsMod = b.createModule(.{ .root_source_file = b.path("src/constants/_index.zig") });
+    const structsMod = b.createModule(.{ .root_source_file = b.path("src/structs/_index.zig") });
 
-    const constantsMod = b.createModule(.{
-        .root_source_file = b.path("src/constants.zig"),
-    });
-    exe.root_module.addImport("constants", constantsMod);
-
-    const structsMod = b.createModule(.{
-        .root_source_file = b.path("src/structs.zig"),
-    });
-    exe.root_module.addImport("structs", structsMod);
-
-    const utilsMod = b.createModule(.{ .root_source_file = b.path("src/utils.zig"), .imports = &.{
+    const iosMod = b.createModule(.{ .root_source_file = b.path("src/tools/io/_index.zig"), .imports = &.{
+        std.Build.Module.Import{ .name = "constants", .module = constantsMod },
+    } });
+    const clisMod = b.createModule(.{ .root_source_file = b.path("src/tools/cli/_index.zig"), .imports = &.{
         std.Build.Module.Import{ .name = "structs", .module = structsMod },
         std.Build.Module.Import{ .name = "constants", .module = constantsMod },
         std.Build.Module.Import{ .name = "locales", .module = localesMod },
+        std.Build.Module.Import{ .name = "io", .module = iosMod },
     } });
-    exe.root_module.addImport("utils", utilsMod);
-    const libMod = b.createModule(.{
-        .root_source_file = b.path("src/lib.zig"),
-    });
-    exe.root_module.addImport("lib", libMod);
-    b.install_prefix = "C:/Users/Public/AppData/Local/zeP";
-    @import(".zep/inject.zig").injectExtraImports(b, exe);
+
+    const coresMod = b.createModule(.{ .root_source_file = b.path("src/tools/core/_index.zig"), .imports = &.{
+        std.Build.Module.Import{ .name = "structs", .module = structsMod },
+        std.Build.Module.Import{ .name = "locales", .module = localesMod },
+        std.Build.Module.Import{ .name = "constants", .module = constantsMod },
+        std.Build.Module.Import{ .name = "io", .module = iosMod },
+        std.Build.Module.Import{ .name = "cli", .module = clisMod },
+    } });
+
+    exe.root_module.addImport("locales", localesMod);
+    exe.root_module.addImport("constants", constantsMod);
+    exe.root_module.addImport("structs", structsMod);
+    exe.root_module.addImport("core", coresMod);
+    exe.root_module.addImport("io", iosMod);
+    exe.root_module.addImport("cli", clisMod);
+
+    @import(".zep/injector.zig").injectExtraImports(b, exe);
     b.installArtifact(exe);
 }

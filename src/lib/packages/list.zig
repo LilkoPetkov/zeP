@@ -4,50 +4,41 @@ const Locales = @import("locales");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
-const Utils = @import("utils");
-const UtilsJson = Utils.UtilsJson;
-const UtilsFs = Utils.UtilsFs;
-const UtilsCompression = Utils.UtilsCompression;
-const UtilsInjector = Utils.UtilsInjector;
-const UtilsPackage = Utils.UtilsPackage;
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsManifest = Utils.UtilsManifest;
+const Json = @import("core").Json.Json;
+const Package = @import("core").Package.Package;
+const Printer = @import("cli").Printer;
 
-const CachePackage = @import("lib/cachePackage.zig");
-const DownloadPackage = @import("lib/downloadPackage.zig");
 const Init = @import("init.zig");
 const Uninstaller = @import("uninstall.zig");
 
 pub const Lister = struct {
     allocator: std.mem.Allocator,
-    json: UtilsJson.Json,
-    printer: *UtilsPrinter.Printer,
-    packageName: []const u8,
+    json: Json,
+    printer: *Printer,
+    package_name: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer, packageName: []const u8) anyerror!Lister {
-        const json = try UtilsJson.Json.init(allocator);
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer, package_name: []const u8) anyerror!Lister {
+        const json = try Json.init(allocator);
 
-        return Lister{ .json = json, .allocator = allocator, .printer = printer, .packageName = packageName };
+        return Lister{ .json = json, .allocator = allocator, .printer = printer, .package_name = package_name };
     }
 
     pub fn list(self: *Lister) !void {
-        // Load package manifest
-        const parsedPkg = try self.json.parsePackage(self.packageName);
-        if (parsedPkg == null) {
+        const parsed_package = try self.json.parsePackage(self.package_name) orelse {
             try self.printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
             return;
-        }
-        defer parsedPkg.?.deinit();
+        };
+        defer parsed_package.deinit();
 
-        try self.printer.append("Package Found! - {s}.json\n\n", .{self.packageName}, .{ .color = 32 });
+        try self.printer.append("Package Found! - {s}.json\n\n", .{self.package_name}, .{ .color = 32 });
 
-        const versions = parsedPkg.?.value.versions;
+        const versions = parsed_package.value.versions;
         try self.printer.append("Available versions:\n", .{}, .{});
         if (versions.len == 0) {
             try self.printer.append("  NO VERSIONS FOUND!\n\n", .{}, .{ .color = 31 });
         } else {
             for (versions) |v| {
-                try self.printer.append("  > version: {s} (zig: {s})\n", .{ v.version, v.zigVersion }, .{});
+                try self.printer.append("  > version: {s} (zig: {s})\n", .{ v.version, v.zig_version }, .{});
             }
         }
 

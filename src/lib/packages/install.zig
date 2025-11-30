@@ -5,30 +5,28 @@ const Locales = @import("locales");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
-const Utils = @import("utils");
-const UtilsJson = Utils.UtilsJson;
-const UtilsFs = Utils.UtilsFs;
-const UtilsCompression = Utils.UtilsCompression;
-const UtilsInjector = Utils.UtilsInjector;
-const UtilsPackage = Utils.UtilsPackage;
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsManifest = Utils.UtilsManifest;
+const Fs = @import("io").Fs;
+const Json = @import("core").Json.Json;
+const Compressor = @import("core").Compression.Compressor;
+const Package = @import("core").Package.Package;
+const Injector = @import("core").Injector.Injector;
+const Printer = @import("cli").Printer;
+const Manifest = @import("core").Manifest;
 
-const CachePackage = @import("lib/cachePackage.zig");
-const DownloadPackage = @import("lib/downloadPackage.zig");
-const Init = @import("init.zig");
-const Uninstaller = @import("uninstall.zig");
+const Cacher = @import("lib/cache.zig").Cacher;
+const Downloader = @import("lib/download.zig").Downloader;
+const Uninstaller = @import("uninstall.zig").Uninstaller;
 
 pub const Installer = struct {
     allocator: std.mem.Allocator,
-    json: UtilsJson.Json,
-    package: UtilsPackage.Package,
-    downloader: DownloadPackage.Downloader,
-    cacher: CachePackage.Cacher,
-    printer: *UtilsPrinter.Printer,
+    json: Json,
+    package: Package,
+    downloader: Downloader,
+    cacher: Cacher,
+    printer: *Printer,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer, packageName: ?[]const u8, packageVersionTarget: ?[]const u8) !Installer {
-        if (packageName == null) {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer, package_name: ?[]const u8, package_version_target: ?[]const u8) !Installer {
+        if (package_name == null) {
             const previous_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
 
@@ -41,14 +39,14 @@ pub const Installer = struct {
             return .NoPackageSpecified;
         }
 
-        const package = try UtilsPackage.Package.init(allocator, packageName.?, packageVersionTarget, printer) orelse {
+        const package = try Package.init(allocator, package_name.?, package_version_target, printer) orelse {
             std.process.exit(0);
             return .PackageNotFound;
         };
 
-        const cacher = try CachePackage.Cacher.init(allocator, package, printer);
-        const downloader = try DownloadPackage.Downloader.init(allocator, package, cacher, printer);
-        const json = try UtilsJson.Json.init(allocator);
+        const cacher = try Cacher.init(allocator, package, printer);
+        const downloader = try Downloader.init(allocator, package, cacher, printer);
+        const json = try Json.init(allocator);
 
         return Installer{
             .json = json,
@@ -70,27 +68,29 @@ pub const Installer = struct {
         const package = self.package;
         const parsed = package.package;
 
-        const lock = try UtilsManifest.readManifest(Structs.PackageLockStruct, self.allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
+        const lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
         defer lock.deinit();
-        if (!std.mem.containsAtLeast(u8, parsed.zigVersion, 1, lock.value.root.zigVersion)) {
+        if (!std.mem.containsAtLeast(u8, parsed.zig_version, 1, lock.value.root.zig_version)) {
             try self.printer.append("WARNING: ", .{}, .{ .color = 31 });
             try self.printer.append("ZIG VERSIONS ARE NOT MATCHING!\n", .{}, .{ .color = 34 });
-            try self.printer.append("{s} Zig Version: {s}\n", .{ package.id, parsed.zigVersion }, .{});
-            try self.printer.append("Your Zig Version: {s}\n\n", .{lock.value.root.zigVersion}, .{});
+            try self.printer.append("{s} Zig Version: {s}\n", .{ package.id, parsed.zig_version }, .{});
+            try self.printer.append("Your Zig Version: {s}\n\n", .{lock.value.root.zig_version}, .{});
         }
 
         for (lock.value.packages) |lockPackage| {
-            if (std.mem.startsWith(u8, lockPackage.name, self.package.packageName)) {
+            if (std.mem.startsWith(u8, lockPackage.name, self.package.package_name)) {
                 if (std.mem.eql(u8, lockPackage.name, self.package.id)) {
                     try self.setPackage();
                     return error.AlreadyInstalled;
                 }
+
+                std.debug.print("MATCHED UNINSTALLING", .{});
                 const previous_verbosity = Locales.VERBOSITY_MODE;
                 Locales.VERBOSITY_MODE = 0;
 
-                var uninstaller = try Uninstaller.Uninstaller.init(
+                var uninstaller = try Uninstaller.init(
                     self.allocator,
-                    self.package.packageName,
+                    self.package.package_name,
                     self.printer,
                 );
 
@@ -103,17 +103,17 @@ pub const Installer = struct {
         try self.downloader.downloadPackage(parsed.url);
 
         try self.printer.append("\nChecking hash...\n", .{}, .{});
-        if (std.mem.eql(u8, package.packageHash, parsed.sha256sum)) {
+        if (std.mem.eql(u8, package.package_hash, parsed.sha256sum)) {
             try self.printer.append("HASH IDENTICAL!\n", .{}, .{});
         } else {
-            try self.package.deletePackage();
+            try self.package.deletePackage(true);
             try self.cacher.deletePackageFromCache();
             return error.HashMismatch;
         }
 
         try self.printer.append("\nChecking Caching...\n", .{}, .{});
-        const isPackageCached = try self.cacher.isPackageCached();
-        if (!isPackageCached) {
+        const is_package_cached = try self.cacher.isPackageCached();
+        if (!is_package_cached) {
             try self.printer.append("\nCaching...\n", .{}, .{});
 
             try self.cacher.cachePackage();
@@ -122,63 +122,65 @@ pub const Installer = struct {
         try self.printer.append("PACKAGE ALREADY CACHED! SKIPPING CACHING!\n\n", .{}, .{});
 
         try self.setPackage();
-        try self.printer.append("Successfully installed - {s}\n\n", .{package.packageName}, .{ .color = 32 });
+        try self.printer.append("Successfully installed - {s}\n\n", .{package.package_name}, .{ .color = 32 });
     }
 
     fn setPackage(self: *Installer) !void {
         try self.addPackageToJson();
         const package = self.package;
 
-        var injector = UtilsInjector.Injector.init(self.allocator, package.packageName, self.printer);
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        var injector = Injector.init(self.allocator, package.package_name, self.printer);
         try injector.initInjector();
 
         // symbolic link
-        const targetPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}@{s}", .{ Constants.ROOT_ZEP_PKG_FOLDER, package.packageName, package.packageVersion });
-        defer self.allocator.free(targetPath);
+        const target_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}@{s}", .{ paths.pkg_root, package.package_name, package.package_version });
+        defer self.allocator.free(target_path);
 
-        const linkPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.ZEP_FOLDER, package.packageName });
-        std.fs.cwd().deleteDir(linkPath) catch {};
-        std.fs.cwd().deleteFile(linkPath) catch {};
-        defer self.allocator.free(linkPath);
+        const relative_symbolic_link_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.Extras.package_files.zep_folder, package.package_name });
+        std.fs.cwd().deleteDir(relative_symbolic_link_path) catch {};
+        std.fs.cwd().deleteFile(relative_symbolic_link_path) catch {};
+        defer self.allocator.free(relative_symbolic_link_path);
 
         const cwd = try std.fs.cwd().realpathAlloc(self.allocator, ".");
         defer self.allocator.free(cwd);
 
-        const absLinkedPath = try std.fs.path.resolve(self.allocator, &[_][]const u8{ cwd, linkPath });
-        defer self.allocator.free(absLinkedPath);
-        try std.fs.cwd().symLink(targetPath, linkPath, .{ .is_directory = true });
-        UtilsManifest.addPathToManifest(
+        const absolute_symbolic_link_path = try std.fs.path.resolve(self.allocator, &[_][]const u8{ cwd, relative_symbolic_link_path });
+        defer self.allocator.free(absolute_symbolic_link_path);
+        try std.fs.cwd().symLink(target_path, relative_symbolic_link_path, .{ .is_directory = true });
+        Manifest.addPathToManifest(
             &self.json,
             self.package.id,
-            absLinkedPath,
+            absolute_symbolic_link_path,
         ) catch {
             try self.printer.append("Adding to manifest failed!\n", .{}, .{ .color = 31 });
         };
     }
 
     fn addPackageToJson(self: *Installer) !void {
-        var packageJson = try UtilsManifest.readManifest(Structs.PackageJsonStruct, self.allocator, Constants.ZEP_PACKAGE_FILE);
-        var lockJson = try UtilsManifest.readManifest(Structs.PackageLockStruct, self.allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
+        var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+        var lock_json = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
 
-        defer packageJson.deinit();
-        defer lockJson.deinit();
-        try self.package.manifestAdd(&packageJson.value);
-        try self.package.lockAdd(&lockJson.value);
+        defer package_json.deinit();
+        defer lock_json.deinit();
+        try self.package.manifestAdd(&package_json.value);
+        try self.package.lockAdd(&lock_json.value);
     }
 };
 
-fn installAll(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) anyerror!void {
-    var pkgJson = try UtilsManifest.readManifest(Structs.PackageJsonStruct, allocator, Constants.ZEP_PACKAGE_FILE);
+fn installAll(allocator: std.mem.Allocator, printer: *Printer) anyerror!void {
+    var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, allocator, Constants.Extras.package_files.manifest);
 
-    const pkgJsonValue = pkgJson.value;
-    defer pkgJson.deinit();
-    for (pkgJsonValue.packages) |packageId| {
-        try printer.append(" > Installing - {s}...\n", .{packageId}, .{ .verbosity = 0 });
+    defer package_json.deinit();
+    for (package_json.value.packages) |package_id| {
+        try printer.append(" > Installing - {s}...\n", .{package_id}, .{ .verbosity = 0 });
 
-        var packageSplit = std.mem.splitScalar(u8, packageId, '@');
-        const packageName = packageSplit.first();
-        const packageVersion = packageSplit.next();
-        var installer = try Installer.init(allocator, printer, packageName, packageVersion);
+        var package_split = std.mem.splitScalar(u8, package_id, '@');
+        const package_name = package_split.first();
+        const package_version = package_split.next();
+        var installer = try Installer.init(allocator, printer, package_name, package_version);
         installer.install() catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
@@ -186,7 +188,7 @@ fn installAll(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) anye
                     continue;
                 },
                 else => {
-                    try printer.append("  ! [ERROR] Failed to install - {s}...\n", .{packageId}, .{ .verbosity = 0 });
+                    try printer.append("  ! [ERROR] Failed to install - {s}...\n", .{package_id}, .{ .verbosity = 0 });
                 },
             }
         };

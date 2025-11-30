@@ -1,19 +1,19 @@
 const std = @import("std");
 
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
 
 /// Handles uninstalling Zep versions
 pub const ZepUninstaller = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZepUninstaller
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !ZepUninstaller {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ZepUninstaller {
         return ZepUninstaller{
             .allocator = allocator,
             .printer = printer,
@@ -33,10 +33,13 @@ pub const ZepUninstaller = struct {
     pub fn uninstall(self: *ZepUninstaller, version: []const u8) !void {
         try self.printer.append("Deleting Zep version {s} now...\n", .{version}, .{});
 
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
         // Recursively delete folder
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, version });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ paths.zep_root, version });
         defer self.allocator.free(path);
-        try UtilsFs.delTree(path);
+        try Fs.deleteTreeIfExists(path);
 
         try self.printer.append("Zep version deleted successfully.\n\n", .{}, .{ .color = 32 });
     }

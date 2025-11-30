@@ -1,19 +1,18 @@
 const std = @import("std");
 
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
 
 /// Handles uninstalling Zig versions
 pub const ZigUninstaller = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZigUninstaller
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !ZigUninstaller {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ZigUninstaller {
         return ZigUninstaller{
             .allocator = allocator,
             .printer = printer,
@@ -34,7 +33,7 @@ pub const ZigUninstaller = struct {
         try self.printer.append("Deleting Zig version at path: {s}\n", .{path}, .{});
 
         // Recursively delete folder
-        try UtilsFs.delTree(path);
+        try Fs.deleteTreeIfExists(path);
         try self.printer.append("Zig version deleted successfully.\n\n", .{}, .{ .color = 32 });
     }
 };

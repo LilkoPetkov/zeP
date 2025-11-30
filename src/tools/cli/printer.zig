@@ -7,11 +7,12 @@ const AppendOptions = struct {
     color: u8 = 0,
 };
 
+/// Handles Cleaner printing and interactivity.
 pub const Printer = struct {
-    data: std.ArrayList(Structs.PrinterData),
+    data: std.ArrayList(Structs.Extras.PrinterData),
     allocator: std.mem.Allocator,
 
-    pub fn init(data: std.ArrayList(Structs.PrinterData)) Printer {
+    pub fn init(data: std.ArrayList(Structs.Extras.PrinterData)) Printer {
         const allocator = std.heap.page_allocator;
         return Printer{ .data = data, .allocator = allocator };
     }
@@ -26,13 +27,13 @@ pub const Printer = struct {
     pub fn append(self: *Printer, comptime fmt: []const u8, args: anytype, options: AppendOptions) !void {
         if (options.verbosity > Locales.VERBOSITY_MODE) return;
         const data = try std.fmt.allocPrint(self.allocator, fmt, args);
-        try self.data.append(Structs.PrinterData{ .data = data, .verbosity = options.verbosity, .color = options.color });
+        try self.data.append(Structs.Extras.PrinterData{ .data = data, .verbosity = options.verbosity, .color = options.color });
         try self.print();
         return;
     }
 
-    pub fn pop(self: *Printer, popAmount: ?u8) void {
-        const amount = popAmount orelse 1;
+    pub fn pop(self: *Printer, pop_amount: ?u8) void {
+        const amount = pop_amount orelse 1;
         for (0..amount) |_| {
             _ = self.data.pop();
         }

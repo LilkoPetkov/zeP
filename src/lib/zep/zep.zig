@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
 
 const ZepInstaller = @import("install.zig");
 const ZepUninstaller = @import("uninstall.zig");
@@ -15,7 +15,7 @@ const ZepSwitcher = @import("switch.zig");
 // ------------------------
 pub const Zep = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     installer: ZepInstaller.ZepInstaller,
     uninstaller: ZepUninstaller.ZepUninstaller,
@@ -25,7 +25,7 @@ pub const Zep = struct {
     // ------------------------
     // Initialize all submodules
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !Zep {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !Zep {
         const installer = try ZepInstaller.ZepInstaller.init(allocator, printer);
         const uninstaller = try ZepUninstaller.ZepUninstaller.init(allocator, printer);
         const lister = try ZepLister.ZepLister.init(allocator, printer);
@@ -54,9 +54,12 @@ pub const Zep = struct {
     pub fn install(self: *Zep, targetVersion: []const u8) !void {
         try self.printer.append("Installing version: {s}\n\n", .{targetVersion}, .{});
 
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ paths.zep_root, targetVersion });
         defer self.allocator.free(path);
-        if (UtilsFs.checkDirExists(path)) {
+        if (Fs.existsDir(path)) {
             try self.printer.append("Zep version already installed.\n", .{}, .{});
             try self.printer.append("Use 'zeP zep switch x.x.x' to update.\n\n", .{}, .{});
             return;
@@ -72,10 +75,14 @@ pub const Zep = struct {
     // ------------------------
     pub fn uninstall(self: *Zep, targetVersion: []const u8) !void {
         try self.printer.append("Uninstalling version: {s}\n\n", .{targetVersion}, .{});
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
+
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ paths.zep_root, targetVersion });
         defer self.allocator.free(path);
 
-        if (!UtilsFs.checkDirExists(path)) {
+        if (!Fs.existsDir(path)) {
             try self.printer.append("Zep version is not installed.\n\n", .{}, .{});
             return;
         }
@@ -91,10 +98,13 @@ pub const Zep = struct {
     pub fn switchVersion(self: *Zep, targetVersion: []const u8) !void {
         try self.printer.append("Switching version: {s}\n\n", .{targetVersion}, .{});
 
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ Constants.ROOT_ZEP_ZEP_FOLDER, targetVersion });
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/v/{s}", .{ paths.zep_root, targetVersion });
         defer self.allocator.free(path);
 
-        if (!UtilsFs.checkDirExists(path)) {
+        if (!Fs.existsDir(path)) {
             try self.printer.append("Zep version not installed.\n\n", .{}, .{});
             return;
         }

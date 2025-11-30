@@ -3,20 +3,22 @@ const builtin = @import("builtin");
 
 const Locales = @import("locales");
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPackage = Utils.UtilsPackage;
-const UtilsPrinter = Utils.UtilsPrinter;
 
-const CachePackage = @import("cachePackage.zig");
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
+const Package = @import("core").Package.Package;
+
+const Cacher = @import("cache.zig").Cacher;
+
+const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 
 pub const Downloader = struct {
     allocator: std.mem.Allocator,
-    cacher: CachePackage.Cacher,
-    package: UtilsPackage.Package,
-    printer: *UtilsPrinter.Printer,
+    cacher: Cacher,
+    package: Package,
+    printer: *Printer,
 
-    pub fn init(allocator: std.mem.Allocator, package: UtilsPackage.Package, cacher: CachePackage.Cacher, printer: *UtilsPrinter.Printer) !Downloader {
+    pub fn init(allocator: std.mem.Allocator, package: Package, cacher: Cacher, printer: *Printer) !Downloader {
         return Downloader{
             .allocator = allocator,
             .cacher = cacher,
@@ -29,90 +31,54 @@ pub const Downloader = struct {
         // Nothing to free here (fields are owned externally).
     }
 
-    // small helper: alloc formatted string and make caller responsible for free
-    fn allocFmt(self: *Downloader, fmt: []const u8, args: anytype) ![]u8 {
-        // Note: zig fmt helpers differ by version; keep this pattern.
-        return try std.fmt.allocPrint(self.allocator, fmt, args);
-    }
-
     fn packagePath(self: *Downloader) ![]u8 {
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
         return try std.fmt.allocPrint(
             self.allocator,
-            "{s}/{s}@{s}",
-            .{ Constants.ROOT_ZEP_PKG_FOLDER, self.package.packageName, self.package.packageVersion },
+            "{s}/{s}",
+            .{ try self.allocator.dupe(u8, paths.pkg_root), self.package.id },
         );
-    }
-
-    fn tmpDirPath(_: *Downloader) []const u8 {
-        // no need to alloc a constant path every time
-        return ".ZEPtmp";
-    }
-
-    fn ensureTmpDir(self: *Downloader) !std.fs.Dir {
-        const path = self.tmpDirPath();
-        return try UtilsFs.openCDir(path);
-    }
-
-    fn removeTmpDir(self: *Downloader) !void {
-        try UtilsFs.delTree(self.tmpDirPath());
-    }
-
-    fn writeStreamToFile(self: *Downloader, reader: anytype, out_path: []const u8) !void {
-        var out_file = try UtilsFs.openCFile(out_path);
-        defer out_file.close();
-
-        var buffered_writer = std.io.bufferedWriter(out_file.writer());
-        defer {
-            buffered_writer.flush() catch {
-                self.printer.append("\nFailed to flush buffer!\n", .{}, .{ .color = 31 }) catch {};
-            };
-        }
-
-        var buf: [4096 * 4]u8 = undefined;
-        var progress_counter: u32 = 0;
-        var dot_counter: u8 = 0;
-
-        while (true) {
-            const n = try reader.read(&buf);
-            if (n == 0) break;
-            try buffered_writer.writer().writeAll(buf[0..n]);
-
-            progress_counter += 1;
-            if (progress_counter > 200) {
-                if (dot_counter >= 3) {
-                    self.printer.pop(3);
-                    dot_counter = 0;
-                }
-                try self.printer.append(".", .{}, .{});
-                dot_counter += 1;
-                progress_counter = 0;
-            }
-        }
-        try self.printer.append("\n", .{}, .{});
     }
 
     fn fetchPackage(self: *Downloader, url: []const u8) !void {
         // allocate paths and free them after use
-        const path = self.packagePath() catch |err| return err;
+        const path = try self.packagePath();
         defer self.allocator.free(path);
 
-        if (UtilsFs.checkDirExists(path)) try UtilsFs.delDir(path);
+        if (Fs.existsDir(path)) try Fs.deleteDirIfExists(path);
 
         // create/open temporary directory
-        var tmp_dir = try self.ensureTmpDir();
-        defer tmp_dir.close();
+        var temporary_directory = try Fs.openOrCreateDir(TEMPORARY_DIRECTORY_PATH);
+        defer temporary_directory.close();
         defer {
-            self.removeTmpDir() catch {
+            Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
                 self.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = 31 }) catch {};
             };
         }
 
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const zipped_path = try std.fmt.allocPrint(
+            self.allocator,
+            "{s}/{s}@{s}.zip",
+            .{ paths.zepped, self.package.package_name, self.package.package_version },
+        );
+        defer {
+            std.fs.cwd().deleteFile(zipped_path) catch {
+                self.printer.append("\nFailed to deleted zip file!\n", .{}, .{ .color = 31 }) catch {};
+            };
+            self.allocator.free(zipped_path);
+        }
+
         try self.printer.append("Installing package... [{s}]\n", .{url}, .{});
-        const uri = try std.Uri.parse(url);
 
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
+        const uri = try std.Uri.parse(url);
         var server_buf: [4096 * 4]u8 = undefined;
         var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_buf });
         defer req.deinit();
@@ -122,49 +88,34 @@ pub const Downloader = struct {
         try req.finish();
         try self.printer.append("Waiting for response...\n", .{}, .{});
         try req.wait();
-
-        const zipped_path = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/{s}@{s}.zip",
-            .{ Constants.ROOT_ZEP_ZEPPED_FOLDER, self.package.packageName, self.package.packageVersion },
-        );
-        defer {
-            std.fs.cwd().deleteFile(zipped_path) catch {
-                self.printer.append("\nFailed to deleted zip file!\n", .{}, .{ .color = 31 }) catch {};
-            };
-            self.allocator.free(zipped_path);
-        }
-
-        // write HTTP body to zip file
         const reader = req.reader();
-        try self.writeStreamToFile(reader, zipped_path);
+        const data = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 10);
 
+        try self.printer.append("Writing stream...\n", .{}, .{});
+        var zip_file = try Fs.openOrCreateFile(zipped_path);
+        _ = try zip_file.write(data);
+        zip_file.close();
         try self.printer.append("Decompressing...\n", .{}, .{});
 
         // Open the zip file for reading
-        var read_file = try UtilsFs.openFile(zipped_path);
+        var read_file = try Fs.openFile(zipped_path);
         defer read_file.close();
 
-        // Attempt to iterate zip entries and extract
-        var iter = try std.zip.Iterator(@TypeOf(read_file.seekableStream())).init(read_file.seekableStream());
-        var filename_buf: [std.fs.max_path_bytes]u8 = undefined;
-        var selected_file: []u8 = undefined;
-
-        while (try iter.next()) |entry| {
-            const crc = try entry.extract(read_file.seekableStream(), .{}, &filename_buf, tmp_dir);
-            if (crc != entry.crc32) continue;
-            selected_file = filename_buf[0..entry.filename_len];
-            break;
-        }
-
-        try std.zip.extract(tmp_dir, read_file.seekableStream(), .{});
+        var diagnostics = std.zip.Diagnostics{
+            .allocator = self.allocator,
+        };
+        defer diagnostics.deinit();
+        try std.zip.extract(temporary_directory, &read_file.seekableStream(), .{ .diagnostics = &diagnostics });
 
         // build path for the extracted top-level component and rename to final path
-        const extract_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.tmpDirPath(), selected_file });
+        const extract_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ TEMPORARY_DIRECTORY_PATH, diagnostics.root_dir });
         defer self.allocator.free(extract_target);
 
         try std.fs.cwd().rename(extract_target, path);
+        try self.filterPackage(path);
+    }
 
+    fn filterPackage(self: *Downloader, path: []const u8) !void {
         // LEGACY
         // ---
         // Might not be required anymore, as the packages are now being copied over
@@ -184,22 +135,22 @@ pub const Downloader = struct {
         }
 
         try self.printer.append("Filtering unimportant folders...\n\n", .{}, .{});
-        for (Constants.FILTER_PACKAGE_FOLDERS) |folder| {
+        for (Constants.Extras.filtering.folders) |folder| {
             const folder_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ path, folder });
             defer self.allocator.free(folder_path);
-            try UtilsFs.delTree(folder_path);
+            try Fs.deleteTreeIfExists(folder_path);
         }
-        for (Constants.FILTER_PACKAGE_FILES) |file| {
+        for (Constants.Extras.filtering.files) |file| {
             const file_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ path, file });
             defer self.allocator.free(file_path);
-            try UtilsFs.delFile(file_path);
+            try Fs.deleteFileIfExists(file_path);
         }
     }
 
     fn doesPackageExist(self: *Downloader) !bool {
         const path = try self.packagePath();
         defer self.allocator.free(path);
-        return UtilsFs.checkDirExists(path);
+        return Fs.existsDir(path);
     }
 
     pub fn downloadPackage(self: *Downloader, url: []const u8) !void {

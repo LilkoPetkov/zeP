@@ -2,55 +2,56 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const Constants = @import("constants");
-
 const Structs = @import("structs");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsManifest = Utils.UtilsManifest;
-const UtilsJson = Utils.UtilsJson;
+
+const Fs = @import("io").Fs;
+const Manifest = @import("core").Manifest;
 
 /// Updates the symbolic link to point to the currently active Zig installation
 pub fn updateLink() !void {
     const allocator = std.heap.page_allocator;
+    var paths = try Constants.Paths.paths(allocator);
+    defer paths.deinit();
 
     // Load manifest and get absolute path
-    const manifest = try UtilsManifest.readManifest(Structs.ZepManifest, allocator, Constants.ROOT_ZEP_ZEP_MANIFEST);
+    const manifest = try Manifest.readManifest(Structs.Manifests.ZepManifest, allocator, paths.zep_manifest);
     defer manifest.deinit();
 
-    const absPath = try std.fs.realpathAlloc(allocator, manifest.value.path);
-    defer allocator.free(absPath);
+    const absolute_path = try std.fs.realpathAlloc(allocator, manifest.value.path);
+    defer allocator.free(absolute_path);
 
-    const manifestTarget = Constants.ROOT_ZEP_ZEP_MANIFEST;
-    const openManifest = try UtilsFs.openFile(manifestTarget);
-    defer openManifest.close();
+    const manifest_target = paths.zep_manifest;
+    const open_manifest = try Fs.openFile(manifest_target);
+    defer open_manifest.close();
 
-    const readOpenManifest = try openManifest.readToEndAlloc(allocator, 1024 * 1024);
-    const parsedManifest = try std.json.parseFromSlice(Structs.ZepManifest, allocator, readOpenManifest, .{});
-    defer parsedManifest.deinit();
+    const read_open_manifest = try open_manifest.readToEndAlloc(allocator, Constants.Default.mb);
+    const parsed_manifest: std.json.Parsed(Structs.Manifests.ZepManifest) = try std.json.parseFromSlice(Structs.Manifests.ZepManifest, allocator, read_open_manifest, .{});
+    defer parsed_manifest.deinit();
 
     if (builtin.os.tag == .windows) {
-        const zepExePath = try std.fmt.allocPrint(allocator, "{s}/zep.exe", .{parsedManifest.value.path});
-        defer allocator.free(zepExePath);
+        const zep_exe_path = try std.fmt.allocPrint(allocator, "{s}/zep.exe", .{parsed_manifest.value.path});
+        defer allocator.free(zep_exe_path);
 
-        const linkExePathDir = try std.fmt.allocPrint(allocator, "{s}/e/", .{Constants.ROOT_ZEP_ZEP_FOLDER});
-        if (!UtilsFs.checkDirExists(linkExePathDir)) {
-            try std.fs.cwd().makePath(linkExePathDir);
+        const symbolic_link_zep_exe_directory = try std.fmt.allocPrint(allocator, "{s}/e", .{paths.zep_root});
+        defer allocator.free(symbolic_link_zep_exe_directory);
+        if (!Fs.existsDir(symbolic_link_zep_exe_directory)) {
+            try std.fs.cwd().makePath(symbolic_link_zep_exe_directory);
         }
 
-        const linkExePath = try std.fmt.allocPrint(allocator, "{s}/e/zep.exe", .{Constants.ROOT_ZEP_ZEP_FOLDER});
-        defer allocator.free(linkExePath);
-        if (UtilsFs.checkFileExists(linkExePath)) {
-            try std.fs.cwd().deleteFile(linkExePath);
+        const symbolic_link_zep_exe = try std.fmt.allocPrint(allocator, "{s}/zep.exe", .{symbolic_link_zep_exe_directory});
+        defer allocator.free(symbolic_link_zep_exe);
+        if (Fs.existsFile(symbolic_link_zep_exe)) {
+            try std.fs.cwd().deleteFile(symbolic_link_zep_exe);
         }
-        try std.fs.cwd().symLink(zepExePath, linkExePath, .{ .is_directory = false });
+        try std.fs.cwd().symLink(zep_exe_path, symbolic_link_zep_exe, .{ .is_directory = false });
     } else {
-        const zepExePath = try std.fmt.allocPrint(allocator, "{s}/zeP", .{parsedManifest.value.path});
-        defer allocator.free(zepExePath);
+        const zep_exe_path = try std.fmt.allocPrint(allocator, "{s}/zeP", .{parsed_manifest.value.path});
+        defer allocator.free(zep_exe_path);
 
-        const zepExeTarget = try std.fs.cwd().openFile(zepExePath, .{});
-        defer zepExeTarget.close();
-        try zepExeTarget.chmod(755);
+        const zep_exe_target = try std.fs.cwd().openFile(zep_exe_path, .{});
+        defer zep_exe_target.close();
+        try zep_exe_target.chmod(755);
 
-        try std.fs.cwd().symLink(zepExePath, "/usr/local/bin/zeP", .{ .is_directory = false });
+        try std.fs.cwd().symLink(zep_exe_path, "/usr/local/bin/zeP", .{ .is_directory = false });
     }
 }

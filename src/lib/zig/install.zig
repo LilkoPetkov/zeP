@@ -5,22 +5,22 @@ const Link = @import("lib/link.zig");
 
 const Structs = @import("structs");
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsManifest = Utils.UtilsManifest;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
+const Manifest = @import("core").Manifest;
 
 /// Installer for Zig versions
 pub const ZigInstaller = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZigInstaller
     // ------------------------
     pub fn init(
         allocator: std.mem.Allocator,
-        printer: *UtilsPrinter.Printer,
+        printer: *Printer,
     ) !ZigInstaller {
         return ZigInstaller{
             .allocator = allocator,
@@ -39,81 +39,85 @@ pub const ZigInstaller = struct {
     // Fetch and extract Zig archive
     // ------------------------
     fn fetchData(self: *ZigInstaller, name: []const u8, tarball: []const u8, version: []const u8, target: []const u8) !void {
-        const targetExt = if (builtin.os.tag == .windows) "zip" else "tar.xz";
-        const targetFile = try std.fmt.allocPrint(
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const target_extension = if (builtin.os.tag == .windows) "zip" else "tar.xz";
+        const target_path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/z/{s}/{s}.{s}",
-            .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, name, targetExt },
+            .{ paths.zig_root, version, name, target_extension },
         );
 
         // Download if not cached
-        if (!UtilsFs.checkFileExists(targetFile)) {
-            try self.downloadFile(tarball, targetFile);
+        if (!Fs.existsFile(target_path)) {
+            try self.downloadFile(tarball, target_path);
         } else {
             try self.printer.append("Data found in cache!\n", .{}, .{});
         }
 
         // Open the downloaded file
-        var compressedFile = try UtilsFs.openCFile(targetFile);
-        defer compressedFile.close();
+        var compressed_file = try Fs.openOrCreateFile(target_path);
+        defer compressed_file.close();
 
         try self.printer.append("Extracting data...\n", .{}, .{});
 
-        const decompressedDir = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version });
+        const decompressed_directory = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}", .{ paths.zig_root, version });
         if (builtin.os.tag == .windows) {
-            try self.decompressWindows(compressedFile.seekableStream(), decompressedDir, target);
+            try self.decompressWindows(compressed_file.seekableStream(), decompressed_directory, target);
         } else {
-            try self.decompressPosix(compressedFile.reader(), decompressedDir, target);
+            try self.decompressPosix(compressed_file.reader(), decompressed_directory, target);
         }
     }
 
     // ------------------------
     // Download file via HTTP
     // ------------------------
-    fn downloadFile(self: *ZigInstaller, uriStr: []const u8, outPath: []const u8) !void {
+    fn downloadFile(self: *ZigInstaller, raw_uri: []const u8, out_path: []const u8) !void {
         try self.printer.append("Parsing URI...\n", .{}, .{});
-        const uri = try std.Uri.parse(uriStr);
+        const uri = try std.Uri.parse(raw_uri);
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var buf: [4096]u8 = undefined;
-        var req = try client.open(.GET, uri, .{ .server_header_buffer = &buf });
+        var server_buf: [4096 * 4]u8 = undefined;
+        var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_buf });
         defer req.deinit();
 
         try self.printer.append("Sending request...\n", .{}, .{});
         try req.send();
         try req.finish();
-        try self.printer.append("Waiting for response", .{}, .{});
+        try self.printer.append("Waiting for response...\n", .{}, .{});
         try req.wait();
 
         var reader = req.reader();
-        var outFile = try UtilsFs.openCFile(outPath);
-        defer outFile.close();
 
-        var bufferedWriter = std.io.bufferedWriter(outFile.writer());
+        var output_file = try Fs.openOrCreateFile(out_path);
+        defer output_file.close();
+
+        var buffer_writer = std.io.bufferedWriter(output_file.writer());
+
         defer {
-            bufferedWriter.flush() catch {
+            buffer_writer.flush() catch {
                 self.printer.append("\nFailed to flush buffer!\n", .{}, .{ .color = 31 }) catch {};
             };
         }
 
-        var bigBuf: [4096 * 4]u8 = undefined;
-        var lineCounter: u32 = 0;
-        var dotCounter: u8 = 0;
+        var line_counter: u32 = 0;
+        var dot_counter: u8 = 0;
         while (true) {
-            const n = try reader.read(&bigBuf);
-            if (n == 0) break;
-            try bufferedWriter.writer().writeAll(bigBuf[0..n]);
+            const n = try reader.readAllAlloc(self.allocator, 4096 * 4);
+            if (n.len == 0) break;
+            _ = try buffer_writer.write(n);
 
-            lineCounter += 1;
-            if (lineCounter > 200) {
-                if (dotCounter >= 3) {
+            line_counter += 1;
+            if (line_counter > 200) {
+                if (dot_counter >= 3) {
                     self.printer.pop(3);
-                    dotCounter = 0;
+                    dot_counter = 0;
                 }
                 try self.printer.append(".", .{}, .{});
-                dotCounter += 1;
-                lineCounter = 0;
+                dot_counter += 1;
+                line_counter = 0;
             }
         }
         try self.printer.append("\n", .{}, .{});
@@ -122,48 +126,42 @@ pub const ZigInstaller = struct {
     // ------------------------
     // Decompress for Windows (.zip)
     // ------------------------
-    fn decompressWindows(self: *ZigInstaller, skStream: std.fs.File.SeekableStream, decompressedPath: []const u8, target: []const u8) !void {
-        const newTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, target });
-        if (UtilsFs.checkDirExists(newTarget)) {
+    fn decompressWindows(self: *ZigInstaller, reader: std.fs.File.SeekableStream, decompressed_path: []const u8, target: []const u8) !void {
+        const new_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressed_path, target });
+        if (Fs.existsDir(new_target)) {
             try self.printer.append("Already installed!\n", .{}, .{});
             return;
         }
 
-        var dir = try UtilsFs.openCDir(decompressedPath);
+        var dir = try Fs.openOrCreateDir(decompressed_path);
         defer dir.close();
+        var diagnostics = std.zip.Diagnostics{
+            .allocator = self.allocator,
+        };
+        defer diagnostics.deinit();
+        try std.zip.extract(dir, reader, .{ .diagnostics = &diagnostics });
 
-        var iter = try std.zip.Iterator(@TypeOf(skStream)).init(skStream);
-        var filenameBuf: [std.fs.max_path_bytes]u8 = undefined;
-        var selectedFile: []u8 = undefined;
-        while (try iter.next()) |entry| {
-            const crc = try entry.extract(skStream, .{}, &filenameBuf, dir);
-            if (crc != entry.crc32) continue;
-            selectedFile = filenameBuf[0..entry.filename_len];
-            break;
-        }
-
-        const extractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, selectedFile });
-        try std.zip.extract(dir, skStream, .{});
-        try self.printer.append("Extracted to {s}!\n", .{decompressedPath}, .{});
-        try std.fs.cwd().rename(extractTarget, newTarget);
+        const extract_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressed_path, diagnostics.root_dir });
+        try self.printer.append("Extracted to {s}!\n", .{decompressed_path}, .{});
+        try std.fs.cwd().rename(extract_target, new_target);
     }
 
     // ------------------------
     // Decompress for POSIX (.tar.xz)
     // ------------------------
-    fn decompressPosix(self: *ZigInstaller, reader: std.fs.File.Reader, decompressedPath: []const u8, target: []const u8) !void {
-        var dir = try UtilsFs.openCDir(decompressedPath);
+    fn decompressPosix(self: *ZigInstaller, reader: std.fs.File.Reader, decompressed_path: []const u8, target: []const u8) !void {
+        var dir = try Fs.openOrCreateDir(decompressed_path);
         defer dir.close();
 
         var decompressed = try std.compress.xz.decompress(self.allocator, reader);
         defer decompressed.deinit();
-        const decompressReader = decompressed.reader();
+        const decompressed_reader = decompressed.reader();
 
-        var filenameBuf: [std.fs.max_path_bytes]u8 = undefined;
-        var linkBuf: [std.fs.max_path_bytes]u8 = undefined;
-        var tarIter = std.tar.iterator(decompressReader, .{ .file_name_buffer = &filenameBuf, .link_name_buffer = &linkBuf });
+        var filename_buffer: [std.fs.max_path_bytes]u8 = undefined;
+        var symbolic_link_buffer: [std.fs.max_path_bytes]u8 = undefined;
+        var tar_iterator = std.tar.iterator(decompressed_reader, .{ .file_name_buffer = &filename_buffer, .link_name_buffer = &symbolic_link_buffer });
 
-        const firstFile = tarIter.next() catch {
+        const firstFile = tar_iterator.next() catch {
             self.printer.append("\nInvalid tar file!\n", .{}, .{ .color = 31 }) catch {};
             return;
         } orelse {
@@ -171,24 +169,24 @@ pub const ZigInstaller = struct {
             return;
         };
 
-        const extractedName = firstFile.name;
+        const extracted_name = firstFile.name;
 
-        const newTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, target });
-        if (UtilsFs.checkDirExists(newTarget)) {
+        const new_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressed_path, target });
+        if (Fs.existsDir(new_target)) {
             try self.printer.append("Already installed!\n", .{}, .{});
             return;
         }
 
-        const extractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressedPath, extractedName });
-        try std.tar.pipeToFileSystem(dir, decompressReader, .{ .mode_mode = .ignore });
+        const extractTarget = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ decompressed_path, extracted_name });
+        try std.tar.pipeToFileSystem(dir, decompressed_reader, .{ .mode_mode = .ignore });
         try self.printer.append("Extracted!\n\n", .{}, .{});
-        try std.fs.cwd().rename(extractTarget, newTarget);
+        try std.fs.cwd().rename(extractTarget, new_target);
 
-        const zigExeTarget = try std.fmt.allocPrint(self.allocator, "{s}/zig", .{newTarget});
-        defer self.allocator.free(zigExeTarget);
-        const zigExeFile = try UtilsFs.openFile(zigExeTarget);
-        defer zigExeFile.close();
-        try zigExeFile.chmod(755);
+        const zig_exe_path = try std.fmt.allocPrint(self.allocator, "{s}/zig", .{new_target});
+        defer self.allocator.free(zig_exe_path);
+        const zig_exe_file = try Fs.openFile(zig_exe_path);
+        defer zig_exe_file.close();
+        try zig_exe_file.chmod(755);
     }
 
     // ------------------------
@@ -198,12 +196,15 @@ pub const ZigInstaller = struct {
         try self.fetchData(name, tarball, version, target);
         try self.printer.append("Modifying Manifest...\n", .{}, .{});
 
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, target });
-        UtilsManifest.writeManifest(
-            Structs.ZigManifest,
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/{s}", .{ paths.zig_root, version, target });
+        Manifest.writeManifest(
+            Structs.Manifests.ZigManifest,
             self.allocator,
-            Constants.ROOT_ZEP_ZIG_MANIFEST,
-            Structs.ZigManifest{
+            paths.zig_manifest,
+            Structs.Manifests.ZigManifest{
                 .name = name,
                 .path = path,
             },

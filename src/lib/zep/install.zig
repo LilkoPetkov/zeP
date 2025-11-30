@@ -2,21 +2,20 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsFs = Utils.UtilsFs;
-const UtilsPrinter = Utils.UtilsPrinter;
+
+const Printer = @import("cli").Printer;
 
 /// Installer for Zep versions
 pub const ZepInstaller = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZepInstaller
     // ------------------------
     pub fn init(
         allocator: std.mem.Allocator,
-        printer: *UtilsPrinter.Printer,
+        printer: *Printer,
     ) !ZepInstaller {
         return ZepInstaller{
             .allocator = allocator,

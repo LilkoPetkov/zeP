@@ -1,5 +1,6 @@
 const std = @import("std");
 
+/// Get hash from any url
 pub fn hashData(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     const uri = try std.Uri.parse(url);
 

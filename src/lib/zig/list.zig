@@ -2,20 +2,20 @@ const std = @import("std");
 
 const Structs = @import("structs");
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsFs = Utils.UtilsFs;
-const UtilsManifest = Utils.UtilsManifest;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
+const Manifest = @import("core").Manifest;
 
 /// Lists installed Zig versions
 pub const ZigLister = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZigLister
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !ZigLister {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ZigLister {
         return ZigLister{ .allocator = allocator, .printer = printer };
     }
 
@@ -32,16 +32,18 @@ pub const ZigLister = struct {
     // ------------------------
     pub fn listVersions(self: *ZigLister) !void {
         try self.printer.append("\nAvailable Zig Versions:\n", .{}, .{});
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
 
-        const versionsDir = try std.fmt.allocPrint(self.allocator, "{s}/d/", .{Constants.ROOT_ZEP_ZIG_FOLDER});
-        defer self.allocator.free(versionsDir);
+        const versions_directory = try std.fmt.allocPrint(self.allocator, "{s}/d/", .{paths.zig_root});
+        defer self.allocator.free(versions_directory);
 
-        if (!UtilsFs.checkDirExists(versionsDir)) {
+        if (!Fs.existsDir(versions_directory)) {
             try self.printer.append("No versions installed!\n\n", .{}, .{});
             return;
         }
 
-        const manifest = try UtilsManifest.readManifest(Structs.ZigManifest, self.allocator, Constants.ROOT_ZEP_ZIG_MANIFEST);
+        const manifest = try Manifest.readManifest(Structs.Manifests.ZigManifest, self.allocator, paths.zig_manifest);
         defer manifest.deinit();
         if (manifest.value.path.len == 0) {
             std.debug.print("\nManifest path is not defined! Use\n $ zep zig switch <zig-version>\nTo fix!\n", .{});
@@ -49,34 +51,34 @@ pub const ZigLister = struct {
             return;
         }
 
-        var dir = try UtilsFs.openDir(versionsDir);
+        var dir = try Fs.openDir(versions_directory);
         defer dir.close();
         var it = dir.iterate();
 
         while (try it.next()) |entry| {
             if (entry.kind != .directory) continue;
 
-            const versionName = try self.allocator.dupe(u8, entry.name);
-            const versionPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ versionsDir, versionName });
-            defer self.allocator.free(versionPath);
+            const version_name = try self.allocator.dupe(u8, entry.name);
+            const version_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ versions_directory, version_name });
+            defer self.allocator.free(version_path);
 
-            var versionDir = try UtilsFs.openDir(versionPath);
-            defer versionDir.close();
+            var version_directory = try Fs.openDir(version_path);
+            defer version_directory.close();
 
-            const inUseVersion = std.mem.containsAtLeast(u8, manifest.value.path, 1, versionName);
-            try self.printer.append("{s}{s}\n", .{ versionName, if (inUseVersion) " (in-use)" else "" }, .{});
+            const in_use_version = std.mem.containsAtLeast(u8, manifest.value.path, 1, version_name);
+            try self.printer.append("{s}{s}\n", .{ version_name, if (in_use_version) " (in-use)" else "" }, .{});
 
-            var versionIt = versionDir.iterate();
-            var hasTargets: bool = false;
+            var version_iterator = version_directory.iterate();
+            var has_targets: bool = false;
 
-            while (try versionIt.next()) |versionEntry| {
-                hasTargets = true;
-                const targetName = try self.allocator.dupe(u8, versionEntry.name);
-                const inUseTarget = std.mem.containsAtLeast(u8, manifest.value.path, 1, targetName);
-                try self.printer.append("  > {s}{s}\n", .{ targetName, if (inUseVersion and inUseTarget) " (in-use)" else "" }, .{});
+            while (try version_iterator.next()) |versionEntry| {
+                has_targets = true;
+                const target_name = try self.allocator.dupe(u8, versionEntry.name);
+                const in_use_target = std.mem.containsAtLeast(u8, manifest.value.path, 1, target_name);
+                try self.printer.append("  > {s}{s}\n", .{ target_name, if (in_use_version and in_use_target) " (in-use)" else "" }, .{});
             }
 
-            if (!hasTargets) {
+            if (!has_targets) {
                 try self.printer.append("  NO TARGETS AVAILABLE\n", .{}, .{ .color = 31 });
             }
         }

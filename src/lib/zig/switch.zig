@@ -3,21 +3,21 @@ const Link = @import("lib/link.zig");
 
 const Structs = @import("structs");
 const Constants = @import("constants");
-const Utils = @import("utils");
-const UtilsPrinter = Utils.UtilsPrinter;
-const UtilsFs = Utils.UtilsFs;
-const UtilsManifest = Utils.UtilsManifest;
-const UtilsJson = Utils.UtilsJson;
+
+const Fs = @import("io").Fs;
+const Printer = @import("cli").Printer;
+const Manifest = @import("core").Manifest;
+const Json = @import("core").Json.Json;
 
 /// Handles switching between installed Zig versions
 pub const ZigSwitcher = struct {
     allocator: std.mem.Allocator,
-    printer: *UtilsPrinter.Printer,
+    printer: *Printer,
 
     // ------------------------
     // Initialize ZigSwitcher
     // ------------------------
-    pub fn init(allocator: std.mem.Allocator, printer: *UtilsPrinter.Printer) !ZigSwitcher {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ZigSwitcher {
         return ZigSwitcher{ .allocator = allocator, .printer = printer };
     }
 
@@ -34,13 +34,16 @@ pub const ZigSwitcher = struct {
     // ------------------------
     pub fn switchVersion(self: *ZigSwitcher, name: []const u8, version: []const u8, target: []const u8) !void {
         // Update manifest with new version
+        var paths = try Constants.Paths.paths(self.allocator);
+        defer paths.deinit();
+
         try self.printer.append("Modifying Manifest...\n", .{}, .{});
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/{s}", .{ Constants.ROOT_ZEP_ZIG_FOLDER, version, target });
-        UtilsManifest.writeManifest(
-            Structs.ZigManifest,
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/d/{s}/{s}", .{ paths.zig_root, version, target });
+        Manifest.writeManifest(
+            Structs.Manifests.ZigManifest,
             self.allocator,
-            Constants.ROOT_ZEP_ZIG_MANIFEST,
-            Structs.ZigManifest{ .name = name, .path = path },
+            paths.zig_manifest,
+            Structs.Manifests.ZigManifest{ .name = name, .path = path },
         ) catch {
             try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = 31 });
         };
@@ -48,29 +51,29 @@ pub const ZigSwitcher = struct {
         // Update zep.json and zep.lock
         blk: {
             // all need to match for it to be in a zeP project
-            if (!UtilsFs.checkFileExists(Constants.ZEP_LOCK_PACKAGE_FILE) or
-                !UtilsFs.checkFileExists(Constants.ZEP_PACKAGE_FILE) or
-                !UtilsFs.checkDirExists(Constants.ZEP_FOLDER)) break :blk;
+            if (!Fs.existsFile(Constants.Extras.package_files.lock) or
+                !Fs.existsFile(Constants.Extras.package_files.manifest) or
+                !Fs.existsDir(Constants.Extras.package_files.zep_folder)) break :blk;
 
-            var pkg = try UtilsManifest.readManifest(Structs.PackageJsonStruct, self.allocator, Constants.ZEP_PACKAGE_FILE);
-            defer pkg.deinit();
-            var lock = try UtilsManifest.readManifest(Structs.PackageLockStruct, self.allocator, Constants.ZEP_LOCK_PACKAGE_FILE);
+            var manifest = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+            defer manifest.deinit();
+            var lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
             defer lock.deinit();
 
-            pkg.value.zigVersion = version;
-            lock.value.root = pkg.value;
-            UtilsManifest.writeManifest(
-                Structs.PackageJsonStruct,
+            manifest.value.zig_version = version;
+            lock.value.root = manifest.value;
+            Manifest.writeManifest(
+                Structs.ZepFiles.PackageJsonStruct,
                 self.allocator,
-                Constants.ZEP_PACKAGE_FILE,
-                pkg.value,
+                Constants.Extras.package_files.manifest,
+                manifest.value,
             ) catch {
                 try self.printer.append("Updating Json Manifest failed!\n", .{}, .{ .color = 31 });
             };
-            UtilsManifest.writeManifest(
-                Structs.PackageLockStruct,
+            Manifest.writeManifest(
+                Structs.ZepFiles.PackageLockStruct,
                 self.allocator,
-                Constants.ZEP_LOCK_PACKAGE_FILE,
+                Constants.Extras.package_files.lock,
                 lock.value,
             ) catch {
                 try self.printer.append("Updating Lock Manifest failed!\n", .{}, .{ .color = 31 });
