@@ -66,9 +66,9 @@ pub const Zig = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var buffer: [4096]u8 = undefined;
+        var server_header_buffer: [Constants.Default.kb * 8]u8 = undefined;
         const uri = try std.Uri.parse(Constants.Default.zig_download_index);
-        var req = try client.open(.GET, uri, .{ .server_header_buffer = &buffer });
+        var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
         defer req.deinit();
 
         try req.send();

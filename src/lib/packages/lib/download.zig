@@ -61,25 +61,13 @@ pub const Downloader = struct {
         var paths = try Constants.Paths.paths(self.allocator);
         defer paths.deinit();
 
-        const zipped_path = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/{s}@{s}.zip",
-            .{ paths.zepped, self.package.package_name, self.package.package_version },
-        );
-        defer {
-            std.fs.cwd().deleteFile(zipped_path) catch {
-                self.printer.append("\nFailed to deleted zip file!\n", .{}, .{ .color = 31 }) catch {};
-            };
-            self.allocator.free(zipped_path);
-        }
-
         try self.printer.append("Installing package... [{s}]\n", .{url}, .{});
 
+        const uri = try std.Uri.parse(url);
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        const uri = try std.Uri.parse(url);
-        var server_header_buffer: [4096]u8 = undefined;
+        var server_header_buffer: [Constants.Default.kb * 32]u8 = undefined;
         var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
         defer req.deinit();
 
@@ -88,25 +76,19 @@ pub const Downloader = struct {
         try req.finish();
         try self.printer.append("Waiting for response...\n", .{}, .{});
         try req.wait();
+
         const reader = req.reader();
         const data = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 10);
+        var stream = std.io.fixedBufferStream(data);
 
-        try self.printer.append("Writing stream...\n", .{}, .{});
-        var zip_file = try Fs.openOrCreateFile(zipped_path);
-        _ = try zip_file.write(data);
-        zip_file.close();
-        try self.printer.append("Decompressing...\n", .{}, .{});
-
-        // Open the zip file for reading
-        var read_file = try Fs.openFile(zipped_path);
-        defer read_file.close();
-
+        try self.printer.append("Extracting...\n", .{}, .{});
         var diagnostics = std.zip.Diagnostics{
             .allocator = self.allocator,
         };
         defer diagnostics.deinit();
-        try std.zip.extract(temporary_directory, &read_file.seekableStream(), .{ .diagnostics = &diagnostics });
+        try std.zip.extract(temporary_directory, &stream.seekableStream(), .{ .diagnostics = &diagnostics });
 
+        try self.printer.append("Writing...\n", .{}, .{});
         // build path for the extracted top-level component and rename to final path
         const extract_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ TEMPORARY_DIRECTORY_PATH, diagnostics.root_dir });
         defer self.allocator.free(extract_target);
