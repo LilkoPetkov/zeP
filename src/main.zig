@@ -55,20 +55,6 @@ fn resolveDefaultTarget() []const u8 {
     return Constants.Default.default_targets.linux;
 }
 
-/// Checks (for linux) whether or not the user has the required
-/// priveleges
-fn isRoot(printer: *Printer) bool {
-    if (builtin.os.tag == .linux) {
-        const pid = std.os.linux.geteuid();
-        if (pid != 0) {
-            printer.append("Root permissions required for this action!\n", .{}, .{ .color = 31 }) catch {};
-            return false;
-        }
-        return true;
-    }
-    return true;
-}
-
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     var args = try std.process.argsWithAllocator(allocator);
@@ -343,8 +329,6 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "zig")) {
-        if (!isRoot(&printer)) return;
-
         const mode = try nextArg(&args, &printer, " > zeP zig [install|switch|uninstall|list] [version]");
         var zig = try Zig.init(allocator, &printer);
         defer zig.deinit();
@@ -377,8 +361,6 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "zep")) {
-        if (!isRoot(&printer)) return;
-
         const mode = try nextArg(&args, &printer, " > zeP zep [install|switch|uninstall|list] [version]");
         var zep = try Zep.init(allocator, &printer);
         defer zep.deinit();

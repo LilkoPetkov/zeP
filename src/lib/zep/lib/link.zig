@@ -52,6 +52,9 @@ pub fn updateLink() !void {
         defer zep_exe_target.close();
         try zep_exe_target.chmod(755);
 
-        try std.fs.cwd().symLink(zep_exe_path, "/usr/local/bin/zeP", .{ .is_directory = false });
+        const sym_link_path = try std.fs.path.join(allocator, &.{ paths.base, "bin", "zeP" });
+        defer allocator.free(sym_link_path);
+
+        try std.fs.cwd().symLink(zep_exe_path, sym_link_path, .{ .is_directory = false });
     }
 }

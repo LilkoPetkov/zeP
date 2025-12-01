@@ -52,7 +52,9 @@ pub fn updateLink() !void {
         defer zig_exe_target.close();
         try zig_exe_target.chmod(755);
 
-        try Fs.deleteFileIfExists("/usr/local/bin/zig");
-        try std.fs.cwd().symLink(zig_exe, "/usr/local/bin/zig", .{ .is_directory = false });
+        const sym_link_path = try std.fs.path.join(allocator, &.{ paths.base, "bin", "zig" });
+        defer allocator.free(sym_link_path);
+
+        try std.fs.cwd().symLink(zig_exe, sym_link_path, .{ .is_directory = false });
     }
 }
