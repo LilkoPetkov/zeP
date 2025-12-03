@@ -118,7 +118,7 @@ pub fn main() !void {
         const lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, allocator, Constants.Extras.package_files.lock);
         defer lock.deinit();
         if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
-            try printer.append("Lock file schema is NOT matching with zeP version.\nConsider removing them, and re-initing!\n", .{}, .{});
+            try printer.append("Lock file schema is NOT matching with zeP version.\nConsider removing them, and re-initing!\n", .{}, .{ .color = 31 });
             return;
         }
     }
@@ -212,7 +212,7 @@ pub fn main() !void {
                         try printer.append("\nHASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = 31 });
                     },
                     else => {
-                        try printer.append("\nInstalling {s} has failed...\n\n{any}\n", .{ package, err }, .{ .color = 31 });
+                        try printer.append("\nInstalling {s} has failed...\n\n", .{package}, .{ .color = 31 });
                     },
                 }
             };
@@ -235,7 +235,7 @@ pub fn main() !void {
                     try printer.append("(locally) => If you wanna uninstall it globally, use\n $ zep global-uninstall {s}@<version>\n\n", .{package_name}, .{ .color = 34 });
                 },
                 else => {
-                    try printer.append("\nUninstalling {s} has failed...\n\n{any}\n", .{ package_name, err }, .{ .color = 31 });
+                    try printer.append("\nUninstalling {s} has failed...\n\n", .{package_name}, .{ .color = 31 });
                 },
             }
             std.process.exit(0);
@@ -359,7 +359,6 @@ pub fn main() !void {
             const target = args.next() orelse resolveDefaultTarget();
             if (std.mem.eql(u8, mode, "install")) {
                 zig.install(version, target) catch |err| {
-                    try printer.append("\n{any}\n", .{err}, .{ .color = 31 });
                     try printer.append("\nInstalling zig version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             } else if (std.mem.eql(u8, mode, "uninstall")) {
@@ -390,7 +389,7 @@ pub fn main() !void {
             const version = try nextArg(&args, &printer, " > zeP zep {install|switch|uninstall} [version]");
             if (std.mem.eql(u8, mode, "install")) {
                 zep.install(version) catch |err| {
-                    try printer.append("\nInstalling zep version {s} has failed...\n{any}\n", .{ version, err }, .{ .color = 31 });
+                    try printer.append("\nInstalling zep version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             } else if (std.mem.eql(u8, mode, "uninstall")) {
                 zep.uninstall(version) catch {

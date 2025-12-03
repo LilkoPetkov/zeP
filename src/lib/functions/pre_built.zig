@@ -37,22 +37,20 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (!Fs.existsFile(path)) {
-            try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{});
+            try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{ .color = 31 });
             return;
         }
 
-        try self.printer.append("Pre-Built found!\n", .{}, .{});
+        try self.printer.append("Pre-Built found!\n", .{}, .{ .color = 32 });
 
         if (!Fs.existsDir(target_path)) {
-            try self.printer.append("Creating target path...\n", .{}, .{});
             try std.fs.cwd().makePath(target_path);
-            try self.printer.append("Created!\n\n", .{}, .{});
         }
 
         try self.printer.append("Decompressing {s} into {s}...\n", .{ path, target_path }, .{});
         _ = try self.compressor.decompress(path, target_path);
 
-        try self.printer.append("Decompressed!\n\n", .{}, .{});
+        try self.printer.append("Decompressed!\n\n", .{}, .{ .color = 32 });
     }
 
     /// Compresses a folder into a pre-built package, overwriting if it exists
@@ -71,9 +69,9 @@ pub const PreBuilt = struct {
 
         const is_compressed = try self.compressor.compress(target_path, path);
         if (is_compressed) {
-            try self.printer.append("Compressed!\n\n", .{}, .{});
+            try self.printer.append("Compressed!\n\n", .{}, .{ .color = 32 });
         } else {
-            try self.printer.append("Compression failed...\n\n", .{}, .{});
+            try self.printer.append("Compression failed...\n\n", .{}, .{ .color = 31 });
         }
     }
 
@@ -85,7 +83,7 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (Fs.existsFile(path)) {
-            try self.printer.append("Pre-Built found!\n", .{}, .{});
+            try self.printer.append("Pre-Built found!\n", .{}, .{ .color = 31 });
             try Fs.deleteFileIfExists(path);
             try self.printer.append("Deleted.\n\n", .{}, .{});
         }
