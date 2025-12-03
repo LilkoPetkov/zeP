@@ -358,7 +358,7 @@ pub fn main() !void {
             const version = try nextArg(&args, &printer, " > zeP zig {install|switch|uninstall} [version] [target?]");
             const target = args.next() orelse resolveDefaultTarget();
             if (std.mem.eql(u8, mode, "install")) {
-                zig.install(version, target) catch |err| {
+                zig.install(version, target) catch {
                     try printer.append("\nInstalling zig version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             } else if (std.mem.eql(u8, mode, "uninstall")) {
@@ -388,7 +388,7 @@ pub fn main() !void {
         if (std.mem.eql(u8, mode, "install") or std.mem.eql(u8, mode, "uninstall") or std.mem.eql(u8, mode, "switch")) {
             const version = try nextArg(&args, &printer, " > zeP zep {install|switch|uninstall} [version]");
             if (std.mem.eql(u8, mode, "install")) {
-                zep.install(version) catch |err| {
+                zep.install(version) catch {
                     try printer.append("\nInstalling zep version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             } else if (std.mem.eql(u8, mode, "uninstall")) {
