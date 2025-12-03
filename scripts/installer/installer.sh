@@ -26,7 +26,7 @@ ZEP_VERSION_DIR="$ZEP_DIR/zep/v/$TARGET"
 MANIFEST_ZEP="$ZEP_DIR/zep/manifest.json"
 
 TEMP_DIR="/tmp/zeP"
-TEMP_ZEP_TAR_FILE="$TEMP_DIR/$TARGET.tar"
+TEMP_ZEP_TAR_FILE="$TEMP_DIR/$TARGET.tar.xz"
 
 sudo rm -rf "$TEMP_DIR"
 mkdir -p "$TEMP_DIR"
@@ -57,7 +57,7 @@ echo "$JSON_STRING" > "$MANIFEST_ZEP"
 # Download and extract
 ###
 echo "Downloading release..."
-curl -L "https://github.com/XerWoho/zeP/releases/download/$TARGET/linux_$TARGET.tar" \
+curl -L "https://github.com/XerWoho/zeP/releases/download/$TARGET/linux_$TARGET.tar.xz" \
     -o "$TEMP_ZEP_TAR_FILE"
 
 echo "Extracting..."

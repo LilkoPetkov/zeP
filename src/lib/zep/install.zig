@@ -42,7 +42,7 @@ pub const ZepInstaller = struct {
         var paths = try Constants.Paths.paths(self.allocator);
         defer paths.deinit();
 
-        const target_extension = if (builtin.os.tag == .windows) "zip" else "tar";
+        const target_extension = if (builtin.os.tag == .windows) "zip" else "tar.xz";
         const target_path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/v/temp_{s}.{s}",
