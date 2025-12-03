@@ -49,19 +49,19 @@ pub const PackageFiles = struct {
         const stdin = std.io.getStdIn().reader();
         try self.printer.append("--- MODIFYING JSON MODE ---\n", .{}, .{ .color = 33 });
         try self.printer.append("(leave empty to keep same)\n\n", .{}, .{ .color = 33 });
-        const author = try self.promptInput(stdin, "Author: ", zep_json.value.author);
+        const author = try self.promptInput(stdin, "> Author: ", zep_json.value.author);
         defer self.allocator.free(author);
-        const description = try self.promptInput(stdin, "Description: ", zep_json.value.description);
+        const description = try self.promptInput(stdin, "> Description: ", zep_json.value.description);
         defer self.allocator.free(description);
-        const name = try self.promptInput(stdin, "Name: ", zep_json.value.name);
+        const name = try self.promptInput(stdin, "> Name: ", zep_json.value.name);
         defer self.allocator.free(name);
-        const license = try self.promptInput(stdin, "License: ", zep_json.value.license);
+        const license = try self.promptInput(stdin, "> License: ", zep_json.value.license);
         defer self.allocator.free(license);
-        const repo = try self.promptInput(stdin, "Repo: ", zep_json.value.repo);
+        const repo = try self.promptInput(stdin, "> Repo: ", zep_json.value.repo);
         defer self.allocator.free(repo);
-        const version = try self.promptInput(stdin, "Version: ", zep_json.value.version);
+        const version = try self.promptInput(stdin, "> Version: ", zep_json.value.version);
         defer self.allocator.free(version);
-        const zig_version = try self.promptInput(stdin, "Zig Version: ", zep_json.value.zig_version);
+        const zig_version = try self.promptInput(stdin, "> Zig Version: ", zep_json.value.zig_version);
         defer self.allocator.free(zig_version);
 
         zep_json.value.name = name;

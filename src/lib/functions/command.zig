@@ -58,7 +58,7 @@ pub const Command = struct {
 
         try self.printer.append("--- ADDING COMMAND MODE ---\n\n", .{}, .{ .color = 33 });
 
-        const command_name = try self.promptInput(stdin, "Command Name: ", true);
+        const command_name = try self.promptInput(stdin, "> *Command Name: ", true);
         defer self.allocator.free(command_name);
         for (zep_json.value.cmd) |c| {
             if (std.mem.eql(u8, c.name, command_name)) {
@@ -68,7 +68,7 @@ pub const Command = struct {
             try cmds.append(c);
         }
 
-        const command = try self.promptInput(stdin, "Command: ", true);
+        const command = try self.promptInput(stdin, "> *Command: ", true);
         defer self.allocator.free(command);
 
         const new_command = Structs.ZepFiles.CommandPackageJsonStrcut{ .cmd = command, .name = command_name };

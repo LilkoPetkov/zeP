@@ -21,10 +21,10 @@ pub const CustomPackage = struct {
     }
 
     fn promptVersionData(self: CustomPackage, stdin: anytype) !Structs.Packages.PackageVersions {
-        const url = try self.promptInput(stdin, "Url (required [.zip]): ", true, verifyUrl);
-        const root_file = try self.promptInput(stdin, "Root file (required): ", true, null);
-        const version = try self.promptInput(stdin, "Version (optional) [def: 0.1.0]: ", false, null);
-        const zig_version = try self.promptInput(stdin, "Zig Version (recommended) [def: 0.14.0]: ", false, null);
+        const url = try self.promptInput(stdin, "> *Url ([http(s)][.zip]): ", true, verifyUrl);
+        const root_file = try self.promptInput(stdin, "> *Root file: ", true, null);
+        const version = try self.promptInput(stdin, "> Version [0.1.0]: ", false, null);
+        const zig_version = try self.promptInput(stdin, "> Zig Version [0.14.0]: ", false, null);
 
         const hash = try Hash.hashData(self.allocator, url);
         return .{
@@ -41,7 +41,7 @@ pub const CustomPackage = struct {
 
         try self.printer.append("--- ADDING CUSTOM PACKAGE MODE ---\n\n", .{}, .{ .color = 33 });
 
-        const package_name = try self.promptInput(stdin, "Package Name: ", true, null);
+        const package_name = try self.promptInput(stdin, "> *Package Name: ", true, null);
         defer self.allocator.free(package_name);
 
         var paths = try Constants.Paths.paths(self.allocator);
@@ -64,7 +64,7 @@ pub const CustomPackage = struct {
         }
 
         // New package mode
-        const author = try self.promptInput(stdin, "Author (optional): ", false, null);
+        const author = try self.promptInput(stdin, "> Author: ", false, null);
         defer self.allocator.free(author);
 
         const v = try self.promptVersionData(stdin);
