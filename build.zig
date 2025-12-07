@@ -16,7 +16,9 @@ pub fn build(b: *std.Build) void {
 
     const localesMod = b.createModule(.{ .root_source_file = b.path("src/locales.zig") });
     const constantsMod = b.createModule(.{ .root_source_file = b.path("src/constants/_index.zig") });
-    const structsMod = b.createModule(.{ .root_source_file = b.path("src/structs/_index.zig") });
+    const structsMod = b.createModule(.{ .root_source_file = b.path("src/structs/_index.zig"), .imports = &.{
+        std.Build.Module.Import{ .name = "constants", .module = constantsMod },
+    } });
 
     const iosMod = b.createModule(.{ .root_source_file = b.path("src/tools/io/_index.zig"), .imports = &.{
         std.Build.Module.Import{ .name = "constants", .module = constantsMod },
