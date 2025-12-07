@@ -6,4 +6,3 @@ zep-out
 
 .zep/*
 !.zep/injector.zig
-zep.run

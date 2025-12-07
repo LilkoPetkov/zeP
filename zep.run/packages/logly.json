@@ -1,0 +1,35 @@
+{
+  "name": "logly",
+  "author": "muhammad-fiaz",
+  "docs": "",
+  "versions": [
+    {
+      "version": "0.0.4",
+      "url": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.0.4.zip",
+      "root_file": "/src/logly.zig",
+      "zig_version": "0.15.1",
+      "sha256sum": "f617015b68a15eb0a03df7a31c194f18965bea94633ecb664ecee6c1f9b5b619"
+    },
+    {
+      "version": "0.0.3",
+      "url": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.0.3.zip",
+      "root_file": "/src/logly.zig",
+      "zig_version": "0.15.1",
+      "sha256sum": "bf5751c5626bd3dea630973d89e022c1f1f40fab62d6fcbab5a4da6f49e6335d"
+    },
+    {
+      "version": "0.0.2",
+      "url": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.0.2.zip",
+      "root_file": "/src/logly.zig",
+      "zig_version": "0.15.1",
+      "sha256sum": "45dff12e5a4eb38d8664a626b6bbbc05a99c3cd97431ea25ac2c652e9619c813"
+    },
+    {
+      "version": "0.0.1",
+      "url": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.0.1.zip",
+      "root_file": "/src/logly.zig",
+      "zig_version": "0.15.1",
+      "sha256sum": "def8bd81cd43ab4ab6b457745b1d5418d5bcbdc2685c853375a9e9f81ad4acb2"
+    }
+  ]
+}

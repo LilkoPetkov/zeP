@@ -1,0 +1,92 @@
+{
+  "master": {
+    "version": "0.5",
+    "date": "2025-12-03",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/windows_0.5.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/linux_0.5.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  },
+  "0.5": {
+    "version": "0.5",
+    "date": "2025-12-03",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/windows_0.5.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/linux_0.5.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  },
+  "0.4": {
+    "version": "0.4",
+    "date": "2025-11-30",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.4/windows_0.4.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.4/linux_0.4.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  },
+  "0.3": {
+    "version": "0.3",
+    "date": "2025-11-23",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.3/windows_0.3.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.3/linux_0.3.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  },
+  "0.2": {
+    "version": "0.2",
+    "date": "2025-11-17",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.2/windows_0.2.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.2/linux_0.2.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  },
+  "0.1": {
+    "version": "0.1",
+    "date": "2025-11-16",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.1/windows_0.1.zip",
+      "sha256sum": "",
+      "size": ""
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.1/linux_0.1.tar.xz",
+      "sha256sum": "",
+      "size": ""
+    }
+  }
+}
