@@ -461,7 +461,15 @@ pub fn main() !void {
                 }
             };
         } else {
-            var installer = try Installer.init(allocator, &printer, null, null);
+            var installer = Installer.init(allocator, &printer, null, null) catch |err| {
+                switch (err) {
+                    error.NoPackageSpecified => {},
+                    else => {
+                        try printer.append("\nInstalling all packages has failed.\n", .{}, .{ .color = 31 });
+                    },
+                }
+                return;
+            };
             defer installer.deinit();
         }
         return;

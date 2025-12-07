@@ -75,6 +75,17 @@ pub const Installer = struct {
         for (lock.value.packages) |lockPackage| {
             if (std.mem.startsWith(u8, lockPackage.name, self.package.package_name)) {
                 if (std.mem.eql(u8, lockPackage.name, self.package.id)) {
+                    var paths = try Constants.Paths.paths(self.allocator);
+                    defer paths.deinit();
+
+                    const target_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}@{s}", .{
+                        paths.pkg_root,
+                        self.package.package_name,
+                        self.package.package_version,
+                    });
+                    defer self.allocator.free(target_path);
+                    if (!Fs.existsDir(target_path)) break;
+
                     try self.setPackage();
                     return error.AlreadyInstalled;
                 }
@@ -138,7 +149,7 @@ pub const Installer = struct {
         });
         defer self.allocator.free(target_path);
 
-        const relative_symbolic_link_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.Extras.package_files.zep_folder, package.package_name });
+        const relative_symbolic_link_path = try std.fs.path.join(self.allocator, &.{ Constants.Extras.package_files.zep_folder, package.package_name });
         Fs.deleteTreeIfExists(relative_symbolic_link_path) catch {};
         Fs.deleteFileIfExists(relative_symbolic_link_path) catch {};
         defer self.allocator.free(relative_symbolic_link_path);
