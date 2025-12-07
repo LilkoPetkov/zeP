@@ -1,10 +1,5 @@
-pub const ZigManifest = struct {
+pub const ArtifactManifest = struct {
     name: []const u8 = "",
-    path: []const u8 = "",
-};
-
-pub const ZepManifest = struct {
-    version: []const u8 = "",
     path: []const u8 = "",
 };
 

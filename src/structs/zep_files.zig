@@ -1,6 +1,9 @@
+const Constants = @import("constants");
+const builtin = @import("builtin");
+
 pub const BuildPackageJsonStruct = struct {
     entry: []const u8 = "src/main.zig",
-    target: []const u8 = "",
+    target: []const u8 = if (builtin.os.tag == .windows) Constants.Default.default_targets.windows else Constants.Default.default_targets.linux,
 };
 
 pub const CommandPackageJsonStrcut = struct {
