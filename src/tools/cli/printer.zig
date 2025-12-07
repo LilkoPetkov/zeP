@@ -12,8 +12,7 @@ pub const Printer = struct {
     data: std.ArrayList(Structs.Extras.PrinterData),
     allocator: std.mem.Allocator,
 
-    pub fn init(data: std.ArrayList(Structs.Extras.PrinterData)) Printer {
-        const allocator = std.heap.page_allocator;
+    pub fn init(data: std.ArrayList(Structs.Extras.PrinterData), allocator: std.mem.Allocator) Printer {
         return Printer{ .data = data, .allocator = allocator };
     }
 
