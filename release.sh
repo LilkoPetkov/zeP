@@ -9,7 +9,7 @@ mkdir -p release
 mkdir -p tempR
 
 # Windows targets
-windows_targets=("x86_64-windows" "x86-windows" "aarch64-windows")
+windows_targets=("x86_64-windows" "x86-windows" "aarch64-windows" "x86_64-windows-msvc" "aarch64-windows-msvc")
 
 for element in "${windows_targets[@]}"; do
     mkdir -p release/$element
@@ -17,7 +17,6 @@ for element in "${windows_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget=$element -p tempR/$element
 
     zip -j release/$element/zep_${element}_$versionName.zip tempR/$element/bin/zeP.exe
-    zip -r release/$element/zep_${element}_$versionName.zip packages/
 done
 
 # Linux targets
@@ -28,7 +27,7 @@ for element in "${linux_targets[@]}"; do
 
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget=$element -p tempR/$element
 
-	tar -C tempR/$element/bin -cJf release/$element/zep_${element}_$versionName.tar.xz zeP ../../../packages/
+	tar -C tempR/$element/bin -cJf release/$element/zep_${element}_$versionName.tar.xz zeP
 done
 
 rm -r tempR/
