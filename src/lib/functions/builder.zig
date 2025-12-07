@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const Constants = @import("constants");
 const Structs = @import("structs");
@@ -22,18 +23,29 @@ pub const Builder = struct {
     }
 
     /// Initializes a Child Processor, and builds zig project
-    pub fn build(self: *Builder) ![]u8 {
+    pub fn build(self: *Builder) !std.ArrayList([]u8) {
         const read_manifest = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
         defer read_manifest.deinit();
 
-        const execs = try std.fmt.allocPrint(self.allocator, "-Dtarget={s}", .{read_manifest.value.build.target});
+        var target = read_manifest.value.build.target;
+        if (target.len == 0) {
+            target = if (builtin.os.tag == .windows) Constants.Default.default_targets.windows else Constants.Default.default_targets.linux;
+        }
+        const execs = try std.fmt.allocPrint(self.allocator, "-Dtarget={s}", .{target});
         defer self.allocator.free(execs);
         const args = [_][]const u8{ "zig", "build", "-Doptimize=ReleaseSmall", execs, "-p", "zep-out/" };
-
         try self.printer.append("\nExecuting: \n$ {s}!\n\n", .{try std.mem.join(self.allocator, " ", &args)}, .{ .color = 32 });
 
         var process = std.process.Child.init(&args, self.allocator);
-        _ = process.spawnAndWait() catch {};
+        _ = process.spawnAndWait() catch |err| {
+            switch (err) {
+                else => {
+                    try self.printer.append("\nZig building failed!\nExiting.\n\n", .{}, .{ .color = 31 });
+                    std.process.exit(0);
+                    return;
+                },
+            }
+        };
         try self.printer.append("\nFinished executing!\n", .{}, .{ .color = 32 });
 
         const target_directory = try std.fs.path.join(self.allocator, &.{ "zep-out", "bin" });
@@ -48,7 +60,15 @@ pub const Builder = struct {
             try entries.append(entry.name);
         }
 
-        const target_file = try std.fs.path.join(self.allocator, &.{ target_directory, entries.items[0] });
-        return target_file;
+        if (entries.items.len == 0) {
+            return error.NoFile;
+        }
+
+        var target_files = std.ArrayList([]u8).init(self.allocator);
+        for (entries.items) |entry| {
+            const target_file = try std.fs.path.join(self.allocator, &.{ target_directory, entry });
+            try target_files.append(target_file);
+        }
+        return target_files;
     }
 };
