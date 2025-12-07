@@ -6,6 +6,10 @@ if ! [ -e "$LOCAL_ZEP" ]; then
     mkdir -p "${LOCAL_ZEP}"
 fi
 
+if ! [ -e "$USR_LOCAL_BIN" ]; then
+    mkdir -p "${USR_LOCAL_BIN}"
+fi
+
 OLD_LOCAL_ZEP="/lib/zeP"
 if [ -e "$OLD_LOCAL_ZEP" ]; then
     sudo mv "${OLD_LOCAL_ZEP}" "${LOCAL_ZEP}"
