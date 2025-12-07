@@ -1,17 +1,112 @@
 {
   "master": {
-    "version": "0.5",
-    "date": "2025-12-03",
+    "version": "0.6",
+    "date": "2025-12-07",
     "docs": "",
     "x86_64-windows": {
-      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/windows_0.5.zip",
-      "sha256sum": "713fb7502a08e5cfbfada9d94a32cee02e46e9079c1d06069775b6bafe242335",
-      "size": "733184"
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-windows_0.6.zip",
+      "sha256sum": "8f6c6aab43306f071d948d1b60652aa511ec16efaccffb326ec9582f9aaad918",
+      "size": "714945"
+    },
+    "x86-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86-windows_0.6.zip",
+      "sha256sum": "66b41f0c76769422d09431a0a2a94940a40768f5ead01f415ff688915b8323db",
+      "size": "857520"
+    },
+    "x86_64-windows-msvc": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-windows-msvc_0.6.zip",
+      "sha256sum": "291e285891aa830836bf75e398b60adda197ed34517dd04cb9bc92bc4eb60bc8",
+      "size": "716997"
+    },
+    "aarch64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/aarch64-windows_0.6.zip",
+      "sha256sum": "50fb769af2d56a5baad3abacf37aec33dddf9974c813cdc45321189ea25a0bd7",
+      "size": "747796"
+    },
+    "aarch64-windows-msvc": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-windows-msvc_0.6.zip",
+      "sha256sum": "ef17f569a5993ddd945608b4b18e8b37f1cea3bb6d063a9b255ee0895e142301",
+      "size": "747744"
     },
     "x86_64-linux": {
-      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.5/linux_0.5.tar.xz",
-      "sha256sum": "a91a2e2cddfacc19aa3ae45fd1090eef3afebe23d9e5aee3c3921eab032fadf5",
-      "size": "2098812"
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-linux_0.6.zip",
+      "sha256sum": "38495caae47f8d1a2031b8035a47faed4f1458f3acfdf29847908ca46dab6840",
+      "size": "2099744"
+    },
+    "x86-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86-linux_0.6.zip",
+      "sha256sum": "59dc5996972b120f68d51421e29432b42644baa1d38da5c9a8bb0ddaf121d87b",
+      "size": "2528856"
+    },
+    "x86_64-linux-musl": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-linux-musl_0.6.zip",
+      "sha256sum": "38495caae47f8d1a2031b8035a47faed4f1458f3acfdf29847908ca46dab6840",
+      "size": "2099744"
+    },
+    "aarch64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-linux_0.6.zip",
+      "sha256sum": "a5585c53fab52e2e766ae7452985dca9607229914c298c2782e0f7b7f568584f",
+      "size": "2204248"
+    },
+    "aarch64-linux-musl": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-linux-musl_0.6.zip",
+      "sha256sum": "a5585c53fab52e2e766ae7452985dca9607229914c298c2782e0f7b7f568584f",
+      "size": "2204248"
+    }
+  },
+  "0.6": {
+    "version": "0.6",
+    "date": "2025-12-07",
+    "docs": "",
+    "x86_64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-windows_0.6.zip",
+      "sha256sum": "8f6c6aab43306f071d948d1b60652aa511ec16efaccffb326ec9582f9aaad918",
+      "size": "714945"
+    },
+    "x86-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86-windows_0.6.zip",
+      "sha256sum": "66b41f0c76769422d09431a0a2a94940a40768f5ead01f415ff688915b8323db",
+      "size": "857520"
+    },
+    "x86_64-windows-msvc": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-windows-msvc_0.6.zip",
+      "sha256sum": "291e285891aa830836bf75e398b60adda197ed34517dd04cb9bc92bc4eb60bc8",
+      "size": "716997"
+    },
+    "aarch64-windows": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/aarch64-windows_0.6.zip",
+      "sha256sum": "50fb769af2d56a5baad3abacf37aec33dddf9974c813cdc45321189ea25a0bd7",
+      "size": "747796"
+    },
+    "aarch64-windows-msvc": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-windows-msvc_0.6.zip",
+      "sha256sum": "ef17f569a5993ddd945608b4b18e8b37f1cea3bb6d063a9b255ee0895e142301",
+      "size": "747744"
+    },
+    "x86_64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-linux_0.6.zip",
+      "sha256sum": "38495caae47f8d1a2031b8035a47faed4f1458f3acfdf29847908ca46dab6840",
+      "size": "2099744"
+    },
+    "x86-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86-linux_0.6.zip",
+      "sha256sum": "59dc5996972b120f68d51421e29432b42644baa1d38da5c9a8bb0ddaf121d87b",
+      "size": "2528856"
+    },
+    "x86_64-linux-musl": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_x86_64-linux-musl_0.6.zip",
+      "sha256sum": "38495caae47f8d1a2031b8035a47faed4f1458f3acfdf29847908ca46dab6840",
+      "size": "2099744"
+    },
+    "aarch64-linux": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-linux_0.6.zip",
+      "sha256sum": "a5585c53fab52e2e766ae7452985dca9607229914c298c2782e0f7b7f568584f",
+      "size": "2204248"
+    },
+    "aarch64-linux-musl": {
+      "tarball": "https://github.com/XerWoho/zeP/releases/download/0.6/zep_aarch64-linux-musl_0.6.zip",
+      "sha256sum": "a5585c53fab52e2e766ae7452985dca9607229914c298c2782e0f7b7f568584f",
+      "size": "2204248"
     }
   },
   "0.5": {
