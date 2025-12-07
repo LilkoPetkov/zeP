@@ -24,16 +24,16 @@ pub const Runner = struct {
     }
 
     /// Initializes a Child Processor, and executes specified file
-    pub fn run(self: *Runner, target_exe: ?[]const u8, args: [][]const u8) !void {
+    pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
         var builder = try Builder.init(self.allocator, self.printer);
         try self.printer.append("\nBuilding executeable...\n\n", .{}, .{ .color = 32 });
         const target_files = try builder.build();
         defer target_files.deinit();
 
         var target_file = target_files.items[0];
-        if (target_files.items.len > 0 and target_exe != null) {
+        if (target_files.items.len > 0 and target_exe.len > 0) {
             for (target_files.items) |tf| {
-                if (std.mem.eql(u8, tf, target_exe.?)) {
+                if (std.mem.eql(u8, tf, target_exe)) {
                     target_file = tf;
                     break;
                 }

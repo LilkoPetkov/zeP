@@ -291,13 +291,12 @@ pub fn main() !void {
             return;
         }
         if (std.mem.eql(u8, mode, "remove")) {
-            const target = args.next();
-            var custom = CustomPackage.init(allocator, &printer);
-            if (target == null) {
+            const target = args.next() orelse {
                 try printer.append("No target specified!\n\n", .{}, .{});
                 return;
-            }
-            try custom.removePackage(target.?);
+            };
+            var custom = CustomPackage.init(allocator, &printer);
+            try custom.removePackage(target);
             return;
         }
 

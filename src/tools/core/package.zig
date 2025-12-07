@@ -63,23 +63,23 @@ pub const Package = struct {
         try printer.append("\n\n", .{}, .{});
 
         // Find version struct
-        var selected: ?Structs.Packages.PackageVersions = null;
+        var check_selected: ?Structs.Packages.PackageVersions = null;
         for (versions) |v| {
             if (std.mem.eql(u8, v.version, target_version)) {
-                selected = v;
+                check_selected = v;
                 break;
             }
         }
 
-        if (selected == null) {
+        const selected = check_selected orelse {
             try printer.append("Package version was not found...\n\n", .{}, .{ .color = 31 });
             return error.PackageVersion;
-        }
+        };
 
         try printer.append("Package version found!\n\n", .{}, .{ .color = 32 });
 
         // Create hash
-        const hash = try Hash.hashData(allocator, selected.?.url);
+        const hash = try Hash.hashData(allocator, selected.url);
 
         // Compute id
         const id = try std.fmt.allocPrint(allocator, "{s}@{s}", .{
@@ -93,7 +93,7 @@ pub const Package = struct {
             .package_name = package_name,
             .package_version = target_version,
             .package_hash = hash,
-            .package = selected.?,
+            .package = selected,
             .printer = printer,
             .id = id,
         };

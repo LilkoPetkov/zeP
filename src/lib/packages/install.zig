@@ -25,8 +25,8 @@ pub const Installer = struct {
     cacher: Cacher,
     printer: *Printer,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer, package_name: ?[]const u8, package_version_target: ?[]const u8) !Installer {
-        if (package_name == null) {
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer, opt_package_name: ?[]const u8, opt_package_version_target: ?[]const u8) !Installer {
+        const package_name = opt_package_name orelse {
             const previous_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
 
@@ -36,9 +36,9 @@ pub const Installer = struct {
 
             Locales.VERBOSITY_MODE = previous_verbosity;
             return error.NoPackageSpecified;
-        }
+        };
 
-        const package = try Package.init(allocator, package_name.?, package_version_target, printer);
+        const package = try Package.init(allocator, package_name, opt_package_version_target, printer);
         const cacher = try Cacher.init(allocator, package, printer);
         const downloader = try Downloader.init(allocator, package, cacher, printer);
         const json = try Json.init(allocator);
