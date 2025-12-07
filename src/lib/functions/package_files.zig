@@ -16,8 +16,7 @@ pub const PackageFiles = struct {
         const runner = PackageFiles{ .allocator = allocator, .printer = printer };
         if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
             try printer.append("\nNo zep.json file!\n", .{}, .{ .color = 31 });
-            std.process.exit(0);
-            return runner;
+            return error.ManifestMissing;
         }
 
         return runner;
