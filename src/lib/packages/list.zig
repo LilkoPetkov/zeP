@@ -24,9 +24,17 @@ pub const Lister = struct {
     }
 
     pub fn list(self: *Lister) !void {
-        const parsed_package = try self.json.parsePackage(self.package_name) orelse {
-            try self.printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
-            return;
+        const parsed_package = self.json.parsePackage(self.package_name) catch |err| {
+            switch (err) {
+                error.PackageNotFound => {
+                    try self.printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
+                    return;
+                },
+                else => {
+                    try self.printer.append("Parsing package failed...\n\n", .{}, .{ .color = 31 });
+                    return;
+                },
+            }
         };
         defer parsed_package.deinit();
 
