@@ -54,7 +54,7 @@ pub const Paths = struct {
         self.allocator.free(self.custom);
         self.allocator.free(self.zepped);
 
-        // self.allocator.free(self.pkg_root);
+        self.allocator.free(self.pkg_root);
         self.allocator.free(self.zig_root);
         self.allocator.free(self.zep_root);
 
