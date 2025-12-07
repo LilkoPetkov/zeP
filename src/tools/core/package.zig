@@ -31,7 +31,7 @@ pub const Package = struct {
         package_name: []const u8,
         package_version: ?[]const u8,
         printer: *Printer,
-    ) !?Package {
+    ) !Package {
         try printer.append("\nFinding the package...\n", .{}, .{});
 
         // JSON context
@@ -40,7 +40,7 @@ pub const Package = struct {
         // Load package manifest
         const parsed_package = try json.parsePackage(package_name) orelse {
             try printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
-            return null;
+            return error.PackageNotFound;
         };
         defer parsed_package.deinit();
 
@@ -49,7 +49,7 @@ pub const Package = struct {
         const versions = parsed_package.value.versions;
         if (versions.len == 0) {
             printer.append("\nPackage has no version!\n", .{}, .{ .color = 31 }) catch {};
-            return null;
+            return error.PackageVersion;
         }
 
         // Pick target version
@@ -76,7 +76,7 @@ pub const Package = struct {
 
         if (selected == null) {
             try printer.append("Package version was not found...\n\n", .{}, .{ .color = 31 });
-            std.process.exit(0);
+            return error.PackageVersion;
         }
 
         try printer.append("Package version found!\n\n", .{}, .{ .color = 32 });
@@ -249,151 +249,7 @@ pub const Package = struct {
             try Fs.deleteTreeIfExists(path);
         }
     }
-
-    // --- PACKAGE-FILES ---
-
-    pub fn manifestAdd(self: *Package, pkg: *Structs.ZepFiles.PackageJsonStruct) !void {
-        pkg.packages = try filterOut(
-            self.allocator,
-            pkg.packages,
-            self.package_name,
-            []const u8,
-            struct {
-                fn match(a: []const u8, b: []const u8) bool {
-                    return std.mem.startsWith(u8, a, b); // first remove the previous package Name
-                }
-            }.match,
-        );
-
-        pkg.packages = try appendUnique(
-            []const u8,
-            pkg.packages,
-            self.id,
-            self.allocator,
-            struct {
-                fn match(a: []const u8, b: []const u8) bool {
-                    return std.mem.startsWith(u8, a, b);
-                }
-            }.match,
-        );
-
-        try self.json.writePretty(Constants.Extras.package_files.manifest, pkg);
-    }
-
-    pub fn manifestRemove(self: *Package, pkg: *Structs.ZepFiles.PackageJsonStruct) !void {
-        pkg.packages = try filterOut(
-            self.allocator,
-            pkg.packages,
-            self.id,
-            []const u8,
-            struct {
-                fn match(item: []const u8, ctx: []const u8) bool {
-                    return std.mem.startsWith(u8, item, ctx);
-                }
-            }.match,
-        );
-
-        try self.json.writePretty(Constants.Extras.package_files.manifest, pkg);
-    }
-
-    pub fn lockAdd(self: *Package, lock: *Structs.ZepFiles.PackageLockStruct) !void {
-        const new_entry = Structs.ZepFiles.LockPackageStruct{
-            .name = self.id,
-            .hash = self.package_hash,
-            .source = self.package.url,
-            .zig_version = self.package.zig_version,
-            .root_file = self.package.root_file,
-        };
-
-        lock.packages = try filterOut(
-            self.allocator,
-            lock.packages,
-            self.package_name,
-            Structs.ZepFiles.LockPackageStruct,
-            struct {
-                fn match(item: Structs.ZepFiles.LockPackageStruct, ctx: []const u8) bool {
-                    return std.mem.startsWith(u8, item.name, ctx);
-                }
-            }.match,
-        );
-
-        lock.packages = try appendUnique(
-            Structs.ZepFiles.LockPackageStruct,
-            lock.packages,
-            new_entry,
-            self.allocator,
-            struct {
-                fn match(item: Structs.ZepFiles.LockPackageStruct, ctx: Structs.ZepFiles.LockPackageStruct) bool {
-                    return std.mem.startsWith(u8, item.name, ctx.name);
-                }
-            }.match,
-        );
-
-        var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
-        defer package_json.deinit();
-        lock.root = package_json.value;
-
-        try self.json.writePretty(Constants.Extras.package_files.lock, lock);
-    }
-
-    pub fn lockRemove(self: *Package, lock: *Structs.ZepFiles.PackageLockStruct) !void {
-        lock.packages = try filterOut(
-            self.allocator,
-            lock.packages,
-            self.package_name,
-            Structs.ZepFiles.LockPackageStruct,
-            struct {
-                fn match(item: Structs.ZepFiles.LockPackageStruct, ctx: []const u8) bool {
-                    return std.mem.startsWith(u8, item.name, ctx);
-                }
-            }.match,
-        );
-
-        var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
-        defer package_json.deinit();
-        lock.root = package_json.value;
-
-        try self.json.writePretty(Constants.Extras.package_files.lock, lock);
-    }
 };
-
-fn filterOut(
-    allocator: std.mem.Allocator,
-    list: anytype,
-    filter: []const u8,
-    comptime T: type,
-    matchFn: fn (a: T, b: []const u8) bool,
-) ![]T {
-    var out = std.ArrayList(T).init(allocator);
-    defer out.deinit();
-
-    for (list) |item| {
-        if (!matchFn(item, filter))
-            try out.append(item);
-    }
-
-    return out.toOwnedSlice();
-}
-
-fn appendUnique(
-    comptime T: type,
-    list: []const T,
-    new_item: T,
-    allocator: std.mem.Allocator,
-    matchFn: fn (a: T, b: T) bool,
-) ![]T {
-    var arr = std.ArrayList(T).init(allocator);
-    defer arr.deinit();
-
-    for (list) |item| {
-        try arr.append(item);
-        if (matchFn(item, new_item))
-            return arr.toOwnedSlice();
-    }
-
-    try arr.append(new_item);
-    return arr.toOwnedSlice();
-}
 
 fn absDiff(x: usize, y: usize) usize {
     return @as(usize, @abs(@as(i64, @intCast(x)) - @as(i64, @intCast(y))));
