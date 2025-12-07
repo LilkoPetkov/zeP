@@ -15,23 +15,166 @@ const Installer = @import("lib/packages/install.zig").Installer;
 const Uninstaller = @import("lib/packages/uninstall.zig").Uninstaller;
 const Lister = @import("lib/packages/list.zig").Lister;
 const Purger = @import("lib/packages/purge.zig").Purger;
-const Zig = @import("lib/zig/zig.zig").Zig;
-const Zep = @import("lib/zep/zep.zig").Zep;
 const CustomPackage = @import("lib/packages/custom.zig").CustomPackage;
 const PreBuilt = @import("lib/functions/pre_built.zig").PreBuilt;
 const Command = @import("lib/functions/command.zig").Command;
 const PackageFiles = @import("lib/functions/package_files.zig").PackageFiles;
 const Builder = @import("lib/functions/builder.zig").Builder;
 const Runner = @import("lib/functions/runner.zig").Runner;
+const Bootstrap = @import("lib/functions/bootstrap.zig");
+
+const Artifact = @import("lib/artifact/artifact.zig").Artifact;
+
+const clap = @import("clap");
+
+const BootstrapArgs = struct {
+    zig: []const u8,
+    deps: [][]const u8,
+
+    pub fn deinit(self: *BootstrapArgs, allocator: std.mem.Allocator) void {
+        allocator.free(self.zig);
+        for (self.deps) |dep| {
+            allocator.free(dep);
+        }
+    }
+};
+fn parseBootstrap(allocator: std.mem.Allocator) !BootstrapArgs {
+    const params = [_]clap.Param(u8){
+        .{
+            .id = 'z',
+            .names = .{ .short = 'z', .long = "zig" },
+            .takes_value = .one,
+        },
+        .{
+            .id = 'd',
+            .names = .{ .short = 'd', .long = "deps" },
+            .takes_value = .one,
+        },
+    };
+
+    var iter = try std.process.ArgIterator.initWithAllocator(allocator);
+    defer iter.deinit();
+
+    // skip .exe and command
+    _ = iter.next();
+    _ = iter.next();
+    var diag = clap.Diagnostic{};
+    var parser = clap.streaming.Clap(u8, std.process.ArgIterator){
+        .params = &params,
+        .iter = &iter,
+        .diagnostic = &diag,
+    };
+
+    var zig: []const u8 = "0.14.0";
+    var raw_deps: []const u8 = "";
+    // Because we use a streaming parser, we have to consume each argument parsed individually.
+    while (parser.next() catch |err| {
+        return err;
+    }) |arg| {
+        // arg.param will point to the parameter which matched the argument.
+        switch (arg.param.id) {
+            'z' => {
+                zig = arg.value orelse "";
+            },
+            'd' => {
+                raw_deps = arg.value orelse "";
+            },
+            else => continue,
+        }
+    }
+
+    var deps = std.ArrayList([]const u8).init(allocator);
+    var deps_split = std.mem.splitScalar(u8, raw_deps, ',');
+    while (deps_split.next()) |d| {
+        const dep = std.mem.trim(u8, d, " ");
+        if (dep.len == 0) continue;
+        try deps.append(try allocator.dupe(u8, dep));
+    }
+
+    return BootstrapArgs{
+        .zig = try allocator.dupe(u8, zig),
+        .deps = deps.items,
+    };
+}
+
+const RunnerArgs = struct {
+    target: []const u8,
+    args: [][]const u8,
+
+    pub fn deinit(self: *RunnerArgs, allocator: std.mem.Allocator) void {
+        allocator.free(self.target);
+        for (self.args) |arg| {
+            allocator.free(arg);
+        }
+    }
+};
+fn parseRunner(allocator: std.mem.Allocator) !RunnerArgs {
+    const params = [_]clap.Param(u8){
+        .{
+            .id = 't',
+            .names = .{ .short = 't', .long = "target" },
+            .takes_value = .one,
+        },
+        .{
+            .id = 'a',
+            .names = .{ .short = 'a', .long = "args" },
+            .takes_value = .one,
+        },
+    };
+
+    var iter = try std.process.ArgIterator.initWithAllocator(allocator);
+    defer iter.deinit();
+
+    // skip .exe and command
+    _ = iter.next();
+    _ = iter.next();
+    var diag = clap.Diagnostic{};
+    var parser = clap.streaming.Clap(u8, std.process.ArgIterator){
+        .params = &params,
+        .iter = &iter,
+        .diagnostic = &diag,
+    };
+
+    var target: []const u8 = "";
+    var raw_args: []const u8 = "";
+    // Because we use a streaming parser, we have to consume each argument parsed individually.
+    while (parser.next() catch |err| {
+        return err;
+    }) |arg| {
+        // arg.param will point to the parameter which matched the argument.
+        switch (arg.param.id) {
+            't' => {
+                target = arg.value orelse "";
+            },
+            'a' => {
+                raw_args = arg.value orelse "";
+            },
+            else => continue,
+        }
+    }
+
+    var args = std.ArrayList([]const u8).init(allocator);
+    var args_split = std.mem.splitScalar(u8, raw_args, ' ');
+    while (args_split.next()) |a| {
+        const arg = std.mem.trim(u8, a, " ");
+        if (arg.len == 0) continue;
+        try args.append(try allocator.dupe(u8, arg));
+    }
+
+    return RunnerArgs{
+        .target = try allocator.dupe(u8, target),
+        .args = args.items,
+    };
+}
 
 /// Print the usage and the legend of zeP.
 fn printUsage(printer: *Printer) !void {
     try printer.append("\nUsage:\n", .{}, .{});
     try printer.append(" Legend:\n  > []  # required\n  > ()  # optional\n\n", .{}, .{});
-    try printer.append("--- SIMPLE COMMANDS ---\n  zeP version\n  zeP help\n zeP debug\n\n", .{}, .{});
-    try printer.append("--- BUILD COMMANDS ---\n  zeP runner (args)\n  zeP build\n\n", .{}, .{});
-    try printer.append("--- MANIFEST COMMANDS ---\n  zeP init\n  zeP lock\n zeP json\n\n", .{}, .{});
-    try printer.append("--- CMD COMMANDS ---\n  zeP cmd run [cmd]\nzeP cmd add\nzeP cmd remove <cmd>\nzeP cmd list\n\n", .{}, .{});
+    try printer.append("--- SIMPLE COMMANDS ---\n  zeP version\n  zeP help\n  zeP debug\n\n", .{}, .{});
+    try printer.append("--- BUILD COMMANDS ---\n  zeP runner (--target <target>) (--args <args>)\n  zeP build\n  zeP bootstrap (--zig <zig-version>) (--deps <package1,package2>)\n\n", .{}, .{});
+    try printer.append("--- MANIFEST COMMANDS ---\n  zeP init\n  zeP lock\n  zeP json\n\n", .{}, .{});
+    try printer.append("--- CMD COMMANDS ---\n  zeP cmd run [cmd]\n  zeP cmd add\n  zeP cmd remove <cmd>\n  zeP cmd list\n\n", .{}, .{});
     try printer.append("--- PACKAGE COMMANDS ---\n  zeP install (target)@(version)\n  zeP uninstall [target]\n", .{}, .{});
     try printer.append("  zeP purge [pkg|cache]\n", .{}, .{});
     try printer.append("  zeP pkg list [target]\n  zeP pkg remove [custom package name]\n  zeP pkg add\n\n", .{}, .{});
@@ -44,9 +187,9 @@ fn printUsage(printer: *Printer) !void {
 }
 
 /// Fetch the next argument or print an error and exit out of the process.
-fn nextArg(args: *std.process.ArgIterator, printer: *Printer, usageMsg: []const u8) ![]const u8 {
+fn nextArg(args: *std.process.ArgIterator, printer: *Printer, usage_message: []const u8) ![]const u8 {
     return args.next() orelse blk: {
-        try printer.append("Missing argument:\n{s}\n", .{usageMsg}, .{});
+        try printer.append("Missing argument:\n{s}\n", .{usage_message}, .{});
         std.process.exit(1);
         break :blk "";
     };
@@ -110,6 +253,14 @@ pub fn main() !void {
         return;
     }
 
+    if (std.mem.eql(u8, subcommand, "bootstrap")) {
+        var bootstrap_args = try parseBootstrap(allocator);
+        defer bootstrap_args.deinit(allocator);
+
+        try Bootstrap.bootstrap(allocator, &printer, bootstrap_args.zig, bootstrap_args.deps);
+        return;
+    }
+
     // First verify that we are in zeP project
     if (Fs.existsFile(Constants.Extras.package_files.lock) and
         Fs.existsFile(Constants.Extras.package_files.manifest) and
@@ -166,19 +317,17 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "build")) {
         var builder = try Builder.init(allocator, &printer);
-        _ = try builder.build();
+        const t = try builder.build();
+        t.deinit();
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "runner")) {
-        var arguments = std.ArrayList([]const u8).init(allocator);
-        defer arguments.deinit();
-        while (args.next()) |arg| {
-            try arguments.append(arg);
-        }
+        var runner_args = try parseRunner(allocator);
+        defer runner_args.deinit(allocator);
 
         var runner = try Runner.init(allocator, &printer);
-        try runner.run(arguments.items);
+        try runner.run(runner_args.target, runner_args.args);
         return;
     }
 
@@ -351,7 +500,7 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "zig")) {
         const mode = try nextArg(&args, &printer, " > zeP zig [install|switch|uninstall|list] [version]");
-        var zig = try Zig.init(allocator, &printer);
+        var zig = try Artifact.init(allocator, &printer, .zig);
         defer zig.deinit();
 
         if (std.mem.eql(u8, mode, "install") or std.mem.eql(u8, mode, "uninstall") or std.mem.eql(u8, mode, "switch")) {
@@ -382,21 +531,23 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "zep")) {
         const mode = try nextArg(&args, &printer, " > zeP zep [install|switch|uninstall|list] [version]");
-        var zep = try Zep.init(allocator, &printer);
+        var zep = try Artifact.init(allocator, &printer, .zep);
         defer zep.deinit();
 
         if (std.mem.eql(u8, mode, "install") or std.mem.eql(u8, mode, "uninstall") or std.mem.eql(u8, mode, "switch")) {
             const version = try nextArg(&args, &printer, " > zeP zep {install|switch|uninstall} [version]");
+            const target = args.next() orelse resolveDefaultTarget();
+
             if (std.mem.eql(u8, mode, "install")) {
-                zep.install(version) catch {
-                    try printer.append("\nInstalling zep version {s} has failed...\n\n", .{version}, .{ .color = 31 });
+                zep.install(version, target) catch |err| {
+                    try printer.append("\nInstalling zep version {s} has failed... {any}\n\n", .{ version, err }, .{ .color = 31 });
                 };
             } else if (std.mem.eql(u8, mode, "uninstall")) {
-                zep.uninstall(version) catch {
+                zep.uninstall(version, target) catch {
                     try printer.append("\nUninstalling zep version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             } else {
-                zep.switchVersion(version) catch {
+                zep.switchVersion(version, target) catch {
                     try printer.append("\nSwitching to zep version {s} has failed...\n\n", .{version}, .{ .color = 31 });
                 };
             }
