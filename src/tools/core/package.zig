@@ -38,10 +38,7 @@ pub const Package = struct {
         var json = try Json.init(allocator);
 
         // Load package manifest
-        const parsed_package = try json.parsePackage(package_name) orelse {
-            try printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
-            return error.PackageNotFound;
-        };
+        const parsed_package = try json.parsePackage(package_name);
         defer parsed_package.deinit();
 
         try printer.append("Package Found! - {s}.json\n\n", .{package_name}, .{ .color = 32 });
@@ -103,115 +100,6 @@ pub const Package = struct {
     }
 
     pub fn deinit(_: *Package) void {}
-
-    fn getPackageNames(self: *Package) !std.ArrayList([]const u8) {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
-        if (!Fs.existsFile(paths.zep_manifest)) {
-            var tmp = try std.fs.cwd().createFile(paths.zep_manifest, .{});
-            defer tmp.close();
-            try self.json.writePretty(paths.zep_manifest, Structs.Manifests.ZepManifest{
-                .path = "",
-                .version = "",
-            });
-        }
-
-        const manifest_target = paths.zep_manifest;
-        const open_manifest = try Fs.openFile(manifest_target);
-        defer open_manifest.close();
-
-        const read_open_manifest = try open_manifest.readToEndAlloc(self.allocator, Constants.Default.mb);
-        const parsed_manifest = try std.json.parseFromSlice(Structs.Manifests.ZepManifest, self.allocator, read_open_manifest, .{});
-        defer parsed_manifest.deinit();
-        const local_path = try std.fmt.allocPrint(self.allocator, "{s}/packages/", .{parsed_manifest.value.path});
-        defer self.allocator.free(local_path);
-
-        const dir = try Fs.openDir(local_path);
-        defer dir.close();
-
-        var names = std.ArrayList([]const u8).init(self.allocator);
-        var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
-            if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
-            const name = entry.name[0 .. entry.name.len - 5];
-            try names.append(try self.allocator.dupe(u8, name));
-        }
-
-        return names;
-    }
-
-    fn getCustomPackageNames(self: *Package) !std.ArrayList([]const u8) {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
-        const dir = try Fs.openDir(paths.custom);
-        defer dir.close();
-
-        var names = std.ArrayList([]const u8).init(self.allocator);
-        var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
-            if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
-            const name = entry.name[0 .. entry.name.len - 5];
-            try names.append(try self.allocator.dupe(u8, name));
-        }
-
-        return names;
-    }
-
-    pub fn findPackage(self: *Package) !?[]const u8 {
-        const local_package_names = try self.getPackageNames();
-        defer {
-            for (local_package_names.items) |n| self.allocator.free(n);
-            local_package_names.deinit();
-        }
-        var local_suggestions = std.ArrayList([]const u8).init(self.allocator);
-        defer local_suggestions.deinit();
-        for (local_package_names.items) |pn| {
-            const dist = hammingDistance(pn, self.package_name);
-            if (dist == 0) {
-                const found = try self.allocator.dupe(u8, pn);
-                return found;
-            } else if (dist < 3) {
-                try local_suggestions.append(pn);
-            }
-        }
-
-        const custom_package_names = try self.getCustomPackageNames();
-        defer {
-            for (custom_package_names.items) |n| self.allocator.free(n);
-            custom_package_names.deinit();
-        }
-
-        try self.printer.append(try custom_package_names.toOwnedSlice(), .{}, .{});
-        var custom_suggestions = std.ArrayList([]const u8).init(self.allocator);
-        defer custom_suggestions.deinit();
-        for (custom_package_names.items) |pn| {
-            const dist = hammingDistance(pn, self.package_name);
-            if (dist == 0) {
-                const found = try self.allocator.dupe(u8, pn);
-                return found;
-            } else if (dist < 3) {
-                try custom_suggestions.append(pn);
-            }
-        }
-
-        if (local_suggestions.items.len == 0 and custom_suggestions.items.len == 0) {
-            try self.printer.append("(404) No package named '{s}' found.\nCheck for typos!\n", .{self.package_name}, .{});
-            return null;
-        }
-        try self.printer.append("(404) No package named '{s}' found.\nDid you mean:\n", .{self.package_name}, .{});
-        for (local_suggestions.items) |s| {
-            try self.printer.append("- {s} (local)\n", .{s}, .{});
-        }
-        try self.printer.append("\n", .{}, .{});
-        for (custom_suggestions.items) |s| {
-            try self.printer.append("- {s} (custom)\n", .{s}, .{});
-        }
-        try self.printer.append("\n", .{}, .{});
-
-        return null;
-    }
 
     fn getPackagePathsAmount(self: *Package) !usize {
         var paths = try Constants.Paths.paths(self.allocator);
