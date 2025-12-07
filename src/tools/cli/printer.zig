@@ -31,8 +31,8 @@ pub const Printer = struct {
         return;
     }
 
-    pub fn pop(self: *Printer, pop_amount: ?u8) void {
-        const amount = pop_amount orelse 1;
+    pub fn pop(self: *Printer, pop_amount: u8) void {
+        const amount = pop_amount;
         for (0..amount) |_| {
             const n = self.data.pop();
             if (n == null) break;
