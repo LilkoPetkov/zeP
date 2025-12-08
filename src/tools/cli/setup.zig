@@ -6,6 +6,33 @@ const Constants = @import("constants");
 const Fs = @import("io").Fs;
 const Printer = @import("printer.zig").Printer;
 
+fn setupEnviromentPath(tmp_path: []const u8) !void {
+    if (builtin.os.tag != .linux) return;
+    const sh_file =
+        \\\ #!/bin/bash
+        \\\ 
+        \\\ USR_LOCAL_BIN="$HOME/.local/bin"
+        \\\ export PATH="$USR_LOCAL_BIN:$PATH"
+        \\\ grep -qxF "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
+    ;
+
+    const tmp = try Fs.openFile(tmp_path);
+    defer {
+        tmp.close();
+        Fs.deleteFileIfExists(tmp_path) catch {};
+    }
+
+    const allocator = std.heap.page_allocator;
+    _ = try tmp.write(sh_file);
+    try tmp.chmod(755);
+
+    const exec = try std.fmt.allocPrint(allocator, "./{s}", .{tmp_path});
+    defer allocator.free(exec);
+
+    var exec_cmd = std.process.Child.init(&.{exec}, allocator);
+    _ = exec_cmd.spawnAndWait() catch {};
+}
+
 /// Runs on install.
 /// Sets up basic folders for faster
 /// usage.
@@ -31,4 +58,16 @@ pub fn setup(allocator: std.mem.Allocator, printer: *Printer) !void {
             }
         };
     }
+
+    if (builtin.os.tag != .linux) return;
+    const tmp_path = try std.fs.path.join(allocator, &.{ paths.root, "temp" });
+    defer {
+        allocator.free(tmp_path);
+        Fs.deleteTreeIfExists(tmp_path) catch {};
+    }
+
+    const tmp_file = try std.fs.path.join(allocator, &.{ tmp_path, "tmp_exe" });
+    defer allocator.free(tmp_file);
+
+    try setupEnviromentPath(tmp_file);
 }
