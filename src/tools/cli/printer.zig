@@ -40,9 +40,31 @@ pub const Printer = struct {
         return;
     }
 
-    pub fn clearScreen(_: *Printer) !void {
+    pub fn clearScreen(self: *Printer) !void {
+        if (self.data.items.len < 2) return;
         const stdout = std.io.getStdOut().writer();
-        try stdout.print("\x1B[3J\x1B[2J\x1B[H", .{});
+
+        var count: u16 = 0;
+        for (0..self.data.items.len - 1) |i| {
+            const data = self.data.items[i];
+            const d = data.data;
+            var small_count: usize = 0;
+            for (d) |c| {
+                if (c == '\n') small_count += 1;
+            }
+            count += @intCast(small_count);
+        }
+
+        // Moves the cursor up by the amount
+        // of \n within the .data
+        try stdout.print("\x1b[{d}A", .{count});
+        for (0..count) |_| {
+            try stdout.print("\x1b[2K\r", .{}); // Clear line
+            try stdout.print("\x1b[1E", .{}); // Move cursor down 1 line
+        }
+        // Move cursor back up, to keep printing where we
+        // left off
+        try stdout.print("\x1b[{d}A", .{count});
     }
 
     pub fn print(self: *Printer) !void {
