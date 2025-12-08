@@ -8,9 +8,15 @@ pub fn paths(allocator: std.mem.Allocator) !Paths {
 
     if (builtin.os.tag == .windows) {
         base = "C:\\Users\\Public\\AppData\\Local";
-    } else {
+    } else if (builtin.os.tag == .linux) {
         const home = std.posix.getenv("HOME") orelse return error.MissingHome;
         base = try std.fs.path.join(allocator, &.{ home, ".local" });
+    } else if (builtin.os.tag == .macos) {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        base = try std.fs.path.join(allocator, &.{ home, "Library", "Application Support" });
+    } else {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        base = home;
     }
     return .{
         .allocator = allocator,
