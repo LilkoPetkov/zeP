@@ -6,29 +6,10 @@ const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
+const Prompt = @import("cli").Prompt;
 
 const Json = @import("core").Json.Json;
 const ZigInit = @import("core").ZigInit;
-
-fn promptInput(stdin: anytype, prompt: []const u8, required: bool, printer: *Printer, allocator: std.mem.Allocator) ![]const u8 {
-    try printer.append("{s}", .{prompt}, .{});
-    var line: []const u8 = "";
-
-    while (true) {
-        var read_line = try stdin.readUntilDelimiterAlloc(allocator, '\n', Constants.Default.kb);
-        if (required and read_line.len <= 1) {
-            allocator.free(read_line);
-            try printer.print();
-            continue;
-        }
-
-        line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
-        break;
-    }
-
-    try printer.append("{s}\n", .{line}, .{});
-    return line;
-}
 
 pub const Init = struct {
     allocator: std.mem.Allocator,
@@ -56,12 +37,32 @@ pub const Init = struct {
         });
         const zig_version = child.stdout[0 .. child.stdout.len - 1];
 
-        try printer.append("--- INITTING ZEP MODE ---\n\n", .{}, .{ .color = 34 });
+        try printer.append("--- INITING ZEP MODE ---\n\n", .{}, .{ .color = 34 });
         const stdin = std.io.getStdIn().reader();
 
-        const name = try promptInput(stdin, "> *Name: ", true, printer, allocator);
-        const description = try promptInput(stdin, "> Description: ", false, printer, allocator);
-        const license = try promptInput(stdin, "> License: ", false, printer, allocator);
+        const name = try Prompt.input(
+            allocator,
+            printer,
+            stdin,
+            "> *Name: ",
+            .{
+                .required = true,
+            },
+        );
+        const description = try Prompt.input(
+            allocator,
+            printer,
+            stdin,
+            "> Description: ",
+            .{},
+        );
+        const license = try Prompt.input(
+            allocator,
+            printer,
+            stdin,
+            "> License: ",
+            .{},
+        );
 
         return Init{
             .allocator = allocator,
@@ -89,7 +90,7 @@ pub const Init = struct {
             self.zig_version,
         );
 
-        try self.printer.append("Finished initting!\n", .{}, .{ .color = 32 });
+        try self.printer.append("Finished initing!\n", .{}, .{ .color = 32 });
     }
 
     fn createFolders(_: *Init) !void {

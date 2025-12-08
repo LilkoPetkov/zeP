@@ -5,6 +5,7 @@ const Structs = @import("structs");
 const Constants = @import("constants");
 
 const Printer = @import("cli").Printer;
+const Prompt = @import("cli").Prompt;
 const Fs = @import("io").Fs;
 const Manifest = @import("core").Manifest;
 
@@ -22,31 +23,6 @@ pub const Command = struct {
         return runner;
     }
 
-    fn promptInput(self: *Command, stdin: anytype, prompt: []const u8, required: bool) ![]const u8 {
-        try self.printer.append("{s}", .{prompt}, .{});
-        var line: []const u8 = "";
-
-        while (required) {
-            var read_line = try stdin.readUntilDelimiterAlloc(self.allocator, '\n', Constants.Default.kb);
-            if (required and read_line.len <= 1) {
-                self.allocator.free(read_line);
-                try self.printer.print();
-                continue;
-            }
-
-            line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
-            break;
-        }
-
-        if (!required) {
-            var read_line = try stdin.readUntilDelimiterAlloc(self.allocator, '\n', Constants.Default.kb);
-            line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
-        }
-
-        try self.printer.append("{s}\n", .{line}, .{});
-        return line;
-    }
-
     pub fn add(self: *Command) !void {
         var zep_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
         defer zep_json.deinit();
@@ -57,7 +33,15 @@ pub const Command = struct {
 
         try self.printer.append("--- ADDING COMMAND MODE ---\n\n", .{}, .{ .color = 33 });
 
-        const command_name = try self.promptInput(stdin, "> *Command Name: ", true);
+        const command_name = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> *Command Name: ",
+            .{
+                .required = true,
+            },
+        );
         defer self.allocator.free(command_name);
         for (zep_json.value.cmd) |c| {
             if (std.mem.eql(u8, c.name, command_name)) {
@@ -67,7 +51,15 @@ pub const Command = struct {
             try cmds.append(c);
         }
 
-        const command = try self.promptInput(stdin, "> *Command: ", true);
+        const command = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> *Command: ",
+            .{
+                .required = true,
+            },
+        );
         defer self.allocator.free(command);
 
         const new_command = Structs.ZepFiles.CommandPackageJsonStrcut{ .cmd = command, .name = command_name };

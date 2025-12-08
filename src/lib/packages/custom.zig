@@ -5,6 +5,7 @@ const Constants = @import("constants");
 const Structs = @import("structs");
 
 const Printer = @import("cli").Printer;
+const Prompt = @import("cli").Prompt;
 const Fs = @import("io").Fs;
 const Hash = @import("core").Hash;
 
@@ -21,12 +22,47 @@ pub const CustomPackage = struct {
     }
 
     fn promptVersionData(self: CustomPackage, stdin: anytype) !Structs.Packages.PackageVersions {
-        const url = try self.promptInput(stdin, "> *Url ([http(s)][.zip]): ", true, verifyUrl);
-        const root_file = try self.promptInput(stdin, "> *Root file: ", true, null);
-        const version = try self.promptInput(stdin, "> Version [0.1.0]: ", false, null);
-        const zig_version = try self.promptInput(stdin, "> Zig Version [0.14.0]: ", false, null);
+        const url = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> *Url ([http(s)][.zip]): ",
+            .{ .required = true, .validate = &verifyUrl },
+        );
+        const root_file = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> *Root file: ",
+            .{
+                .required = true,
+            },
+        );
 
-        const hash = try Hash.hashData(self.allocator, url);
+        const version = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> Version [0.1.0]: ",
+            .{},
+        );
+
+        const zig_version = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> Zig Version [0.14.0]: ",
+            .{},
+        );
+
+        const hash = Hash.hashData(self.allocator, url) catch |err| {
+            switch (err) {
+                else => {
+                    try self.printer.append("\nINVALID URL!\nABORTING!\n", .{}, .{ .color = 31 });
+                },
+            }
+            return error.InvalidUrl;
+        };
         return .{
             .version = getOrDefault(version, "0.1.0"),
             .url = url,
@@ -41,7 +77,15 @@ pub const CustomPackage = struct {
 
         try self.printer.append("--- ADDING CUSTOM PACKAGE MODE ---\n\n", .{}, .{ .color = 33 });
 
-        const package_name = try self.promptInput(stdin, "> *Package Name: ", true, null);
+        const package_name = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> *Package Name: ",
+            .{
+                .required = true,
+            },
+        );
         defer self.allocator.free(package_name);
 
         var paths = try Constants.Paths.paths(self.allocator);
@@ -64,10 +108,22 @@ pub const CustomPackage = struct {
         }
 
         // New package mode
-        const author = try self.promptInput(stdin, "> Author: ", false, null);
+        const author = try Prompt.input(
+            self.allocator,
+            self.printer,
+            stdin,
+            "> Author: ",
+            .{},
+        );
         defer self.allocator.free(author);
 
-        const v = try self.promptVersionData(stdin);
+        const v = self.promptVersionData(stdin) catch |err| {
+            switch (err) {
+                error.InvalidUrl => return,
+                else => return,
+            }
+            return;
+        };
 
         var versions = std.ArrayList(Structs.Packages.PackageVersions).init(self.allocator);
         try versions.append(v);
@@ -81,38 +137,6 @@ pub const CustomPackage = struct {
 
         try self.addPackage(custom_package_path, pkg);
         try self.printer.append("\nSuccessfully added custom package - {s}\n\n", .{package_name}, .{ .color = 32 });
-    }
-
-    fn promptInput(self: CustomPackage, stdin: anytype, prompt: []const u8, required: bool, validate: ?fn (a: []const u8) bool) ![]const u8 {
-        try self.printer.append("{s}", .{prompt}, .{});
-        var line: []const u8 = "";
-
-        if (required or validate != null) {
-            while (true) {
-                var read_line = try stdin.readUntilDelimiterAlloc(self.allocator, '\n', Constants.Default.kb);
-                if (required and read_line.len <= 1) {
-                    self.allocator.free(read_line);
-                    try self.printer.print();
-                    continue;
-                }
-                if (validate) |v| {
-                    if (!v(if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line)) {
-                        self.allocator.free(read_line);
-                        try self.printer.print();
-                        continue;
-                    }
-                }
-
-                line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
-                break;
-            }
-        } else {
-            var read_line = try stdin.readUntilDelimiterAlloc(self.allocator, '\n', Constants.Default.kb);
-            line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
-        }
-
-        try self.printer.append("{s}\n", .{line}, .{});
-        return line;
     }
 
     fn addPackage(self: CustomPackage, custom_package_path: []const u8, package_json: Structs.Packages.PackageStruct) !void {

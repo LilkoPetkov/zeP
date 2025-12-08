@@ -46,11 +46,11 @@ pub const Runner = struct {
             try exec_args.append(arg);
         }
 
-        if (builtin.os.tag != .windows) {
+        if (builtin.os.tag == .windows) {
+            try exec_args.insert(0, target_file);
+        } else {
             const exec = try std.fmt.allocPrint(self.allocator, "./{s}", .{target_file});
             try exec_args.insert(0, exec);
-        } else {
-            try exec_args.insert(0, target_file);
         }
 
         self.printer.pop(50);
