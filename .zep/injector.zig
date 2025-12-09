@@ -6,11 +6,4 @@ pub fn injectExtraImports(b: *std.Build, exe: *std.Build.Step.Compile) void {
  }); 
  exe.root_module.addImport("clap", clapMod); 
  // ---------- 
- 
- // zeit MODULE 
- const zeitMod = b.createModule(.{ 
- .root_source_file = b.path(".zep/zeit/src/zeit.zig"), 
- }); 
- exe.root_module.addImport("zeit", zeitMod); 
- // ---------- 
 }
