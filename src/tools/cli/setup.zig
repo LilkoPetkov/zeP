@@ -9,11 +9,11 @@ const Printer = @import("printer.zig").Printer;
 fn setupEnviromentPath(tmp_path: []const u8) !void {
     if (builtin.os.tag != .linux) return;
     const sh_file =
-        \\\ #!/bin/bash
-        \\\ 
-        \\\ USR_LOCAL_BIN="$HOME/.local/bin"
-        \\\ export PATH="$USR_LOCAL_BIN:$PATH"
-        \\\ grep -qxF "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
+        \\ #!/bin/bash
+        \\ 
+        \\ USR_LOCAL_BIN="$HOME/.local/bin"
+        \\ export PATH="$USR_LOCAL_BIN:$PATH"
+        \\ grep -qxF "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
     ;
 
     const tmp = try Fs.openOrCreateFile(tmp_path);
@@ -24,7 +24,7 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
 
     const allocator = std.heap.page_allocator;
     _ = try tmp.write(sh_file);
-    try tmp.chmod(755);
+    try tmp.chmod(0o755);
 
     const exec = try std.fmt.allocPrint(allocator, "./{s}", .{tmp_path});
     defer allocator.free(exec);
