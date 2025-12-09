@@ -10,18 +10,13 @@
 			{
 				"name": "release_windows",
 				"cmd": "zig build -Doptimize=ReleaseFast -freference-trace -Dtarget=x86_64-windows-msvc -p tempR/w"
-			},
-			{
-				"name": "Test",
-				"cmd": "echo \"hello world\""
 			}
 		],
 		"description": "A new zig Package manager, and version manager for zig.",
 		"version": "0.6",
 		"license": "GPLv3",
 		"packages": [
-			"clap@0.10.0",
-			"zeit@0.7.0"
+			"clap@0.10.0"
 		],
 		"dev_packages": [],
 		"build": {
@@ -36,13 +31,6 @@
 			"source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.10.0.zip",
 			"zig_version": "0.14.0",
 			"root_file": "/clap.zig"
-		},
-		{
-			"name": "zeit@0.7.0",
-			"hash": "e933d2730ef3504f7b830707c10c6a6df10544d26425db828e991a4ff84ebdbc",
-			"source": "https://github.com/rockorager/zeit/archive/refs/tags/v0.7.0.zip",
-			"zig_version": "0.15.1",
-			"root_file": "/src/zeit.zig"
 		}
 	]
 }
