@@ -26,10 +26,7 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
     _ = try tmp.write(sh_file);
     try tmp.chmod(0o755);
 
-    const exec = try std.fmt.allocPrint(allocator, "./{s}", .{tmp_path});
-    defer allocator.free(exec);
-
-    var exec_cmd = std.process.Child.init(&.{exec}, allocator);
+    var exec_cmd = std.process.Child.init(&.{ "bash", tmp }, allocator);
     _ = exec_cmd.spawnAndWait() catch {};
 }
 
