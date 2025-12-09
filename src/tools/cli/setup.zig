@@ -16,7 +16,7 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
         \\\ grep -qxF "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
     ;
 
-    const tmp = try Fs.openFile(tmp_path);
+    const tmp = try Fs.openOrCreateFile(tmp_path);
     defer {
         tmp.close();
         Fs.deleteFileIfExists(tmp_path) catch {};
@@ -61,13 +61,12 @@ pub fn setup(allocator: std.mem.Allocator, printer: *Printer) !void {
 
     if (builtin.os.tag != .linux) return;
     const tmp_path = try std.fs.path.join(allocator, &.{ paths.root, "temp" });
+    const tmp_file = try std.fs.path.join(allocator, &.{ tmp_path, "tmp_exe" });
     defer {
+        allocator.free(tmp_file);
         allocator.free(tmp_path);
         Fs.deleteTreeIfExists(tmp_path) catch {};
     }
-
-    const tmp_file = try std.fs.path.join(allocator, &.{ tmp_path, "tmp_exe" });
-    defer allocator.free(tmp_file);
 
     try setupEnviromentPath(tmp_file);
 }
