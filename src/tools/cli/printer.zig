@@ -1,4 +1,6 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const Structs = @import("structs");
 const Locales = @import("locales");
 
@@ -40,9 +42,19 @@ pub const Printer = struct {
         return;
     }
 
+    fn clearLine(_: *Printer, n: usize) !void {
+        if (n == 0) return;
+
+        const stdout = std.io.getStdOut().writer();
+        for (0..n) |i| {
+            try stdout.print("\x1b[2K\r", .{}); // Clear line
+            if (@as(i8, @intCast(i)) - 1 < n) try stdout.print("\x1b[1A", .{});
+        }
+        try stdout.print("\x1b[1A", .{});
+    }
+
     pub fn clearScreen(self: *Printer) !void {
         if (self.data.items.len < 2) return;
-        const stdout = std.io.getStdOut().writer();
 
         var count: u16 = 0;
         for (0..self.data.items.len - 1) |i| {
@@ -55,16 +67,7 @@ pub const Printer = struct {
             count += @intCast(small_count);
         }
 
-        // Moves the cursor up by the amount
-        // of \n within the .data
-        try stdout.print("\x1b[{d}A", .{count});
-        for (0..count) |_| {
-            try stdout.print("\x1b[2K\r", .{}); // Clear line
-            try stdout.print("\x1b[1E", .{}); // Move cursor down 1 line
-        }
-        // Move cursor back up, to keep printing where we
-        // left off
-        try stdout.print("\x1b[{d}A", .{count});
+        try self.clearLine(count - 1);
     }
 
     pub fn print(self: *Printer) !void {
