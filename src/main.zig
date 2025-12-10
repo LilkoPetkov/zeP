@@ -320,7 +320,7 @@ pub fn main() !void {
         return;
     }
     if (std.mem.eql(u8, subcommand, "version")) {
-        try printer.append("zeP Version 0.6\n\n", .{}, .{});
+        try printer.append("zeP Version 0.7\n\n", .{}, .{});
         return;
     }
 
