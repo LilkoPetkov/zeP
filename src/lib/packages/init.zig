@@ -31,12 +31,23 @@ pub const Init = struct {
             };
         }
 
-        const child = try std.process.Child.run(.{
+        var zig_version: []const u8 = "0.14.0";
+        const child = std.process.Child.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "version" },
-        });
-        const zig_version = child.stdout[0 .. child.stdout.len - 1];
+        }) catch |err| {
+            switch (err) {
+                else => {
+                    try printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = 31 });
+                    try printer.append("\nSUGGESTION:\n", .{}, .{ .color = 34 });
+                    try printer.append(" - Install zig\n $ zeP zig install <version>\n\n", .{}, .{});
+                    std.process.exit(0);
+                },
+            }
+            return;
+        };
 
+        zig_version = child.stdout[0 .. child.stdout.len - 1];
         try printer.append("--- INITING ZEP MODE ---\n\n", .{}, .{ .color = 34 });
         const stdin = std.io.getStdIn().reader();
 

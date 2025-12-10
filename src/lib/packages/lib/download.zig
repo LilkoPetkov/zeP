@@ -67,7 +67,7 @@ pub const Downloader = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var server_header_buffer: [Constants.Default.kb * 32]u8 = undefined;
+        var server_header_buffer: [Constants.Default.kb * 32 * 4]u8 = undefined;
         var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
         defer req.deinit();
 
@@ -78,7 +78,7 @@ pub const Downloader = struct {
         try req.wait();
 
         const reader = req.reader();
-        const data = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 10);
+        const data = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 100);
         var stream = std.io.fixedBufferStream(data);
 
         try self.printer.append("Extracting...\n", .{}, .{});
