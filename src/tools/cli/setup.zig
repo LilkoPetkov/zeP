@@ -26,7 +26,7 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
     _ = try tmp.write(sh_file);
     try tmp.chmod(0o755);
 
-    var exec_cmd = std.process.Child.init(&.{ "bash", tmp }, allocator);
+    var exec_cmd = std.process.Child.init(&.{ "bash", tmp_path }, allocator);
     _ = exec_cmd.spawnAndWait() catch {};
 }
 
@@ -60,9 +60,10 @@ pub fn setup(allocator: std.mem.Allocator, printer: *Printer) !void {
     const tmp_path = try std.fs.path.join(allocator, &.{ paths.root, "temp" });
     const tmp_file = try std.fs.path.join(allocator, &.{ tmp_path, "tmp_exe" });
     defer {
+        Fs.deleteTreeIfExists(tmp_path) catch {};
+
         allocator.free(tmp_file);
         allocator.free(tmp_path);
-        Fs.deleteTreeIfExists(tmp_path) catch {};
     }
 
     try setupEnviromentPath(tmp_file);
