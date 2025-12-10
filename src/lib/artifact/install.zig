@@ -204,7 +204,7 @@ pub const ArtifactInstaller = struct {
         const extract_target = try std.fs.path.join(self.allocator, &.{ temporary_path, diagnostics.root_dir });
         defer self.allocator.free(extract_target);
 
-        try self.printer.append("Extracted!\n", .{}, .{});
+        try self.printer.append("Extracted {s} => {s}!\n", .{ extract_target, new_target }, .{});
         try std.fs.cwd().rename(extract_target, new_target);
     }
 
@@ -241,9 +241,14 @@ pub const ArtifactInstaller = struct {
 
         const extract_target = try std.fs.path.join(self.allocator, &.{ temporary_path, diagnostics.root_dir });
         defer self.allocator.free(extract_target);
-
-        try self.printer.append("Extracted!\n\n", .{}, .{});
-        try std.fs.cwd().rename(extract_target, new_target);
+        const stat_extract = try std.fs.cwd().statFile(extract_target);
+        if (stat_extract.kind == .file) {
+            try self.printer.append("Extracted {s} => {s}!\n", .{ temporary_path, new_target }, .{});
+            try std.fs.cwd().rename(temporary_path, new_target);
+        } else {
+            try self.printer.append("Extracted {s} => {s}!\n", .{ extract_target, new_target }, .{});
+            try std.fs.cwd().rename(extract_target, new_target);
+        }
 
         const artifact_exe_path = try std.fs.path.join(self.allocator, &.{ new_target, if (artifact_type == .zig) "zig" else "zeP" });
         defer self.allocator.free(artifact_exe_path);
