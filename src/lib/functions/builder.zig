@@ -31,6 +31,7 @@ pub const Builder = struct {
         if (target.len == 0) {
             target = if (builtin.os.tag == .windows) Constants.Default.default_targets.windows else Constants.Default.default_targets.linux;
         }
+
         const execs = try std.fmt.allocPrint(self.allocator, "-Dtarget={s}", .{target});
         defer self.allocator.free(execs);
         const args = [_][]const u8{ "zig", "build", "-Doptimize=ReleaseSmall", execs, "-p", "zep-out/" };
@@ -39,6 +40,13 @@ pub const Builder = struct {
         var process = std.process.Child.init(&args, self.allocator);
         _ = process.spawnAndWait() catch |err| {
             switch (err) {
+                error.FileNotFound => {
+                    try self.printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = 31 });
+                    try self.printer.append("\nSUGGESTION:\n", .{}, .{ .color = 34 });
+                    try self.printer.append(" - Install zig\n $ zeP zig install <version>\n\n", .{}, .{});
+                    std.process.exit(0);
+                    return;
+                },
                 else => {
                     try self.printer.append("\nZig building failed!\nExiting.\n\n", .{}, .{ .color = 31 });
                     std.process.exit(0);
