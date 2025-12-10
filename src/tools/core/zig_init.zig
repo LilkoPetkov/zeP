@@ -28,10 +28,34 @@ const Fingerprint = packed struct(u64) {
     }
 };
 
-pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: []const u8, zig_version: []const u8) !void {
+pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: []const u8, default_zig_version: ?[]const u8) !void {
     const zig_main_path = "src/main.zig";
     const zig_build_path = "build.zig";
     const zig_build_zon_path = "build.zig.zon";
+    if (Fs.existsFile(zig_main_path) and Fs.existsFile(zig_build_path) and Fs.existsFile(zig_build_zon_path)) return;
+
+    var zig_version: []const u8 = default_zig_version orelse "0.14.0";
+
+    blk: {
+        if (default_zig_version != null) break :blk;
+        const child = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{ "zig", "version" },
+        }) catch |err| {
+            switch (err) {
+                else => {
+                    try printer.append(
+                        "Zig is not installed!\nDefaulting to {s}!\n\n",
+                        .{zig_version},
+                        .{ .color = 31 },
+                    );
+                    break :blk;
+                },
+            }
+            break :blk;
+        };
+        zig_version = child.stdout[0 .. child.stdout.len - 1];
+    }
 
     try printer.append("Initing Zig project...\n", .{}, .{});
 
@@ -40,7 +64,7 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
         \\const std = @import("std");
         \\
         \\pub fn main() !void {
-        \\  std.debug.print("Auto init, using zeP.", .{});
+        \\  std.debug.print("Auto init, using zeP.\n\n", .{});
         \\}
     ;
     if (!Fs.existsFile(zig_main_path)) {

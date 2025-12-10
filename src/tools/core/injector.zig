@@ -74,16 +74,22 @@ pub const Injector = struct {
         }
         _ = try injector_file.write(injector_end);
 
-        try self.injectIntoBuildZig();
+        self.injectIntoBuildZig() catch |err| {
+            switch (err) {
+                error.MissingInstallCall => {
+                    try self.printer.append("No install call in build.zig.zon\n", .{}, .{});
+                },
+                else => {
+                    try self.printer.append("Injecting into build.zig has failed.\n", .{}, .{ .color = 31 });
+                    try self.printer.append("\nSUGGESTION:\n", .{}, .{ .color = 34 });
+                    try self.printer.append(" - Delete build.zig.zon\n $ zeP init\n\n", .{}, .{});
+                },
+            }
+        };
     }
 
     pub fn injectIntoBuildZig(self: *Injector) !void {
-        const child = try std.process.Child.run(.{
-            .allocator = self.allocator,
-            .argv = &[_][]const u8{ "zig", "version" },
-        });
-        const zig_version = child.stdout[0 .. child.stdout.len - 1];
-        try ZigInit.createZigProject(self.printer, self.allocator, "myproject", zig_version);
+        try ZigInit.createZigProject(self.printer, self.allocator, "myproject", null);
 
         const path = "build.zig";
         var file = try Fs.openFile(path);
