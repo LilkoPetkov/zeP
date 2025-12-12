@@ -6,7 +6,7 @@ if [ $# -eq 0 ]; then
     VERSION_NAME=$(date '+%Y-%m-%d')
 fi
 
-RELEASE_DIR="../zep.run/releases/$VERSION_NAME"
+RELEASE_DIR="zep.run/releases/$VERSION_NAME"
 TEMP_DIR="temp_release"
 
 mkdir -p "$RELEASE_DIR"
