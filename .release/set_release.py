@@ -5,8 +5,8 @@ import os
 import hashlib
 import datetime
 
-BASE_PATH = "../zep.run/releases"
-JSON_PATH = "../zep.run/download.json"
+BASE_PATH = "zep.run/releases"
+JSON_PATH = "zep.run/download.json"
 
 
 def sha256_of(path):
