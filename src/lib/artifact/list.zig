@@ -12,9 +12,18 @@ const Manifest = @import("core").Manifest;
 pub const ArtifactLister = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ArtifactLister {
-        return ArtifactLister{ .allocator = allocator, .printer = printer };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+    ) !ArtifactLister {
+        return ArtifactLister{
+            .allocator = allocator,
+            .printer = printer,
+            .paths = paths,
+        };
     }
 
     pub fn deinit(_: *ArtifactLister) void {
@@ -38,11 +47,9 @@ pub const ArtifactLister = struct {
     /// Marks the version currently in use
     pub fn listVersions(self: *ArtifactLister, artifact_type: Structs.Extras.ArtifactType) !void {
         try self.printer.append("\nAvailable Artifact Versions:\n", .{}, .{});
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
 
         const versions_directory = try std.fs.path.join(self.allocator, &.{
-            if (artifact_type == .zig) paths.zig_root else paths.zep_root,
+            if (artifact_type == .zig) self.paths.zig_root else self.paths.zep_root,
             "d",
         });
         defer self.allocator.free(versions_directory);
@@ -55,7 +62,7 @@ pub const ArtifactLister = struct {
         const manifest = try Manifest.readManifest(
             Structs.Manifests.ArtifactManifest,
             self.allocator,
-            if (artifact_type == .zig) paths.zig_manifest else paths.zep_manifest,
+            if (artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest,
         );
         defer manifest.deinit();
         if (manifest.value.path.len == 0) {

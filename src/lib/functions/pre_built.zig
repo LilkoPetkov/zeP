@@ -11,29 +11,30 @@ pub const PreBuilt = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
     compressor: Compressor,
+    paths: *Constants.Paths.Paths,
 
     /// Initializes PreBuilt with compressor and ensures prebuilt folder exists
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !PreBuilt {
-        var paths = try Constants.Paths.paths(allocator);
-        defer paths.deinit();
-
+    pub fn init(allocator: std.mem.Allocator, printer: *Printer, paths: *Constants.Paths.Paths) !PreBuilt {
         if (!Fs.existsDir(paths.prebuilt)) {
             try std.fs.cwd().makeDir(paths.prebuilt);
         }
-        const compressor = Compressor.init(allocator, printer);
+        const compressor = Compressor.init(
+            allocator,
+            printer,
+            paths,
+        );
 
         return PreBuilt{
             .allocator = allocator,
             .printer = printer,
             .compressor = compressor,
+            .paths = paths,
         };
     }
 
     /// Extracts a pre-built package into the specified target path
     pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ paths.prebuilt, pre_built_name });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
         defer self.allocator.free(path);
 
         if (!Fs.existsFile(path)) {
@@ -55,9 +56,7 @@ pub const PreBuilt = struct {
 
     /// Compresses a folder into a pre-built package, overwriting if it exists
     pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ paths.prebuilt, pre_built_name });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
         defer self.allocator.free(path);
 
         if (Fs.existsFile(path)) {
@@ -77,9 +76,7 @@ pub const PreBuilt = struct {
 
     /// Deletes a pre-built package if it exists
     pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ paths.prebuilt, pre_built_name });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
         defer self.allocator.free(path);
 
         if (Fs.existsFile(path)) {
@@ -91,9 +88,7 @@ pub const PreBuilt = struct {
 
     /// List a pre-builts
     pub fn list(self: *PreBuilt) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const dir = try Fs.openDir(paths.prebuilt);
+        const dir = try Fs.openDir(self.paths.prebuilt);
         var it = dir.iterate();
         var entries = false;
         while (try it.next()) |entry| {

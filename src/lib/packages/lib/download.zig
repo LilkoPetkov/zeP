@@ -17,13 +17,21 @@ pub const Downloader = struct {
     cacher: Cacher,
     package: Package,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
-    pub fn init(allocator: std.mem.Allocator, package: Package, cacher: Cacher, printer: *Printer) !Downloader {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        package: Package,
+        cacher: Cacher,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+    ) !Downloader {
         return Downloader{
             .allocator = allocator,
             .cacher = cacher,
             .package = package,
             .printer = printer,
+            .paths = paths,
         };
     }
 
@@ -32,13 +40,10 @@ pub const Downloader = struct {
     }
 
     fn packagePath(self: *Downloader) ![]u8 {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         return try std.fmt.allocPrint(
             self.allocator,
             "{s}/{s}",
-            .{ try self.allocator.dupe(u8, paths.pkg_root), self.package.id },
+            .{ try self.allocator.dupe(u8, self.paths.pkg_root), self.package.id },
         );
     }
 
@@ -57,9 +62,6 @@ pub const Downloader = struct {
                 self.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = 31 }) catch {};
             };
         }
-
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
 
         try self.printer.append("Installing package... [{s}]\n", .{url}, .{});
 

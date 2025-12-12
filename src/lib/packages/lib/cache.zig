@@ -15,31 +15,31 @@ pub const Cacher = struct {
     package: Package,
     compressor: Compressor,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
     pub fn init(
         allocator: std.mem.Allocator,
         package: Package,
         printer: *Printer,
+        paths: *Constants.Paths.Paths,
     ) !Cacher {
         return .{
             .allocator = allocator,
             .package = package,
-            .compressor = Compressor.init(allocator, printer),
+            .compressor = Compressor.init(allocator, printer, paths),
             .printer = printer,
+            .paths = paths,
         };
     }
 
     pub fn deinit(_: *Cacher) void {}
 
     fn cacheFilePath(self: *Cacher) ![]u8 {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         return try std.fmt.allocPrint(
             self.allocator,
             "{s}/{s}@{s}.zep",
             .{
-                try self.allocator.dupe(u8, paths.zepped),
+                try self.allocator.dupe(u8, self.paths.zepped),
                 self.package.package_name,
                 self.package.package_version,
             },
@@ -47,14 +47,11 @@ pub const Cacher = struct {
     }
 
     fn extractPath(self: *Cacher) ![]u8 {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         return try std.fmt.allocPrint(
             self.allocator,
             "{s}/{s}@{s}",
             .{
-                try self.allocator.dupe(u8, paths.pkg_root),
+                try self.allocator.dupe(u8, self.paths.pkg_root),
                 self.package.package_name,
                 self.package.package_version,
             },
@@ -104,10 +101,7 @@ pub const Cacher = struct {
     }
 
     pub fn deletePackageFromCache(self: *Cacher) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ paths.zepped, self.package.id });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.zepped, self.package.id });
         defer self.allocator.free(path);
 
         if (Fs.existsFile(path)) {

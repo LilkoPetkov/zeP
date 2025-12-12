@@ -15,7 +15,8 @@ const Json = @import("json.zig").Json;
 /// Hashes are generated on init.
 pub const Package = struct {
     allocator: std.mem.Allocator,
-    json: Json,
+    json: *Json,
+    paths: *Constants.Paths.Paths,
 
     package_hash: []u8,
     package_name: []const u8,
@@ -28,14 +29,13 @@ pub const Package = struct {
 
     pub fn init(
         allocator: std.mem.Allocator,
+        printer: *Printer,
+        json: *Json,
+        paths: *Constants.Paths.Paths,
         package_name: []const u8,
         package_version: ?[]const u8,
-        printer: *Printer,
     ) !Package {
         try printer.append("Finding the package...\n", .{}, .{});
-
-        // JSON context
-        var json = try Json.init(allocator);
 
         // Load package manifest
         const parsed_package = try json.parsePackage(package_name);
@@ -95,6 +95,7 @@ pub const Package = struct {
             .package_hash = hash,
             .package = selected,
             .printer = printer,
+            .paths = paths,
             .id = id,
         };
     }
@@ -102,10 +103,11 @@ pub const Package = struct {
     pub fn deinit(_: *Package) void {}
 
     fn getPackagePathsAmount(self: *Package) !usize {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
-        var package_manifest = try Manifest.readManifest(Structs.Manifests.PackagesManifest, self.allocator, paths.pkg_manifest);
+        var package_manifest = try Manifest.readManifest(
+            Structs.Manifests.PackagesManifest,
+            self.allocator,
+            self.paths.pkg_manifest,
+        );
         defer package_manifest.deinit();
 
         var package_paths_amount: usize = 0;
@@ -121,9 +123,7 @@ pub const Package = struct {
     }
 
     pub fn deletePackage(self: *Package, force: bool) !void {
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ paths.pkg_root, self.id });
+        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.paths.pkg_root, self.id });
         defer self.allocator.free(path);
 
         const amount = try self.getPackagePathsAmount();

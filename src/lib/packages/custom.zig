@@ -12,9 +12,14 @@ const Hash = @import("core").Hash;
 pub const CustomPackage = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) CustomPackage {
-        return CustomPackage{ .allocator = allocator, .printer = printer };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+    ) CustomPackage {
+        return CustomPackage{ .allocator = allocator, .printer = printer, .paths = paths };
     }
 
     fn getOrDefault(value: []const u8, def: []const u8) []const u8 {
@@ -88,11 +93,8 @@ pub const CustomPackage = struct {
         );
         defer self.allocator.free(package_name);
 
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         const custom_package_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{
-            paths.custom,
+            self.paths.custom,
             package_name,
         });
         defer self.allocator.free(custom_package_path);
@@ -180,9 +182,7 @@ pub const CustomPackage = struct {
     pub fn removePackage(self: CustomPackage, package_name: []const u8) !void {
         try self.printer.append("Removing package...\n", .{}, .{});
 
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-        const custom_package_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ paths.custom, package_name });
+        const custom_package_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ self.paths.custom, package_name });
         defer self.allocator.free(custom_package_path);
 
         if (Fs.existsFile(custom_package_path)) {

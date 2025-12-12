@@ -13,7 +13,7 @@ const ZigInit = @import("core").ZigInit;
 
 pub const Init = struct {
     allocator: std.mem.Allocator,
-    json: Json,
+    json: *Json,
     printer: *Printer,
 
     zig_version: []const u8 = "0.14.0",
@@ -21,8 +21,12 @@ pub const Init = struct {
     description: []const u8 = "",
     license: []const u8 = "",
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer, default: bool) !Init {
-        const json = try Json.init(allocator);
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        json: *Json,
+        default: bool,
+    ) !Init {
         if (default) {
             return Init{
                 .allocator = allocator,

@@ -19,29 +19,59 @@ const Uninstaller = @import("uninstall.zig").Uninstaller;
 
 pub const Installer = struct {
     allocator: std.mem.Allocator,
-    json: Json,
+    json: *Json,
     package: Package,
     downloader: Downloader,
     cacher: Cacher,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer, opt_package_name: ?[]const u8, opt_package_version_target: ?[]const u8) !Installer {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        json: *Json,
+        paths: *Constants.Paths.Paths,
+        opt_package_name: ?[]const u8,
+        opt_package_version_target: ?[]const u8,
+    ) !Installer {
         const package_name = opt_package_name orelse {
             const previous_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
 
             try printer.append("Installing all packages...\n", .{}, .{ .verbosity = 0 });
 
-            try installAll(allocator, printer);
+            try installAll(
+                allocator,
+                printer,
+                paths,
+                json,
+            );
 
             Locales.VERBOSITY_MODE = previous_verbosity;
             return error.NoPackageSpecified;
         };
 
-        const package = try Package.init(allocator, package_name, opt_package_version_target, printer);
-        const cacher = try Cacher.init(allocator, package, printer);
-        const downloader = try Downloader.init(allocator, package, cacher, printer);
-        const json = try Json.init(allocator);
+        const package = try Package.init(
+            allocator,
+            printer,
+            json,
+            paths,
+            package_name,
+            opt_package_version_target,
+        );
+        const cacher = try Cacher.init(
+            allocator,
+            package,
+            printer,
+            paths,
+        );
+        const downloader = try Downloader.init(
+            allocator,
+            package,
+            cacher,
+            printer,
+            paths,
+        );
 
         return Installer{
             .json = json,
@@ -50,6 +80,7 @@ pub const Installer = struct {
             .downloader = downloader,
             .cacher = cacher,
             .printer = printer,
+            .paths = paths,
         };
     }
 
@@ -75,11 +106,8 @@ pub const Installer = struct {
         for (lock.value.packages) |lockPackage| {
             if (std.mem.startsWith(u8, lockPackage.name, self.package.package_name)) {
                 if (std.mem.eql(u8, lockPackage.name, self.package.id)) {
-                    var paths = try Constants.Paths.paths(self.allocator);
-                    defer paths.deinit();
-
                     const target_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}@{s}", .{
-                        paths.pkg_root,
+                        self.paths.pkg_root,
                         self.package.package_name,
                         self.package.package_version,
                     });
@@ -96,8 +124,10 @@ pub const Installer = struct {
 
                 var uninstaller = try Uninstaller.init(
                     self.allocator,
-                    self.package.package_name,
                     self.printer,
+                    self.json,
+                    self.paths,
+                    self.package.package_name,
                 );
 
                 try uninstaller.uninstall();
@@ -135,15 +165,12 @@ pub const Installer = struct {
         try self.addPackageToJson();
         const package = self.package;
 
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         var injector = Injector.init(self.allocator, package.package_name, self.printer);
         try injector.initInjector();
 
         // symbolic link
         const target_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}@{s}", .{
-            paths.pkg_root,
+            self.paths.pkg_root,
             package.package_name,
             package.package_version,
         });
@@ -161,9 +188,10 @@ pub const Installer = struct {
         defer self.allocator.free(absolute_symbolic_link_path);
         try std.fs.cwd().symLink(target_path, relative_symbolic_link_path, .{ .is_directory = true });
         Manifest.addPathToManifest(
-            &self.json,
+            self.json,
             self.package.id,
             absolute_symbolic_link_path,
+            self.paths,
         ) catch {
             try self.printer.append("Adding to manifest failed!\n", .{}, .{ .color = 31 });
         };
@@ -175,8 +203,8 @@ pub const Installer = struct {
 
         defer package_json.deinit();
         defer lock_json.deinit();
-        try manifestAdd(&package_json.value, self.package.package_name, self.package.id, &self.json);
-        try lockAdd(&lock_json.value, self.package, &self.json);
+        try manifestAdd(&package_json.value, self.package.package_name, self.package.id, self.json);
+        try lockAdd(&lock_json.value, self.package, self.json);
     }
 };
 
@@ -298,7 +326,12 @@ fn lockAdd(
     try json.writePretty(Constants.Extras.package_files.lock, lock);
 }
 
-fn installAll(allocator: std.mem.Allocator, printer: *Printer) anyerror!void {
+fn installAll(
+    allocator: std.mem.Allocator,
+    printer: *Printer,
+    paths: *Constants.Paths.Paths,
+    json: *Json,
+) anyerror!void {
     var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, allocator, Constants.Extras.package_files.manifest);
 
     defer package_json.deinit();
@@ -308,7 +341,14 @@ fn installAll(allocator: std.mem.Allocator, printer: *Printer) anyerror!void {
         var package_split = std.mem.splitScalar(u8, package_id, '@');
         const package_name = package_split.first();
         const package_version = package_split.next();
-        var installer = try Installer.init(allocator, printer, package_name, package_version);
+        var installer = try Installer.init(
+            allocator,
+            printer,
+            json,
+            paths,
+            package_name,
+            package_version,
+        );
         installer.install() catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {

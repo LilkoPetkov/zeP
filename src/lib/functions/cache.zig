@@ -13,16 +13,18 @@ const Prompt = @import("cli").Prompt;
 pub const Cache = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
-    paths: Constants.Paths.Paths,
+    paths: *Constants.Paths.Paths,
 
     /// Initializes Cache
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !Cache {
-        const path = try Constants.Paths.paths(allocator);
-
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+    ) !Cache {
         return Cache{
             .allocator = allocator,
             .printer = printer,
-            .paths = path,
+            .paths = paths,
         };
     }
 

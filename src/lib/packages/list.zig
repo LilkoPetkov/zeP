@@ -13,14 +13,22 @@ const Uninstaller = @import("uninstall.zig");
 
 pub const Lister = struct {
     allocator: std.mem.Allocator,
-    json: Json,
+    json: *Json,
     printer: *Printer,
     package_name: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer, package_name: []const u8) anyerror!Lister {
-        const json = try Json.init(allocator);
-
-        return Lister{ .json = json, .allocator = allocator, .printer = printer, .package_name = package_name };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        json: *Json,
+        package_name: []const u8,
+    ) Lister {
+        return Lister{
+            .json = json,
+            .allocator = allocator,
+            .printer = printer,
+            .package_name = package_name,
+        };
     }
 
     pub fn list(self: *Lister) !void {

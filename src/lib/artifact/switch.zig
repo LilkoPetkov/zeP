@@ -13,9 +13,18 @@ const Json = @import("core").Json.Json;
 pub const ArtifactSwitcher = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !ArtifactSwitcher {
-        return ArtifactSwitcher{ .allocator = allocator, .printer = printer };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+    ) !ArtifactSwitcher {
+        return ArtifactSwitcher{
+            .allocator = allocator,
+            .printer = printer,
+            .paths = paths,
+        };
     }
 
     pub fn deinit(_: *ArtifactSwitcher) void {
@@ -32,12 +41,9 @@ pub const ArtifactSwitcher = struct {
         artifact_type: Structs.Extras.ArtifactType,
     ) !void {
         // Update manifest with new version
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         try self.printer.append("Modifying Manifest...\n", .{}, .{});
         const path = try std.fs.path.join(self.allocator, &.{
-            if (artifact_type == .zig) paths.zig_root else paths.zep_root,
+            if (artifact_type == .zig) self.paths.zig_root else self.paths.zep_root,
             "d",
             version,
             target,
@@ -48,7 +54,7 @@ pub const ArtifactSwitcher = struct {
         Manifest.writeManifest(
             Structs.Manifests.ArtifactManifest,
             self.allocator,
-            if (artifact_type == .zig) paths.zig_manifest else paths.zep_manifest,
+            if (artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest,
             Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
         ) catch {
             try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = 31 });
@@ -93,7 +99,7 @@ pub const ArtifactSwitcher = struct {
 
         // Update system PATH to point to new version
         try self.printer.append("Switching to installed version...\n", .{}, .{});
-        Link.updateLink(artifact_type) catch {
+        Link.updateLink(artifact_type, self.paths) catch {
             try self.printer.append("Updating Link has failed!\n", .{}, .{ .color = 31 });
         };
 
@@ -104,14 +110,11 @@ pub const ArtifactSwitcher = struct {
     /// Updates manifest and system PATH
     pub fn getLatestVersion(self: *ArtifactSwitcher, artifact_type: Structs.Extras.ArtifactType, skip_version: []const u8) !LatestArtifact {
         // Update manifest with new version
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
-
         const artifact_root_path = try std.fs.path.join(self.allocator, &.{
             if (artifact_type == .zig)
-                paths.zig_root
+                self.paths.zig_root
             else
-                paths.zep_root,
+                self.paths.zep_root,
             "d",
         });
         defer self.allocator.free(artifact_root_path);
@@ -131,9 +134,9 @@ pub const ArtifactSwitcher = struct {
         const version_name = try self.allocator.dupe(u8, open_artifact_version.name);
         const entry_version = try std.fs.path.join(self.allocator, &.{
             if (artifact_type == .zig)
-                paths.zig_root
+                self.paths.zig_root
             else
-                paths.zep_root,
+                self.paths.zep_root,
             "d",
             version_name,
         });

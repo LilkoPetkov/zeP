@@ -25,6 +25,7 @@ pub const VersionData = struct {
 pub const Artifact = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    paths: *Constants.Paths.Paths,
 
     installer: ArtifactInstaller.ArtifactInstaller,
     uninstaller: ArtifactUninstaller.ArtifactUninstaller,
@@ -35,16 +36,41 @@ pub const Artifact = struct {
     artifact_type: Structs.Extras.ArtifactType,
     artifact_name: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer, artifact_type: Structs.Extras.ArtifactType) !Artifact {
-        const installer = try ArtifactInstaller.ArtifactInstaller.init(allocator, printer);
-        const uninstaller = try ArtifactUninstaller.ArtifactUninstaller.init(allocator, printer);
-        const lister = try ArtifactLister.ArtifactLister.init(allocator, printer);
-        const switcher = try ArtifactSwitcher.ArtifactSwitcher.init(allocator, printer);
-        const pruner = try ArtifactPruner.ArtifactPruner.init(allocator, printer);
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        paths: *Constants.Paths.Paths,
+        artifact_type: Structs.Extras.ArtifactType,
+    ) !Artifact {
+        const installer = try ArtifactInstaller.ArtifactInstaller.init(
+            allocator,
+            printer,
+            paths,
+        );
+        const uninstaller = try ArtifactUninstaller.ArtifactUninstaller.init(
+            allocator,
+            printer,
+        );
+        const lister = try ArtifactLister.ArtifactLister.init(
+            allocator,
+            printer,
+            paths,
+        );
+        const switcher = try ArtifactSwitcher.ArtifactSwitcher.init(
+            allocator,
+            printer,
+            paths,
+        );
+        const pruner = try ArtifactPruner.ArtifactPruner.init(
+            allocator,
+            printer,
+            paths,
+        );
 
         return Artifact{
             .allocator = allocator,
             .printer = printer,
+            .paths = paths,
             .installer = installer,
             .uninstaller = uninstaller,
             .lister = lister,
@@ -95,8 +121,6 @@ pub const Artifact = struct {
     /// Get structured version info
     pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u8) !VersionData {
         try self.printer.append("Getting target version...\n", .{}, .{});
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
 
         const version_data = try self.fetchVersion(target_version);
 
@@ -126,7 +150,7 @@ pub const Artifact = struct {
         const path = try std.fs.path.join(
             self.allocator,
             &.{
-                if (self.artifact_type == .zig) paths.zig_root else paths.zep_root,
+                if (self.artifact_type == .zig) self.paths.zig_root else self.paths.zep_root,
                 "d",
                 resolved_version,
                 target,
@@ -174,12 +198,10 @@ pub const Artifact = struct {
             return;
         }
 
-        var paths = try Constants.Paths.paths(self.allocator);
-        defer paths.deinit();
         const version_dir = try std.fs.path.join(
             self.allocator,
             &.{
-                if (self.artifact_type == .zig) paths.zig_root else paths.zep_root,
+                if (self.artifact_type == .zig) self.paths.zig_root else self.paths.zep_root,
                 "d",
                 version.version,
             },
@@ -191,7 +213,7 @@ pub const Artifact = struct {
             version_dir_includes_folders = true;
             break;
         }
-        const manifest = try Manifest.readManifest(Structs.Manifests.ArtifactManifest, self.allocator, if (self.artifact_type == .zig) paths.zig_manifest else paths.zep_manifest);
+        const manifest = try Manifest.readManifest(Structs.Manifests.ArtifactManifest, self.allocator, if (self.artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest);
         defer manifest.deinit();
 
         if (std.mem.containsAtLeast(u8, manifest.value.name, 1, version.version)) {

@@ -270,6 +270,7 @@ pub fn main() !void {
 
     var paths = try Constants.Paths.paths(allocator);
     defer paths.deinit();
+    var json = try Json.init(allocator, &paths);
 
     const create_paths = [5][]const u8{
         paths.root,
@@ -293,7 +294,7 @@ pub fn main() !void {
             std.mem.startsWith(u8, answer, "y") or
             std.mem.startsWith(u8, answer, "Y"))
         {
-            try Setup.setup(allocator, &printer);
+            try Setup.setup(allocator, &printer, &paths);
         }
     }
 
@@ -301,12 +302,23 @@ pub fn main() !void {
     if (!zep_version_exists) {
         const stdin = std.io.getStdIn().reader();
         try printer.append("\nzep appears to be running outside fitting directory. Run '$ zep zep install'?\n", .{}, .{});
-        const answer = try Prompt.input(allocator, &printer, stdin, "(Y/n) > ", .{});
+        const answer = try Prompt.input(
+            allocator,
+            &printer,
+            stdin,
+            "(Y/n) > ",
+            .{},
+        );
         if (answer.len == 0 or
             std.mem.startsWith(u8, answer, "y") or
             std.mem.startsWith(u8, answer, "Y"))
         {
-            var zep = try Artifact.init(allocator, &printer, .zep);
+            var zep = try Artifact.init(
+                allocator,
+                &printer,
+                &paths,
+                .zep,
+            );
             defer zep.deinit();
             const target = resolveDefaultTarget();
             try zep.install("latest", target);
@@ -314,7 +326,11 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "setup")) {
-        try Setup.setup(allocator, &printer);
+        try Setup.setup(
+            allocator,
+            &printer,
+            &paths,
+        );
         return;
     }
     if (std.mem.eql(u8, subcommand, "help")) {
@@ -356,19 +372,39 @@ pub fn main() !void {
         var bootstrap_args = try parseBootstrap(allocator);
         defer bootstrap_args.deinit(allocator);
 
-        try Bootstrap.bootstrap(allocator, &printer, bootstrap_args.zig, bootstrap_args.deps);
+        try Bootstrap.bootstrap(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+            bootstrap_args.zig,
+            bootstrap_args.deps,
+        );
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "new")) {
         const new_package_name = try nextArg(&args, &printer, " > zep new <name>");
-        try New.new(allocator, &printer, new_package_name);
+        try New.new(
+            allocator,
+            &printer,
+            new_package_name,
+            &json,
+        );
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "cache")) {
-        const cache_subcommand = try nextArg(&args, &printer, " > zep cache [list|clean|size] (package_id)");
-        var cache = try Cache.init(allocator, &printer);
+        const cache_subcommand = try nextArg(
+            &args,
+            &printer,
+            " > zep cache [list|clean|size] (package_id)",
+        );
+        var cache = try Cache.init(
+            allocator,
+            &printer,
+            &paths,
+        );
         defer cache.deinit();
         if (std.mem.eql(u8, cache_subcommand, "list") or std.mem.eql(u8, cache_subcommand, "ls")) {
             try cache.list();
@@ -400,7 +436,11 @@ pub fn main() !void {
         const mode = try nextArg(&args, &printer, " > zep pkg [command]");
 
         if (std.mem.eql(u8, mode, "add")) {
-            var custom = CustomPackage.init(allocator, &printer);
+            var custom = CustomPackage.init(
+                allocator,
+                &printer,
+                &paths,
+            );
             try custom.requestPackage();
             return;
         }
@@ -409,7 +449,11 @@ pub fn main() !void {
                 try printer.append("No target specified!\n\n", .{}, .{});
                 return;
             };
-            var custom = CustomPackage.init(allocator, &printer);
+            var custom = CustomPackage.init(
+                allocator,
+                &printer,
+                &paths,
+            );
             try custom.removePackage(target);
             return;
         }
@@ -419,7 +463,12 @@ pub fn main() !void {
             if (target) |package| {
                 var split = std.mem.splitScalar(u8, package, '@');
                 const package_name = split.first();
-                var lister = try Lister.init(allocator, &printer, package_name);
+                var lister = Lister.init(
+                    allocator,
+                    &printer,
+                    &json,
+                    package_name,
+                );
                 lister.list() catch {
                     try printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = 31 });
                 };
@@ -431,7 +480,7 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "init")) {
-        var initer = try Init.init(allocator, &printer, false);
+        var initer = try Init.init(allocator, &printer, &json, false);
         try initer.commitInit();
         return;
     }
@@ -496,7 +545,14 @@ pub fn main() !void {
             return;
         };
 
-        const package = try Package.init(allocator, package_name, package_version, &printer);
+        const package = try Package.init(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+            package_name,
+            package_version,
+        );
         std.debug.print("Package Name: {s}\n", .{package_name});
         std.debug.print("Version: {s}\n", .{package.package.version});
         std.debug.print("Sha256Sum: {s}\n", .{package.package.sha256sum});
@@ -514,7 +570,14 @@ pub fn main() !void {
             const package_name = split.first();
             const package_version = split.next();
 
-            var installer = try Installer.init(allocator, &printer, package_name, package_version);
+            var installer = try Installer.init(
+                allocator,
+                &printer,
+                &json,
+                &paths,
+                package_name,
+                package_version,
+            );
             defer installer.deinit();
             installer.install() catch |err| {
                 switch (err) {
@@ -530,7 +593,14 @@ pub fn main() !void {
                 }
             };
         } else {
-            var installer = Installer.init(allocator, &printer, null, null) catch |err| {
+            var installer = Installer.init(
+                allocator,
+                &printer,
+                &json,
+                &paths,
+                null,
+                null,
+            ) catch |err| {
                 switch (err) {
                     error.NoPackageSpecified => {},
                     else => {
@@ -549,7 +619,13 @@ pub fn main() !void {
         var split = std.mem.splitScalar(u8, target, '@');
         const package_name = split.first();
 
-        var uninstaller = Uninstaller.init(allocator, package_name, &printer) catch |err| {
+        var uninstaller = Uninstaller.init(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+            package_name,
+        ) catch |err| {
             switch (err) {
                 error.NotInstalled => {
                     try printer.append("{s} is not installed!\n", .{package_name}, .{ .color = 31 });
@@ -580,7 +656,14 @@ pub fn main() !void {
 
         const previous_verbosity = Locales.VERBOSITY_MODE;
         Locales.VERBOSITY_MODE = 0;
-        var package = Package.init(allocator, package_name, package_version, &printer) catch |err| {
+        var package = Package.init(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+            package_name,
+            package_version,
+        ) catch |err| {
             switch (err) {
                 error.PackageNotFound => {
                     try printer.append("\nPackage not found.\n\n", .{}, .{ .color = 31 });
@@ -618,7 +701,14 @@ pub fn main() !void {
 
         const previous_verbosity = Locales.VERBOSITY_MODE;
         Locales.VERBOSITY_MODE = 0;
-        var package = Package.init(allocator, package_name, package_version, &printer) catch |err| {
+        var package = Package.init(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+            package_name,
+            package_version,
+        ) catch |err| {
             switch (err) {
                 error.PackageNotFound => {
                     try printer.append("\nPackage not found.\n\n", .{}, .{ .color = 31 });
@@ -645,13 +735,22 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "purge")) {
-        try Purger.purge(&printer, allocator);
+        try Purger.purge(
+            allocator,
+            &printer,
+            &json,
+            &paths,
+        );
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "prebuilt")) {
         const mode = try nextArg(&args, &printer, " > zep prebuilt [build|use|delete] [name]");
-        var prebuilt = try PreBuilt.init(allocator, &printer);
+        var prebuilt = try PreBuilt.init(
+            allocator,
+            &printer,
+            &paths,
+        );
 
         if (std.mem.eql(u8, mode, "build") or std.mem.eql(u8, mode, "use")) {
             const name = try nextArg(&args, &printer, " > zep prebuilt {build|use} [name] [target?]");
@@ -683,7 +782,12 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "zig")) {
         const mode = try nextArg(&args, &printer, " > zep zig [install|switch|uninstall|list] [version]");
-        var zig = try Artifact.init(allocator, &printer, .zig);
+        var zig = try Artifact.init(
+            allocator,
+            &printer,
+            &paths,
+            .zig,
+        );
         defer zig.deinit();
 
         if (std.mem.eql(u8, mode, "install") or std.mem.eql(u8, mode, "uninstall") or std.mem.eql(u8, mode, "switch")) {
@@ -730,7 +834,12 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "zep")) {
         const mode = try nextArg(&args, &printer, " > zep zep [install|switch|uninstall|list] [version]");
-        var zep = try Artifact.init(allocator, &printer, .zep);
+        var zep = try Artifact.init(
+            allocator,
+            &printer,
+            &paths,
+            .zep,
+        );
         defer zep.deinit();
 
         if (std.mem.eql(u8, mode, "install") or std.mem.eql(u8, mode, "uninstall") or std.mem.eql(u8, mode, "switch")) {
