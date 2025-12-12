@@ -13,20 +13,15 @@ const ArtifactInstaller = @import("install.zig");
 const ArtifactUninstaller = @import("uninstall.zig");
 const ArtifactLister = @import("list.zig");
 const ArtifactSwitcher = @import("switch.zig");
+const ArtifactPruner = @import("pruner.zig");
 
-// ------------------------
-// Version Data
-// ------------------------
-pub const Version = struct {
+pub const VersionData = struct {
     path: []const u8,
     tarball: []const u8,
     name: []const u8,
     version: []const u8,
 };
 
-// ------------------------
-// Artifact Manager
-// ------------------------
 pub const Artifact = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
@@ -35,18 +30,17 @@ pub const Artifact = struct {
     uninstaller: ArtifactUninstaller.ArtifactUninstaller,
     lister: ArtifactLister.ArtifactLister,
     switcher: ArtifactSwitcher.ArtifactSwitcher,
+    pruner: ArtifactPruner.ArtifactPruner,
 
     artifact_type: Structs.Extras.ArtifactType,
     artifact_name: []const u8,
 
-    // ------------------------
-    // Initialize all submodules
-    // ------------------------
     pub fn init(allocator: std.mem.Allocator, printer: *Printer, artifact_type: Structs.Extras.ArtifactType) !Artifact {
         const installer = try ArtifactInstaller.ArtifactInstaller.init(allocator, printer);
         const uninstaller = try ArtifactUninstaller.ArtifactUninstaller.init(allocator, printer);
         const lister = try ArtifactLister.ArtifactLister.init(allocator, printer);
         const switcher = try ArtifactSwitcher.ArtifactSwitcher.init(allocator, printer);
+        const pruner = try ArtifactPruner.ArtifactPruner.init(allocator, printer);
 
         return Artifact{
             .allocator = allocator,
@@ -55,6 +49,7 @@ pub const Artifact = struct {
             .uninstaller = uninstaller,
             .lister = lister,
             .switcher = switcher,
+            .pruner = pruner,
             .artifact_type = artifact_type,
             .artifact_name = if (artifact_type == .zig) "Zig" else "Zep",
         };
@@ -67,9 +62,7 @@ pub const Artifact = struct {
         self.lister.deinit();
     }
 
-    // ------------------------
-    // Fetch version metadata from Artifact JSON
-    // ------------------------
+    /// Fetch version metadata from Artifact JSON
     fn fetchVersion(self: *Artifact, target_version: []const u8) !std.json.Value {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
@@ -99,10 +92,8 @@ pub const Artifact = struct {
         return obj.get(target_version) orelse return error.NotFound;
     }
 
-    // ------------------------
-    // Get structured version info
-    // ------------------------
-    pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u8) !Version {
+    /// Get structured version info
+    pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u8) !VersionData {
         try self.printer.append("Getting target version...\n", .{}, .{});
         var paths = try Constants.Paths.paths(self.allocator);
         defer paths.deinit();
@@ -112,12 +103,12 @@ pub const Artifact = struct {
         const obj = version_data.object;
         const url_value = obj.get(target) orelse {
             try self.printer.append("Target not found...\n\n", .{}, .{});
-            return Version{ .name = "", .path = "", .tarball = "", .version = "" };
+            return VersionData{ .name = "", .path = "", .tarball = "", .version = "" };
         };
 
         const tarball_value = url_value.object.get("tarball") orelse {
             try self.printer.append("Tarball not found...\n\n", .{}, .{});
-            return Version{ .name = "", .path = "", .tarball = "", .version = "" };
+            return VersionData{ .name = "", .path = "", .tarball = "", .version = "" };
         };
         const tarball = tarball_value.string;
         var resolved_version: []const u8 = target_version;
@@ -142,7 +133,7 @@ pub const Artifact = struct {
             },
         );
 
-        return Version{
+        return VersionData{
             .path = path,
             .name = name,
             .version = resolved_version,
@@ -150,9 +141,6 @@ pub const Artifact = struct {
         };
     }
 
-    // ------------------------
-    // Install a Artifact version
-    // ------------------------
     pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) !void {
         try self.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
         const version = try self.getVersion(target_version, target);
@@ -174,9 +162,6 @@ pub const Artifact = struct {
         );
     }
 
-    // ------------------------
-    // Uninstall a Artifact version
-    // ------------------------
     pub fn uninstall(
         self: *Artifact,
         target_version: []const u8,
@@ -223,9 +208,6 @@ pub const Artifact = struct {
         return;
     }
 
-    // ------------------------
-    // Switch active Artifact version
-    // ------------------------
     pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []const u8) !void {
         try self.printer.append(
             "[{s}] Switching version: {s}\nWith target: {s}\n\n",
@@ -251,10 +233,11 @@ pub const Artifact = struct {
         try self.switcher.switchVersion(version.name, version.version, target, self.artifact_type);
     }
 
-    // ------------------------
-    // List installed Artifact versions
-    // ------------------------
     pub fn list(self: *Artifact) !void {
         try self.lister.listVersions(self.artifact_type);
+    }
+
+    pub fn prune(self: *Artifact) !void {
+        try self.pruner.pruneVersions(self.artifact_type);
     }
 };
