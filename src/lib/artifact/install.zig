@@ -136,7 +136,7 @@ pub const ArtifactInstaller = struct {
         var buffered_writer = std.io.bufferedWriter(out_file.writer());
         defer {
             buffered_writer.flush() catch {
-                self.printer.append("\nFailed to flush buffer!\n", .{}, .{ .color = 31 }) catch {};
+                self.printer.append("\nFailed to flush buffer!\n", .{}, .{ .color = .red }) catch {};
             };
         }
 
@@ -282,14 +282,14 @@ pub const ArtifactInstaller = struct {
                 .path = path,
             },
         ) catch {
-            try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = 31 });
+            try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = .red });
         };
 
         try self.printer.append("Manifest Up to Date!\n", .{}, .{});
 
         try self.printer.append("Switching to installed version...\n", .{}, .{});
         Link.updateLink(artifact_type, self.paths) catch {
-            try self.printer.append("Updating Link has failed!\n", .{}, .{ .color = 31 });
+            try self.printer.append("Updating Link has failed!\n", .{}, .{ .color = .red });
         };
         try self.printer.append("Switched to installed version!\n", .{}, .{});
     }

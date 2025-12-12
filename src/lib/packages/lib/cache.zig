@@ -82,7 +82,7 @@ pub const Cacher = struct {
         defer {
             temporary_directory.close();
             Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
-                self.printer.append("\nFailed to delete {s}!\n", .{TEMPORARY_DIRECTORY_PATH}, .{ .color = 31 }) catch {};
+                self.printer.append("\nFailed to delete {s}!\n", .{TEMPORARY_DIRECTORY_PATH}, .{ .color = .red }) catch {};
             };
             self.allocator.free(temporary_output_path);
         }

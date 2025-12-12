@@ -81,11 +81,11 @@ pub const Cache = struct {
 
             Fs.deleteFileIfExists(path) catch {
                 failed_deletion += 1;
-                try self.printer.append(" <FAILED>\n", .{}, .{ .color = 31 });
+                try self.printer.append(" <FAILED>\n", .{}, .{ .color = .red });
                 continue;
             };
             data_found += 1;
-            try self.printer.append(" <REMOVED>\n", .{}, .{ .color = 32 });
+            try self.printer.append(" <REMOVED>\n", .{}, .{ .color = .green });
         }
         if (data_found == 0) {
             try self.printer.append("No cached pacakges found.\n", .{}, .{});
@@ -143,13 +143,13 @@ pub const Cache = struct {
             defer self.allocator.free(path);
 
             Fs.deleteFileIfExists(path) catch {
-                try self.printer.append(" <FAILED>\n", .{}, .{ .color = 31 });
+                try self.printer.append(" <FAILED>\n", .{}, .{ .color = .red });
                 failed_deletion += 1;
                 continue;
             };
 
             data_found += 1;
-            try self.printer.append(" <REMOVED>\n", .{}, .{ .color = 32 });
+            try self.printer.append(" <REMOVED>\n", .{}, .{ .color = .green });
         }
         if (data_found == 0) {
             try self.printer.append("No cached packages found.\n", .{}, .{});

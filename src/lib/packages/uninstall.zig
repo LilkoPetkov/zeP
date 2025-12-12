@@ -98,7 +98,7 @@ pub const Uninstaller = struct {
             );
         }
         try self.removePackageFromJson();
-        try self.printer.append("Successfully deleted - {s}\n\n", .{self.package_name}, .{ .color = 32 });
+        try self.printer.append("Successfully deleted - {s}\n\n", .{self.package_name}, .{ .color = .green });
     }
 
     /// Remove package from `zep.json` and `zep.lock`

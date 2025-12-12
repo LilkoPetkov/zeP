@@ -35,23 +35,23 @@ pub const Lister = struct {
         const parsed_package = self.json.parsePackage(self.package_name) catch |err| {
             switch (err) {
                 error.PackageNotFound => {
-                    try self.printer.append("Package not found...\n\n", .{}, .{ .color = 31 });
+                    try self.printer.append("Package not found...\n\n", .{}, .{ .color = .red });
                     return;
                 },
                 else => {
-                    try self.printer.append("Parsing package failed...\n\n", .{}, .{ .color = 31 });
+                    try self.printer.append("Parsing package failed...\n\n", .{}, .{ .color = .red });
                     return;
                 },
             }
         };
         defer parsed_package.deinit();
 
-        try self.printer.append("Package Found! - {s}.json\n\n", .{self.package_name}, .{ .color = 32 });
+        try self.printer.append("Package Found! - {s}.json\n\n", .{self.package_name}, .{ .color = .green });
 
         const versions = parsed_package.value.versions;
         try self.printer.append("Available versions:\n", .{}, .{});
         if (versions.len == 0) {
-            try self.printer.append("  NO VERSIONS FOUND!\n\n", .{}, .{ .color = 31 });
+            try self.printer.append("  NO VERSIONS FOUND!\n\n", .{}, .{ .color = .red });
         } else {
             for (versions) |v| {
                 try self.printer.append("  > version: {s} (zig: {s})\n", .{ v.version, v.zig_version }, .{});

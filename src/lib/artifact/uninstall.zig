@@ -29,6 +29,6 @@ pub const ArtifactUninstaller = struct {
 
         // Recursively delete folder
         try Fs.deleteTreeIfExists(path);
-        try self.printer.append("Artifact version deleted successfully.\n\n", .{}, .{ .color = 32 });
+        try self.printer.append("Artifact version deleted successfully.\n\n", .{}, .{ .color = .green });
     }
 };

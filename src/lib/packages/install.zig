@@ -97,8 +97,14 @@ pub const Installer = struct {
         const lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
         defer lock.deinit();
         if (!std.mem.containsAtLeast(u8, parsed.zig_version, 1, lock.value.root.zig_version)) {
-            try self.printer.append("WARNING: ", .{}, .{ .color = 31 });
-            try self.printer.append("ZIG VERSIONS ARE NOT MATCHING!\n", .{}, .{ .color = 34 });
+            try self.printer.append("WARNING: ", .{}, .{
+                .color = .red,
+                .weight = .bold,
+            });
+            try self.printer.append("ZIG VERSIONS ARE NOT MATCHING!\n", .{}, .{
+                .color = .blue,
+                .weight = .bold,
+            });
             try self.printer.append("{s} Zig Version: {s}\n", .{ package.id, parsed.zig_version }, .{});
             try self.printer.append("Your Zig Version: {s}\n\n", .{lock.value.root.zig_version}, .{});
         }
@@ -118,7 +124,7 @@ pub const Installer = struct {
                     return error.AlreadyInstalled;
                 }
 
-                try self.printer.append("MATCHED UNINSTALLING\n", .{}, .{ .color = 31 });
+                try self.printer.append("MATCHED UNINSTALLING\n", .{}, .{ .color = .red });
                 const previous_verbosity = Locales.VERBOSITY_MODE;
                 Locales.VERBOSITY_MODE = 0;
 
@@ -158,7 +164,7 @@ pub const Installer = struct {
         try self.printer.append("PACKAGE ALREADY CACHED! SKIPPING CACHING!\n\n", .{}, .{});
 
         try self.setPackage();
-        try self.printer.append("Successfully installed - {s}\n\n", .{package.package_name}, .{ .color = 32 });
+        try self.printer.append("Successfully installed - {s}\n\n", .{package.package_name}, .{ .color = .green });
     }
 
     fn setPackage(self: *Installer) !void {
@@ -193,7 +199,7 @@ pub const Installer = struct {
             absolute_symbolic_link_path,
             self.paths,
         ) catch {
-            try self.printer.append("Adding to manifest failed!\n", .{}, .{ .color = 31 });
+            try self.printer.append("Adding to manifest failed!\n", .{}, .{ .color = .red });
         };
     }
 
@@ -352,7 +358,7 @@ fn installAll(
         installer.install() catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
-                    try printer.append(" >> already installed!\n", .{}, .{ .verbosity = 0, .color = 32 });
+                    try printer.append(" >> already installed!\n", .{}, .{ .verbosity = 0, .color = .green });
                     continue;
                 },
                 else => {
@@ -360,7 +366,7 @@ fn installAll(
                 },
             }
         };
-        try printer.append(" >> done!\n", .{}, .{ .verbosity = 0, .color = 32 });
+        try printer.append(" >> done!\n", .{}, .{ .verbosity = 0, .color = .green });
     }
-    try printer.append("\nInstalled all!\n", .{}, .{ .verbosity = 0, .color = 32 });
+    try printer.append("\nInstalled all!\n", .{}, .{ .verbosity = 0, .color = .green });
 }

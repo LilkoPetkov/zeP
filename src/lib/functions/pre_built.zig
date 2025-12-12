@@ -38,11 +38,11 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (!Fs.existsFile(path)) {
-            try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{ .color = 31 });
+            try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{ .color = .red });
             return;
         }
 
-        try self.printer.append("Pre-Built found!\n", .{}, .{ .color = 32 });
+        try self.printer.append("Pre-Built found!\n", .{}, .{ .color = .green });
 
         if (!Fs.existsDir(target_path)) {
             try std.fs.cwd().makePath(target_path);
@@ -51,7 +51,7 @@ pub const PreBuilt = struct {
         try self.printer.append("Decompressing {s} into {s}...\n", .{ path, target_path }, .{});
         _ = try self.compressor.decompress(path, target_path);
 
-        try self.printer.append("Decompressed!\n\n", .{}, .{ .color = 32 });
+        try self.printer.append("Decompressed!\n\n", .{}, .{ .color = .green });
     }
 
     /// Compresses a folder into a pre-built package, overwriting if it exists
@@ -68,9 +68,9 @@ pub const PreBuilt = struct {
 
         const is_compressed = try self.compressor.compress(target_path, path);
         if (is_compressed) {
-            try self.printer.append("Compressed!\n\n", .{}, .{ .color = 32 });
+            try self.printer.append("Compressed!\n\n", .{}, .{ .color = .green });
         } else {
-            try self.printer.append("Compression failed...\n\n", .{}, .{ .color = 31 });
+            try self.printer.append("Compression failed...\n\n", .{}, .{ .color = .red });
         }
     }
 
@@ -80,7 +80,7 @@ pub const PreBuilt = struct {
         defer self.allocator.free(path);
 
         if (Fs.existsFile(path)) {
-            try self.printer.append("Pre-Built found!\n", .{}, .{ .color = 31 });
+            try self.printer.append("Pre-Built found!\n", .{}, .{ .color = .red });
             try Fs.deleteFileIfExists(path);
             try self.printer.append("Deleted.\n\n", .{}, .{});
         }
@@ -96,7 +96,7 @@ pub const PreBuilt = struct {
             try self.printer.append(" - {s}\n", .{entry.name}, .{});
         }
         if (!entries) {
-            try self.printer.append("No prebuilts available!\n", .{}, .{ .color = 31 });
+            try self.printer.append("No prebuilts available!\n", .{}, .{ .color = .red });
         }
         try self.printer.append("\n", .{}, .{});
     }

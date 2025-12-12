@@ -31,7 +31,7 @@ pub fn new(
         }) catch |err| {
             switch (err) {
                 else => {
-                    try printer.append("Zig is not installed!\nDefaulting to 0.14.0!\n\n", .{}, .{ .color = 31 });
+                    try printer.append("Zig is not installed!\nDefaulting to 0.14.0!\n\n", .{}, .{ .color = .red });
                 },
             }
             break :blk;

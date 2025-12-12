@@ -57,7 +57,8 @@ pub const ArtifactSwitcher = struct {
             if (artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest,
             Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
         ) catch {
-            try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = 31 });
+            return error.ManifestUpdateFailed;
+            // try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = .red });
         };
 
         // Update zep.json and zep.lock
@@ -82,7 +83,7 @@ pub const ArtifactSwitcher = struct {
                 Constants.Extras.package_files.manifest,
                 manifest.value,
             ) catch {
-                try self.printer.append("Updating Json Manifest failed!\n", .{}, .{ .color = 31 });
+                return error.JsonUpdateFailed;
             };
             Manifest.writeManifest(
                 Structs.ZepFiles.PackageLockStruct,
@@ -90,7 +91,7 @@ pub const ArtifactSwitcher = struct {
                 Constants.Extras.package_files.lock,
                 lock.value,
             ) catch {
-                try self.printer.append("Updating Lock Manifest failed!\n", .{}, .{ .color = 31 });
+                return error.LockUpdateFailed;
             };
             break :blk;
         }
@@ -100,10 +101,10 @@ pub const ArtifactSwitcher = struct {
         // Update system PATH to point to new version
         try self.printer.append("Switching to installed version...\n", .{}, .{});
         Link.updateLink(artifact_type, self.paths) catch {
-            try self.printer.append("Updating Link has failed!\n", .{}, .{ .color = 31 });
+            return error.LinkUpdateFailed;
         };
 
-        try self.printer.append("Switched to installed version successfully!\n", .{}, .{ .color = 32 });
+        try self.printer.append("Switched to installed version successfully!\n", .{}, .{ .color = .green });
     }
 
     /// Switch active Artifact version

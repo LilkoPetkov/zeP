@@ -59,7 +59,7 @@ pub const Downloader = struct {
         defer temporary_directory.close();
         defer {
             Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
-                self.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = 31 }) catch {};
+                self.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = .red }) catch {};
             };
         }
 
@@ -160,9 +160,9 @@ pub const Downloader = struct {
 
         try self.printer.append("Caching Package now...\n", .{}, .{});
         if (try self.cacher.setPackageToCache(try self.packagePath())) {
-            try self.printer.append("Successfully cached!\n", .{}, .{ .color = 32 });
+            try self.printer.append("Successfully cached!\n", .{}, .{ .color = .green });
         } else {
-            try self.printer.append("Caching failed...\n", .{}, .{ .color = 31 });
+            try self.printer.append("Caching failed...\n", .{}, .{ .color = .red });
         }
     }
 };

@@ -41,11 +41,11 @@ pub const Package = struct {
         const parsed_package = try json.parsePackage(package_name);
         defer parsed_package.deinit();
 
-        try printer.append("Package Found! - {s}.json\n\n", .{package_name}, .{ .color = 32 });
+        try printer.append("Package Found! - {s}.json\n\n", .{package_name}, .{ .color = .green });
 
         const versions = parsed_package.value.versions;
         if (versions.len == 0) {
-            printer.append("\nPackage has no version!\n", .{}, .{ .color = 31 }) catch {};
+            printer.append("\nPackage has no version!\n", .{}, .{ .color = .red }) catch {};
             return error.PackageVersion;
         }
 
@@ -72,11 +72,11 @@ pub const Package = struct {
         }
 
         const selected = check_selected orelse {
-            try printer.append("Package version was not found...\n\n", .{}, .{ .color = 31 });
+            try printer.append("Package version was not found...\n\n", .{}, .{ .color = .red });
             return error.PackageVersion;
         };
 
-        try printer.append("Package version found!\n\n", .{}, .{ .color = 32 });
+        try printer.append("Package version found!\n\n", .{}, .{ .color = .green });
 
         // Create hash
         const hash = try Hash.hashData(allocator, selected.url);
@@ -128,8 +128,8 @@ pub const Package = struct {
 
         const amount = try self.getPackagePathsAmount();
         if (amount > 0 and !force) {
-            try self.printer.append("\nWARNING: Atleast 1 project is using {s} [{d}]. Uninstalling it globally now might have serious consequences.\n\n", .{ self.id, amount }, .{ .color = 31 });
-            try self.printer.append("Use - if you do not care\n $ zep fglobal-uninstall [target]@[version]\n\n", .{}, .{ .color = 33 });
+            try self.printer.append("\nWARNING: Atleast 1 project is using {s} [{d}]. Uninstalling it globally now might have serious consequences.\n\n", .{ self.id, amount }, .{ .color = .red });
+            try self.printer.append("Use - if you do not care\n $ zep fglobal-uninstall [target]@[version]\n\n", .{}, .{ .color = .yellow });
             return;
         }
 

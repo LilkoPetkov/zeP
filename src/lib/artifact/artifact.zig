@@ -113,9 +113,9 @@ pub const Artifact = struct {
         const obj = parsed.value.object;
 
         if (std.mem.eql(u8, target_version, "latest") or target_version.len == 0) {
-            return obj.get("master") orelse return error.NotFound;
+            return obj.get("master") orelse return error.VersionNotFound;
         }
-        return obj.get(target_version) orelse return error.NotFound;
+        return obj.get(target_version) orelse return error.VersionNotFound;
     }
 
     /// Get structured version info
@@ -126,13 +126,11 @@ pub const Artifact = struct {
 
         const obj = version_data.object;
         const url_value = obj.get(target) orelse {
-            try self.printer.append("Target not found...\n\n", .{}, .{});
-            return VersionData{ .name = "", .path = "", .tarball = "", .version = "" };
+            return error.VersionNotFound;
         };
 
         const tarball_value = url_value.object.get("tarball") orelse {
-            try self.printer.append("Tarball not found...\n\n", .{}, .{});
-            return VersionData{ .name = "", .path = "", .tarball = "", .version = "" };
+            return error.TarballNotFound;
         };
         const tarball = tarball_value.string;
         var resolved_version: []const u8 = target_version;
@@ -165,10 +163,10 @@ pub const Artifact = struct {
         };
     }
 
-    pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) !void {
+    pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
         try self.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
         const version = try self.getVersion(target_version, target);
-        if (version.path.len == 0) return;
+        if (version.path.len == 0) return error.VersionHasNoPath;
 
         if (Fs.existsDir(version.path)) {
             try self.printer.append("{s} version already installed.\n", .{self.artifact_name}, .{});
@@ -230,7 +228,7 @@ pub const Artifact = struct {
         return;
     }
 
-    pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []const u8) !void {
+    pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
         try self.printer.append(
             "[{s}] Switching version: {s}\nWith target: {s}\n\n",
             .{
@@ -242,14 +240,7 @@ pub const Artifact = struct {
         );
         const version = try self.getVersion(target_version, target);
         if (!Fs.existsDir(version.path)) {
-            try self.printer.append(
-                "{s} version not installed.\n\n",
-                .{
-                    self.artifact_name,
-                },
-                .{},
-            );
-            return;
+            return error.VersionNotInstalled;
         }
 
         try self.switcher.switchVersion(version.name, version.version, target, self.artifact_type);

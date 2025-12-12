@@ -42,8 +42,8 @@ pub const Init = struct {
         }) catch |err| {
             switch (err) {
                 else => {
-                    try printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = 31 });
-                    try printer.append("\nSUGGESTION:\n", .{}, .{ .color = 34 });
+                    try printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = .red });
+                    try printer.append("\nSUGGESTION:\n", .{}, .{ .color = .blue });
                     try printer.append(" - Install zig\n $ zep zig install <version>\n\n", .{}, .{});
                     std.process.exit(0);
                 },
@@ -52,7 +52,10 @@ pub const Init = struct {
         };
 
         zig_version = child.stdout[0 .. child.stdout.len - 1];
-        try printer.append("--- INITING ZEP MODE ---\n\n", .{}, .{ .color = 34 });
+        try printer.append("--- INITING ZEP MODE ---\n\n", .{}, .{
+            .color = .blue,
+            .weight = .bold,
+        });
         const stdin = std.io.getStdIn().reader();
 
         const name = try Prompt.input(
@@ -105,7 +108,7 @@ pub const Init = struct {
             self.zig_version,
         );
 
-        try self.printer.append("Finished initing!\n", .{}, .{ .color = 32 });
+        try self.printer.append("Finished initing!\n", .{}, .{ .color = .green });
     }
 
     fn createFolders(_: *Init) !void {

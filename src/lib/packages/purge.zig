@@ -51,17 +51,17 @@ pub fn purge(
             package_name,
         );
         uninstaller.uninstall() catch {
-            try printer.append(" >> failed!\n", .{}, .{ .verbosity = 0, .color = 31 });
+            try printer.append(" >> failed!\n", .{}, .{ .verbosity = 0, .color = .red });
             std.Thread.sleep(std.time.ms_per_s * 100);
             continue;
         };
 
-        try printer.append(" >> done!\n", .{}, .{ .verbosity = 0, .color = 32 });
+        try printer.append(" >> done!\n", .{}, .{ .verbosity = 0, .color = .green });
 
         // small delay to avoid race conditions
         std.Thread.sleep(std.time.ms_per_s * 100);
     }
 
-    try printer.append("\nPurged packages!\n", .{}, .{ .verbosity = 0, .color = 32 });
+    try printer.append("\nPurged packages!\n", .{}, .{ .verbosity = 0, .color = .green });
     Locales.VERBOSITY_MODE = previous_verbosity;
 }

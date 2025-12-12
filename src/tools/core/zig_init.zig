@@ -47,7 +47,7 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
                     try printer.append(
                         "Zig is not installed!\nDefaulting to {s}!\n\n",
                         .{zig_version},
-                        .{ .color = 31 },
+                        .{ .color = .red },
                     );
                     break :blk;
                 },

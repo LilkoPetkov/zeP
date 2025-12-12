@@ -65,14 +65,7 @@ pub const ArtifactLister = struct {
             if (artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest,
         );
         defer manifest.deinit();
-        if (manifest.value.path.len == 0) {
-            if (artifact_type == .zep) {
-                std.debug.print("\nManifest path is not defined! Use\n $ zep zep switch <zep-version>\nTo fix!\n", .{});
-            } else {
-                std.debug.print("\nManifest path is not defined! Use\n $ zep zig switch <zig-version>\nTo fix!\n", .{});
-            }
-            return error.ManifestNotFound;
-        }
+        if (manifest.value.path.len == 0) return error.ManifestNotFound;
 
         var dir = try Fs.openDir(versions_directory);
         defer dir.close();
@@ -102,7 +95,7 @@ pub const ArtifactLister = struct {
             }
 
             if (!has_targets) {
-                try self.printer.append("  NO TARGETS AVAILABLE\n", .{}, .{ .color = 31 });
+                try self.printer.append("  NO TARGETS AVAILABLE\n", .{}, .{ .color = .red });
             }
         }
 
