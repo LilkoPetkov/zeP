@@ -18,7 +18,7 @@ windows_targets=("x86_64-windows" "x86-windows" "aarch64-windows" "x86_64-window
 for target in "${windows_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget="$target" -p "$TEMP_DIR/$target"
 
-    zip -j "$RELEASE_DIR/zep_${target}_$VERSION_NAME.zip" "$TEMP_DIR/$target/bin/zeP.exe"
+    zip -j "$RELEASE_DIR/zep_${target}_$VERSION_NAME.zip" "$TEMP_DIR/$target/bin/zep.exe"
 done
 
 # Linux targets
@@ -27,7 +27,7 @@ linux_targets=("x86_64-linux" "x86-linux" "aarch64-linux" "x86_64-linux-musl" "a
 for target in "${linux_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget="$target" -p "$TEMP_DIR/$target"
 
-    tar -C "$TEMP_DIR/$target/bin" -cJf "$RELEASE_DIR/zep_${target}_$VERSION_NAME.tar.xz" zeP
+    tar -C "$TEMP_DIR/$target/bin" -cJf "$RELEASE_DIR/zep_${target}_$VERSION_NAME.tar.xz" zep
 done
 
 # macOS targets
@@ -36,7 +36,7 @@ macos_targets=("x86_64-macos" "aarch64-macos")
 for target in "${macos_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget="$target" -p "$TEMP_DIR/$target"
 
-    tar -C "$TEMP_DIR/$target/bin" -cJf "$RELEASE_DIR/zep_${target}_$VERSION_NAME.tar.xz" zeP
+    tar -C "$TEMP_DIR/$target/bin" -cJf "$RELEASE_DIR/zep_${target}_$VERSION_NAME.tar.xz" zep
 done
 
 # Clean up temporary build folders

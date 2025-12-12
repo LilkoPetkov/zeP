@@ -3,15 +3,15 @@ const std = @import("std");
 pub fn build(builder: *std.Build) void {
     const target = builder.standardTargetOptions(.{});
     const optimize = builder.standardOptimizeOption(.{});
-    const zeP_executeable_mod = builder.createModule(.{
+    const zep_executeable_mod_mod = builder.createModule(.{
         .root_source_file = builder.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const zeP_executeable = builder.addExecutable(.{
+    const zep_executeable_mod = builder.addExecutable(.{
         .name = "zep",
-        .root_module = zeP_executeable_mod,
+        .root_module = zep_executeable_mod_mod,
     });
 
     const localesMod = builder.createModule(.{ .root_source_file = builder.path("src/locales.zig") });
@@ -38,13 +38,13 @@ pub fn build(builder: *std.Build) void {
         std.Build.Module.Import{ .name = "cli", .module = clisMod },
     } });
 
-    zeP_executeable.root_module.addImport("locales", localesMod);
-    zeP_executeable.root_module.addImport("constants", constantsMod);
-    zeP_executeable.root_module.addImport("structs", structsMod);
-    zeP_executeable.root_module.addImport("core", coresMod);
-    zeP_executeable.root_module.addImport("io", iosMod);
-    zeP_executeable.root_module.addImport("cli", clisMod);
+    zep_executeable_mod.root_module.addImport("locales", localesMod);
+    zep_executeable_mod.root_module.addImport("constants", constantsMod);
+    zep_executeable_mod.root_module.addImport("structs", structsMod);
+    zep_executeable_mod.root_module.addImport("core", coresMod);
+    zep_executeable_mod.root_module.addImport("io", iosMod);
+    zep_executeable_mod.root_module.addImport("cli", clisMod);
 
-    @import(".zep/injector.zig").injectExtraImports(builder, zeP_executeable);
-    builder.installArtifact(zeP_executeable);
+    @import(".zep/injector.zig").injectExtraImports(builder, zep_executeable_mod);
+    builder.installArtifact(zep_executeable_mod);
 }
