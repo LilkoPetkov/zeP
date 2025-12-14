@@ -7,7 +7,7 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 const Hash = @import("hash.zig");
-const Manifest = @import("manifest.zig");
+const Manifest = @import("manifest.zig").Manifest;
 const Json = @import("json.zig").Json;
 
 /// Handles Packages, returns null if package is not found.
@@ -17,6 +17,7 @@ pub const Package = struct {
     allocator: std.mem.Allocator,
     json: *Json,
     paths: *Constants.Paths.Paths,
+    manifest: *Manifest,
 
     package_hash: []u8,
     package_name: []const u8,
@@ -32,6 +33,7 @@ pub const Package = struct {
         printer: *Printer,
         json: *Json,
         paths: *Constants.Paths.Paths,
+        manifest: *Manifest,
         package_name: []const u8,
         package_version: ?[]const u8,
     ) !Package {
@@ -82,7 +84,8 @@ pub const Package = struct {
         const hash = try Hash.hashData(allocator, selected.url);
 
         // Compute id
-        const id = try std.fmt.allocPrint(allocator, "{s}@{s}", .{
+        var id_buf: [64]u8 = undefined;
+        const id = try std.fmt.bufPrint(&id_buf, "{s}@{s}", .{
             package_name,
             target_version,
         });
@@ -90,6 +93,7 @@ pub const Package = struct {
         return Package{
             .allocator = allocator,
             .json = json,
+            .manifest = manifest,
             .package_name = package_name,
             .package_version = target_version,
             .package_hash = hash,
@@ -103,9 +107,8 @@ pub const Package = struct {
     pub fn deinit(_: *Package) void {}
 
     fn getPackagePathsAmount(self: *Package) !usize {
-        var package_manifest = try Manifest.readManifest(
+        var package_manifest = try self.manifest.readManifest(
             Structs.Manifests.PackagesManifest,
-            self.allocator,
             self.paths.pkg_manifest,
         );
         defer package_manifest.deinit();
@@ -123,8 +126,12 @@ pub const Package = struct {
     }
 
     pub fn deletePackage(self: *Package, force: bool) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.paths.pkg_root, self.id });
-        defer self.allocator.free(path);
+        var buf: [128]u8 = undefined;
+        const path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}",
+            .{ self.paths.pkg_root, self.id },
+        );
 
         const amount = try self.getPackagePathsAmount();
         if (amount > 0 and !force) {

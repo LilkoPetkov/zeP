@@ -35,41 +35,52 @@ pub const Cacher = struct {
     pub fn deinit(_: *Cacher) void {}
 
     fn cacheFilePath(self: *Cacher) ![]u8 {
-        return try std.fmt.allocPrint(
-            self.allocator,
+        var buf: [256]u8 = undefined;
+        const cache_fp = try std.fmt.bufPrint(
+            &buf,
             "{s}/{s}@{s}.zep",
             .{
-                try self.allocator.dupe(u8, self.paths.zepped),
+                self.paths.zepped,
                 self.package.package_name,
                 self.package.package_version,
             },
         );
+
+        return cache_fp;
     }
 
     fn extractPath(self: *Cacher) ![]u8 {
-        return try std.fmt.allocPrint(
-            self.allocator,
+        var buf: [256]u8 = undefined;
+        const extract_p = try std.fmt.bufPrint(
+            &buf,
             "{s}/{s}@{s}",
             .{
-                try self.allocator.dupe(u8, self.paths.pkg_root),
+                self.paths.pkg_root,
                 self.package.package_name,
                 self.package.package_version,
             },
         );
+
+        return extract_p;
     }
 
     fn tmpOutputPath(self: *Cacher) ![]u8 {
-        return try std.fmt.allocPrint(
-            self.allocator,
+        var buf: [256]u8 = undefined;
+        const tmp_p = try std.fmt.bufPrint(
+            &buf,
             "{s}/{s}@{s}",
-            .{ TEMPORARY_DIRECTORY_PATH, self.package.package_name, self.package.package_version },
+            .{
+                TEMPORARY_DIRECTORY_PATH,
+                self.package.package_name,
+                self.package.package_version,
+            },
         );
+
+        return tmp_p;
     }
 
     pub fn isPackageCached(self: *Cacher) !bool {
         const path = try self.cacheFilePath();
-        defer self.allocator.free(path);
-
         return Fs.existsFile(path);
     }
 
@@ -84,14 +95,10 @@ pub const Cacher = struct {
             Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
                 self.printer.append("\nFailed to delete {s}!\n", .{TEMPORARY_DIRECTORY_PATH}, .{ .color = .red }) catch {};
             };
-            self.allocator.free(temporary_output_path);
         }
 
         const cache_path = try self.cacheFilePath();
-        defer self.allocator.free(cache_path);
-
         const extract_path = try self.extractPath();
-        defer self.allocator.free(extract_path);
 
         return try self.compressor.decompress(cache_path, extract_path);
     }
@@ -101,8 +108,15 @@ pub const Cacher = struct {
     }
 
     pub fn deletePackageFromCache(self: *Cacher) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.zepped, self.package.id });
-        defer self.allocator.free(path);
+        var buf: [256]u8 = undefined;
+        const path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.zep",
+            .{
+                self.paths.zepped,
+                self.package.id,
+            },
+        );
 
         if (Fs.existsFile(path)) {
             try Fs.deleteFileIfExists(path);

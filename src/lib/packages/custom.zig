@@ -96,11 +96,15 @@ pub const CustomPackage = struct {
         );
         defer self.allocator.free(package_name);
 
-        const custom_package_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{
-            self.paths.custom,
-            package_name,
-        });
-        defer self.allocator.free(custom_package_path);
+        var buf: [256]u8 = undefined;
+        const custom_package_path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.json",
+            .{
+                self.paths.custom,
+                package_name,
+            },
+        );
 
         if (Fs.existsFile(custom_package_path)) {
             try self.printer.append("-- PACKAGE EXISTS [ADD VERSION MODE] --\n\n", .{}, .{
@@ -188,8 +192,12 @@ pub const CustomPackage = struct {
     pub fn removePackage(self: CustomPackage, package_name: []const u8) !void {
         try self.printer.append("Removing package...\n", .{}, .{});
 
-        const custom_package_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ self.paths.custom, package_name });
-        defer self.allocator.free(custom_package_path);
+        var buf: [256]u8 = undefined;
+        const custom_package_path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.json",
+            .{ self.paths.custom, package_name },
+        );
 
         if (Fs.existsFile(custom_package_path)) {
             try self.printer.append("Package found...\n", .{}, .{});

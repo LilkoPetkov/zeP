@@ -34,8 +34,12 @@ pub const PreBuilt = struct {
 
     /// Extracts a pre-built package into the specified target path
     pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
-        defer self.allocator.free(path);
+        var buf: [256]u8 = undefined;
+        const path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.zep",
+            .{ self.paths.prebuilt, pre_built_name },
+        );
 
         if (!Fs.existsFile(path)) {
             try self.printer.append("Pre-Built does NOT exist!\n\n", .{}, .{ .color = .red });
@@ -56,8 +60,12 @@ pub const PreBuilt = struct {
 
     /// Compresses a folder into a pre-built package, overwriting if it exists
     pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
-        defer self.allocator.free(path);
+        var buf: [256]u8 = undefined;
+        const path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.zep",
+            .{ self.paths.prebuilt, pre_built_name },
+        );
 
         if (Fs.existsFile(path)) {
             try self.printer.append("Pre-Built already exists! Overwriting it now...\n\n", .{}, .{});
@@ -76,8 +84,12 @@ pub const PreBuilt = struct {
 
     /// Deletes a pre-built package if it exists
     pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.zep", .{ self.paths.prebuilt, pre_built_name });
-        defer self.allocator.free(path);
+        var buf: [256]u8 = undefined;
+        const path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}.zep",
+            .{ self.paths.prebuilt, pre_built_name },
+        );
 
         if (Fs.existsFile(path)) {
             try self.printer.append("Pre-Built found!\n", .{}, .{ .color = .red });

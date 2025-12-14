@@ -8,7 +8,7 @@ const Prompt = @import("cli").Prompt;
 const Printer = @import("cli").Printer;
 const Setup = @import("cli").Setup;
 const Fs = @import("io").Fs;
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 const Package = @import("core").Package.Package;
 const Json = @import("core").Json.Json;
 
@@ -27,194 +27,9 @@ const Bootstrap = @import("lib/functions/bootstrap.zig");
 const New = @import("lib/functions/new.zig");
 const Doctor = @import("lib/functions/doctor.zig");
 const Cache = @import("lib/functions/cache.zig").Cache;
-
 const Artifact = @import("lib/artifact/artifact.zig").Artifact;
 
-const clap = @import("clap");
-
-const DoctorArgs = struct {
-    fix: bool,
-};
-fn parseDoctor(allocator: std.mem.Allocator) !DoctorArgs {
-    const params = [_]clap.Param(u8){
-        .{
-            .id = 'f',
-            .names = .{ .short = 'f', .long = "fix" },
-            .takes_value = .none,
-        },
-    };
-
-    var iter = try std.process.ArgIterator.initWithAllocator(allocator);
-    defer iter.deinit();
-
-    // skip .exe and command
-    _ = iter.next();
-    _ = iter.next();
-    var diag = clap.Diagnostic{};
-    var parser = clap.streaming.Clap(u8, std.process.ArgIterator){
-        .params = &params,
-        .iter = &iter,
-        .diagnostic = &diag,
-    };
-
-    var fix: bool = false;
-    // Because we use a streaming parser, we have to consume each argument parsed individually.
-    while (parser.next() catch |err| {
-        return err;
-    }) |arg| {
-        // arg.param will point to the parameter which matched the argument.
-        switch (arg.param.id) {
-            'f' => {
-                fix = true;
-            },
-            else => continue,
-        }
-    }
-
-    return DoctorArgs{
-        .fix = fix,
-    };
-}
-
-const BootstrapArgs = struct {
-    zig: []const u8,
-    deps: [][]const u8,
-
-    pub fn deinit(self: *BootstrapArgs, allocator: std.mem.Allocator) void {
-        allocator.free(self.zig);
-        for (self.deps) |dep| {
-            allocator.free(dep);
-        }
-    }
-};
-fn parseBootstrap(allocator: std.mem.Allocator) !BootstrapArgs {
-    const params = [_]clap.Param(u8){
-        .{
-            .id = 'z',
-            .names = .{ .short = 'z', .long = "zig" },
-            .takes_value = .one,
-        },
-        .{
-            .id = 'd',
-            .names = .{ .short = 'd', .long = "deps" },
-            .takes_value = .one,
-        },
-    };
-
-    var iter = try std.process.ArgIterator.initWithAllocator(allocator);
-    defer iter.deinit();
-
-    // skip .exe and command
-    _ = iter.next();
-    _ = iter.next();
-    var diag = clap.Diagnostic{};
-    var parser = clap.streaming.Clap(u8, std.process.ArgIterator){
-        .params = &params,
-        .iter = &iter,
-        .diagnostic = &diag,
-    };
-
-    var zig: []const u8 = "0.14.0";
-    var raw_deps: []const u8 = "";
-    // Because we use a streaming parser, we have to consume each argument parsed individually.
-    while (parser.next() catch |err| {
-        return err;
-    }) |arg| {
-        // arg.param will point to the parameter which matched the argument.
-        switch (arg.param.id) {
-            'z' => {
-                zig = arg.value orelse "";
-            },
-            'd' => {
-                raw_deps = arg.value orelse "";
-            },
-            else => continue,
-        }
-    }
-
-    var deps = std.ArrayList([]const u8).init(allocator);
-    var deps_split = std.mem.splitScalar(u8, raw_deps, ',');
-    while (deps_split.next()) |d| {
-        const dep = std.mem.trim(u8, d, " ");
-        if (dep.len == 0) continue;
-        try deps.append(try allocator.dupe(u8, dep));
-    }
-
-    return BootstrapArgs{
-        .zig = try allocator.dupe(u8, zig),
-        .deps = deps.items,
-    };
-}
-
-const RunnerArgs = struct {
-    target: []const u8,
-    args: [][]const u8,
-
-    pub fn deinit(self: *RunnerArgs, allocator: std.mem.Allocator) void {
-        allocator.free(self.target);
-        for (self.args) |arg| {
-            allocator.free(arg);
-        }
-    }
-};
-fn parseRunner(allocator: std.mem.Allocator) !RunnerArgs {
-    const params = [_]clap.Param(u8){
-        .{
-            .id = 't',
-            .names = .{ .short = 't', .long = "target" },
-            .takes_value = .one,
-        },
-        .{
-            .id = 'a',
-            .names = .{ .short = 'a', .long = "args" },
-            .takes_value = .one,
-        },
-    };
-
-    var iter = try std.process.ArgIterator.initWithAllocator(allocator);
-    defer iter.deinit();
-
-    // skip .exe and command
-    _ = iter.next();
-    _ = iter.next();
-    var diag = clap.Diagnostic{};
-    var parser = clap.streaming.Clap(u8, std.process.ArgIterator){
-        .params = &params,
-        .iter = &iter,
-        .diagnostic = &diag,
-    };
-
-    var target: []const u8 = "";
-    var raw_args: []const u8 = "";
-    // Because we use a streaming parser, we have to consume each argument parsed individually.
-    while (parser.next() catch |err| {
-        return err;
-    }) |arg| {
-        // arg.param will point to the parameter which matched the argument.
-        switch (arg.param.id) {
-            't' => {
-                target = arg.value orelse "";
-            },
-            'a' => {
-                raw_args = arg.value orelse "";
-            },
-            else => continue,
-        }
-    }
-
-    var args = std.ArrayList([]const u8).init(allocator);
-    var args_split = std.mem.splitScalar(u8, raw_args, ' ');
-    while (args_split.next()) |a| {
-        const arg = std.mem.trim(u8, a, " ");
-        if (arg.len == 0) continue;
-        try args.append(try allocator.dupe(u8, arg));
-    }
-
-    return RunnerArgs{
-        .target = try allocator.dupe(u8, target),
-        .args = args.items,
-    };
-}
+const Args = @import("args.zig");
 
 /// Print the usage and the legend of zep.
 fn printUsage(printer: *Printer) !void {
@@ -251,13 +66,13 @@ fn resolveDefaultTarget() []const u8 {
 }
 
 pub fn main() !void {
-    const allocator = std.heap.page_allocator;
-    var args = try std.process.argsWithAllocator(allocator);
+    const alloc = std.heap.page_allocator;
+    var args = try std.process.argsWithAllocator(alloc);
 
     defer args.deinit();
     _ = args.skip(); // skip program name
 
-    var printer = Printer.init(allocator);
+    var printer = Printer.init(alloc);
     defer printer.deinit();
     try printer.append("\n", .{}, .{});
 
@@ -267,9 +82,10 @@ pub fn main() !void {
         return;
     };
 
-    var paths = try Constants.Paths.paths(allocator);
+    var paths = try Constants.Paths.paths(alloc);
     defer paths.deinit();
-    var json = try Json.init(allocator, &paths);
+    var json = Json.init(alloc, &paths);
+    var manifest = Manifest.init(alloc, &json, &paths);
 
     const create_paths = [5][]const u8{
         paths.root,
@@ -285,9 +101,16 @@ pub fn main() !void {
         if (!is_created) break;
     }
 
+    var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const allocator = arena_allocator.allocator();
+    defer arena_allocator.deinit();
+
     if (!is_created) {
         const stdin = std.io.getStdIn().reader();
-        try printer.append("\nNo setup detected. Run '$ zep setup'?\n", .{}, .{});
+        try printer.append("\nNo setup detected. Run '$ zep setup'?\n", .{}, .{
+            .color = .blue,
+            .weight = .bold,
+        });
         const answer = try Prompt.input(allocator, &printer, stdin, "(Y/n) > ", .{});
         if (answer.len == 0 or
             std.mem.startsWith(u8, answer, "y") or
@@ -316,6 +139,7 @@ pub fn main() !void {
                 allocator,
                 &printer,
                 &paths,
+                &manifest,
                 .zep,
             );
             defer zep.deinit();
@@ -362,13 +186,13 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "doctor")) {
-        const doctor_args = try parseDoctor(allocator);
-        try Doctor.doctor(allocator, &printer, doctor_args.fix);
+        const doctor_args = try Args.parseDoctor(allocator);
+        try Doctor.doctor(allocator, &printer, &manifest, doctor_args.fix);
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "bootstrap")) {
-        var bootstrap_args = try parseBootstrap(allocator);
+        var bootstrap_args = try Args.parseBootstrap(allocator);
         defer bootstrap_args.deinit(allocator);
 
         try Bootstrap.bootstrap(
@@ -376,6 +200,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
             bootstrap_args.zig,
             bootstrap_args.deps,
         );
@@ -423,7 +248,10 @@ pub fn main() !void {
         Fs.existsFile(Constants.Extras.package_files.manifest) and
         Fs.existsDir(Constants.Extras.package_files.zep_folder))
     {
-        const lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, allocator, Constants.Extras.package_files.lock);
+        const lock = try manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
         defer lock.deinit();
         if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
             try printer.append("Lock file schema is NOT matching with zep version.\nConsider removing them, and re-initing!\n", .{}, .{ .color = .red });
@@ -485,23 +313,31 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "build")) {
-        var builder = try Builder.init(allocator, &printer);
+        var builder = try Builder.init(
+            allocator,
+            &printer,
+            &manifest,
+        );
         const t = try builder.build();
         t.deinit();
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "runner")) {
-        var runner_args = try parseRunner(allocator);
+        var runner_args = try Args.parseRunner(allocator);
         defer runner_args.deinit(allocator);
 
-        var runner = try Runner.init(allocator, &printer);
+        var runner = Runner.init(allocator, &printer, &manifest);
         try runner.run(runner_args.target, runner_args.args);
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "lock")) {
-        var package_files = PackageFiles.init(allocator, &printer) catch |err| {
+        var package_files = PackageFiles.init(
+            allocator,
+            &printer,
+            &manifest,
+        ) catch |err| {
             switch (err) {
                 error.ManifestMissing => {
                     try printer.append("zep.json manifest is missing!\n $ zep init\nto get started!\n\n", .{}, .{ .color = .red });
@@ -518,7 +354,11 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "json")) {
-        var package_files = PackageFiles.init(allocator, &printer) catch |err| {
+        var package_files = PackageFiles.init(
+            allocator,
+            &printer,
+            &manifest,
+        ) catch |err| {
             switch (err) {
                 error.ManifestMissing => {
                     try printer.append("zep.json manifest is missing!\n $ zep init\nto get started!\n\n", .{}, .{ .color = .red });
@@ -549,6 +389,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
             package_name,
             package_version,
         );
@@ -574,6 +415,7 @@ pub fn main() !void {
                 &printer,
                 &json,
                 &paths,
+                &manifest,
                 package_name,
                 package_version,
             );
@@ -597,6 +439,7 @@ pub fn main() !void {
                 &printer,
                 &json,
                 &paths,
+                &manifest,
                 null,
                 null,
             ) catch |err| {
@@ -623,6 +466,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
             package_name,
         ) catch |err| {
             switch (err) {
@@ -660,6 +504,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
             package_name,
             package_version,
         ) catch |err| {
@@ -705,6 +550,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
             package_name,
             package_version,
         ) catch |err| {
@@ -739,6 +585,7 @@ pub fn main() !void {
             &printer,
             &json,
             &paths,
+            &manifest,
         );
         return;
     }
@@ -785,6 +632,7 @@ pub fn main() !void {
             allocator,
             &printer,
             &paths,
+            &manifest,
             .zig,
         );
         defer zig.deinit();
@@ -881,6 +729,7 @@ pub fn main() !void {
             allocator,
             &printer,
             &paths,
+            &manifest,
             .zep,
         );
         defer zep.deinit();
@@ -962,7 +811,11 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, subcommand, "cmd")) {
         const mode = try nextArg(&args, &printer, " > zep cmd [run|add|remove|list] <cmd>");
-        var commander = Command.init(allocator, &printer) catch |err| {
+        var commander = Command.init(
+            allocator,
+            &printer,
+            &manifest,
+        ) catch |err| {
             switch (err) {
                 error.ManifestNotFound => {
                     try printer.append("zep.json manifest was not found!\n\n", .{}, .{ .color = .red });

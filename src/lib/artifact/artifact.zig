@@ -7,7 +7,7 @@ const Constants = @import("constants");
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 
 const ArtifactInstaller = @import("install.zig");
 const ArtifactUninstaller = @import("uninstall.zig");
@@ -26,6 +26,7 @@ pub const Artifact = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
     paths: *Constants.Paths.Paths,
+    manifest: *Manifest,
 
     installer: ArtifactInstaller.ArtifactInstaller,
     uninstaller: ArtifactUninstaller.ArtifactUninstaller,
@@ -40,37 +41,43 @@ pub const Artifact = struct {
         allocator: std.mem.Allocator,
         printer: *Printer,
         paths: *Constants.Paths.Paths,
+        manifest: *Manifest,
         artifact_type: Structs.Extras.ArtifactType,
     ) !Artifact {
-        const installer = try ArtifactInstaller.ArtifactInstaller.init(
+        const installer = ArtifactInstaller.ArtifactInstaller.init(
             allocator,
             printer,
             paths,
+            manifest,
         );
-        const uninstaller = try ArtifactUninstaller.ArtifactUninstaller.init(
+        const uninstaller = ArtifactUninstaller.ArtifactUninstaller.init(
             allocator,
             printer,
         );
-        const lister = try ArtifactLister.ArtifactLister.init(
-            allocator,
-            printer,
-            paths,
-        );
-        const switcher = try ArtifactSwitcher.ArtifactSwitcher.init(
+        const lister = ArtifactLister.ArtifactLister.init(
             allocator,
             printer,
             paths,
+            manifest,
         );
-        const pruner = try ArtifactPruner.ArtifactPruner.init(
+        const switcher = ArtifactSwitcher.ArtifactSwitcher.init(
             allocator,
             printer,
             paths,
+            manifest,
+        );
+        const pruner = ArtifactPruner.ArtifactPruner.init(
+            allocator,
+            printer,
+            paths,
+            manifest,
         );
 
         return Artifact{
             .allocator = allocator,
             .printer = printer,
             .paths = paths,
+            .manifest = manifest,
             .installer = installer,
             .uninstaller = uninstaller,
             .lister = lister,
@@ -211,7 +218,10 @@ pub const Artifact = struct {
             version_dir_includes_folders = true;
             break;
         }
-        const manifest = try Manifest.readManifest(Structs.Manifests.ArtifactManifest, self.allocator, if (self.artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest);
+        const manifest = try self.manifest.readManifest(
+            Structs.Manifests.ArtifactManifest,
+            if (self.artifact_type == .zig) self.paths.zig_manifest else self.paths.zep_manifest,
+        );
         defer manifest.deinit();
 
         if (std.mem.containsAtLeast(u8, manifest.value.name, 1, version.version)) {

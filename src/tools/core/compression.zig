@@ -32,7 +32,8 @@ pub const Compressor = struct {
 
         var iter = dir.iterate();
         while (try iter.next()) |entry| {
-            const entry_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ target_folder, entry.name });
+            var buf: [256]u8 = undefined;
+            const entry_path = try std.fmt.bufPrint(&buf, "{s}/{s}", .{ target_folder, entry.name });
             defer self.allocator.free(entry_path);
 
             if (entry.kind == .directory) {
@@ -71,7 +72,8 @@ pub const Compressor = struct {
             _ = try Fs.openOrCreateDir(self.paths.zepped);
         }
 
-        const temporary_tar_path = try std.fmt.allocPrint(self.allocator, "{s}.tmp", .{tar_path});
+        var buf: [256]u8 = undefined;
+        const temporary_tar_path = try std.fmt.bufPrint(&buf, "{s}.tmp", .{tar_path});
         try self.compressTmp(target_folder, temporary_tar_path);
 
         var temporary_file = try Fs.openFile(temporary_tar_path);

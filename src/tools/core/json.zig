@@ -15,7 +15,7 @@ pub const Json = struct {
     pub fn init(
         allocator: std.mem.Allocator,
         paths: *Constants.Paths.Paths,
-    ) !Json {
+    ) Json {
         return Json{
             .allocator = allocator,
             .paths = paths,
@@ -62,12 +62,12 @@ pub const Json = struct {
 
         var server_header_buffer: [Constants.Default.kb * 8]u8 = undefined;
 
-        const url = try std.fmt.allocPrint(
-            self.allocator,
+        var buf: [128]u8 = undefined;
+        const url = try std.fmt.bufPrint(
+            &buf,
             "https://zep.run/packages/{s}.json",
             .{package_name},
         );
-        defer self.allocator.free(url);
         const uri = try std.Uri.parse(url);
 
         var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
@@ -78,7 +78,12 @@ pub const Json = struct {
         try req.wait();
 
         if (req.response.status == .not_found) {
-            const local_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.json", .{ self.paths.custom, package_name });
+            var local_path_buf: [128]u8 = undefined;
+            const local_path = try std.fmt.bufPrint(
+                &local_path_buf,
+                "{s}/{s}.json",
+                .{ self.paths.custom, package_name },
+            );
             if (!Fs.existsFile(local_path)) return error.PackageNotFound;
             const parsed = try self.parseJsonFromFile(Structs.Packages.PackageStruct, local_path, Constants.Default.mb * 10);
             return parsed;

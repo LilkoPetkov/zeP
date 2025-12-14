@@ -4,28 +4,38 @@ const builtin = @import("builtin");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
+const Manifest = @import("core").Manifest.Manifest;
 const Printer = @import("cli").Printer;
 const Fs = @import("io").Fs;
 
-const Manifest = @import("core").Manifest;
 const Builder = @import("builder.zig").Builder;
 
 /// Handles running a build
 pub const Runner = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    manifest: *Manifest,
 
     /// Initializes Runner
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !Runner {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        manifest: *Manifest,
+    ) Runner {
         return Runner{
             .allocator = allocator,
             .printer = printer,
+            .manifest = manifest,
         };
     }
 
     /// Initializes a Child Processor, and executes specified file
     pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
-        var builder = try Builder.init(self.allocator, self.printer);
+        var builder = try Builder.init(
+            self.allocator,
+            self.printer,
+            self.manifest,
+        );
         try self.printer.append("\nBuilding executeable...\n\n", .{}, .{ .color = .green });
         const target_files = try builder.build();
         defer target_files.deinit();
@@ -49,7 +59,12 @@ pub const Runner = struct {
         if (builtin.os.tag == .windows) {
             try exec_args.insert(0, target_file);
         } else {
-            const exec = try std.fmt.allocPrint(self.allocator, "./{s}", .{target_file});
+            var buf: [256]u8 = undefined;
+            const exec = try std.fmt.bufPrint(
+                &buf,
+                "./{s}",
+                .{target_file},
+            );
             try exec_args.insert(0, exec);
         }
 

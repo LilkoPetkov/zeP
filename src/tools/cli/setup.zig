@@ -22,11 +22,11 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
         Fs.deleteFileIfExists(tmp_path) catch {};
     }
 
-    const allocator = std.heap.page_allocator;
+    const alloc = std.heap.page_allocator;
     _ = try tmp.write(sh_file);
     try tmp.chmod(0o755);
 
-    var exec_cmd = std.process.Child.init(&.{ "bash", tmp_path }, allocator);
+    var exec_cmd = std.process.Child.init(&.{ "bash", tmp_path }, alloc);
     _ = exec_cmd.spawnAndWait() catch {};
 }
 

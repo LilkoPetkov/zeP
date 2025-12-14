@@ -8,23 +8,26 @@ const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 
 /// Installer for Artifact versions
 pub const ArtifactInstaller = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
     paths: *Constants.Paths.Paths,
+    manifest: *Manifest,
 
     pub fn init(
         allocator: std.mem.Allocator,
         printer: *Printer,
         paths: *Constants.Paths.Paths,
-    ) !ArtifactInstaller {
+        manifest: *Manifest,
+    ) ArtifactInstaller {
         return ArtifactInstaller{
             .allocator = allocator,
             .printer = printer,
             .paths = paths,
+            .manifest = manifest,
         };
     }
 
@@ -47,8 +50,13 @@ pub const ArtifactInstaller = struct {
         }
 
         const target_extension = tarball_extension orelse if (builtin.os.tag == .windows) "zip" else "tar.xz";
-        const cached_file = try std.fmt.allocPrint(self.allocator, "{s}.{s}", .{ name, target_extension });
-        defer self.allocator.free(cached_file);
+        var buf: [256]u8 = undefined;
+        const cached_file = try std.fmt.bufPrint(
+            &buf,
+            "{s}.{s}",
+            .{ name, target_extension },
+        );
+
         const target_path = try std.fs.path.join(
             self.allocator,
             &.{
@@ -270,9 +278,8 @@ pub const ArtifactInstaller = struct {
             target,
         });
         defer self.allocator.free(path);
-        Manifest.writeManifest(
+        self.manifest.writeManifest(
             Structs.Manifests.ArtifactManifest,
-            self.allocator,
             if (artifact_type == .zig)
                 self.paths.zig_manifest
             else
@@ -288,7 +295,7 @@ pub const ArtifactInstaller = struct {
         try self.printer.append("Manifest Up to Date!\n", .{}, .{});
 
         try self.printer.append("Switching to installed version...\n", .{}, .{});
-        Link.updateLink(artifact_type, self.paths) catch {
+        Link.updateLink(artifact_type, self.paths, self.manifest) catch {
             try self.printer.append("Updating Link has failed!\n", .{}, .{ .color = .red });
         };
         try self.printer.append("Switched to installed version!\n", .{}, .{});

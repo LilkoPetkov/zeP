@@ -40,18 +40,19 @@ pub const Downloader = struct {
     }
 
     fn packagePath(self: *Downloader) ![]u8 {
-        return try std.fmt.allocPrint(
-            self.allocator,
+        var buf: [256]u8 = undefined;
+        const package_p = try std.fmt.bufPrint(
+            &buf,
             "{s}/{s}",
-            .{ try self.allocator.dupe(u8, self.paths.pkg_root), self.package.id },
+            .{ self.paths.pkg_root, self.package.id },
         );
+
+        return package_p;
     }
 
     fn fetchPackage(self: *Downloader, url: []const u8) !void {
         // allocate paths and free them after use
         const path = try self.packagePath();
-        defer self.allocator.free(path);
-
         if (Fs.existsDir(path)) try Fs.deleteDirIfExists(path);
 
         // create/open temporary directory
@@ -92,8 +93,16 @@ pub const Downloader = struct {
 
         try self.printer.append("Writing...\n", .{}, .{});
         // build path for the extracted top-level component and rename to final path
-        const extract_target = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ TEMPORARY_DIRECTORY_PATH, diagnostics.root_dir });
-        defer self.allocator.free(extract_target);
+
+        var buf: [256]u8 = undefined;
+        const extract_target = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}",
+            .{
+                TEMPORARY_DIRECTORY_PATH,
+                diagnostics.root_dir,
+            },
+        );
 
         try std.fs.cwd().rename(extract_target, path);
         try self.filterPackage(path);
@@ -120,20 +129,19 @@ pub const Downloader = struct {
 
         try self.printer.append("Filtering unimportant folders...\n\n", .{}, .{});
         for (Constants.Extras.filtering.folders) |folder| {
-            const folder_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ path, folder });
-            defer self.allocator.free(folder_path);
+            var buf: [256]u8 = undefined;
+            const folder_path = try std.fmt.bufPrint(&buf, "{s}/{s}", .{ path, folder });
             try Fs.deleteTreeIfExists(folder_path);
         }
         for (Constants.Extras.filtering.files) |file| {
-            const file_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ path, file });
-            defer self.allocator.free(file_path);
+            var buf: [256]u8 = undefined;
+            const file_path = try std.fmt.bufPrint(&buf, "{s}/{s}", .{ path, file });
             try Fs.deleteFileIfExists(file_path);
         }
     }
 
     fn doesPackageExist(self: *Downloader) !bool {
         const path = try self.packagePath();
-        defer self.allocator.free(path);
         return Fs.existsDir(path);
     }
 

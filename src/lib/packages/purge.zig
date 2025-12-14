@@ -6,7 +6,7 @@ const Locales = @import("locales");
 
 const Fs = @import("io").Fs;
 const Json = @import("core").Json.Json;
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 const Printer = @import("cli").Printer;
 
 const Uninstaller = @import("uninstall.zig").Uninstaller;
@@ -17,6 +17,7 @@ pub fn purge(
     printer: *Printer,
     json: *Json,
     paths: *Constants.Paths.Paths,
+    manifest: *Manifest,
 ) !void {
     try printer.append("Purging packages...\n", .{}, .{});
 
@@ -36,7 +37,10 @@ pub fn purge(
         try printer.append("Nothing to uninstall.\n", .{}, .{});
         return;
     }
-    var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, allocator, Constants.Extras.package_files.manifest);
+    var package_json = try manifest.readManifest(
+        Structs.ZepFiles.PackageJsonStruct,
+        Constants.Extras.package_files.manifest,
+    );
     defer package_json.deinit();
 
     for (package_json.value.packages) |package_id| {
@@ -48,6 +52,7 @@ pub fn purge(
             printer,
             json,
             paths,
+            manifest,
             package_name,
         );
         uninstaller.uninstall() catch {

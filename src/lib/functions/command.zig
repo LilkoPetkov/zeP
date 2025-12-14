@@ -7,24 +7,35 @@ const Constants = @import("constants");
 const Printer = @import("cli").Printer;
 const Prompt = @import("cli").Prompt;
 const Fs = @import("io").Fs;
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 
 pub const Command = struct {
     allocator: std.mem.Allocator,
     printer: *Printer,
+    manifest: *Manifest,
 
-    pub fn init(allocator: std.mem.Allocator, printer: *Printer) !Command {
-        const runner = Command{ .allocator = allocator, .printer = printer };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        manifest: *Manifest,
+    ) !Command {
         if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
             try printer.append("\nNo zep.json file!\n", .{}, .{ .color = .red });
             return error.ManifestNotFound;
         }
 
-        return runner;
+        return Command{
+            .allocator = allocator,
+            .printer = printer,
+            .manifest = manifest,
+        };
     }
 
     pub fn add(self: *Command) !void {
-        var zep_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+        var zep_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+        );
         defer zep_json.deinit();
 
         var cmds = std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).init(self.allocator);
@@ -93,18 +104,32 @@ pub const Command = struct {
         try cmds.append(new_command);
 
         zep_json.value.cmd = cmds.items;
-        try Manifest.writeManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest, zep_json.value);
+        try self.manifest.writeManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+            zep_json.value,
+        );
 
-        var zep_lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
+        var zep_lock = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
         defer zep_lock.deinit();
         zep_lock.value.root = zep_json.value;
-        try Manifest.writeManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock, zep_lock.value);
+        try self.manifest.writeManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+            zep_lock.value,
+        );
         try self.printer.append("Successfully added command!\n\n", .{}, .{ .color = .green });
         return;
     }
 
     pub fn list(self: *Command) !void {
-        var zep_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+        var zep_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+        );
         defer zep_json.deinit();
 
         for (zep_json.value.cmd) |c| {
@@ -114,7 +139,10 @@ pub const Command = struct {
     }
 
     pub fn remove(self: *Command, key: []const u8) !void {
-        var zep_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+        var zep_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+        );
         defer zep_json.deinit();
 
         var cmds = std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).init(self.allocator);
@@ -124,19 +152,33 @@ pub const Command = struct {
             try cmds.append(c);
         }
         zep_json.value.cmd = cmds.items;
-        try Manifest.writeManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest, zep_json.value);
+        try self.manifest.writeManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+            zep_json.value,
+        );
 
-        var zep_lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
+        var zep_lock = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
         defer zep_lock.deinit();
         zep_lock.value.root = zep_json.value;
-        try Manifest.writeManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock, zep_lock.value);
+        try self.manifest.writeManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+            zep_lock.value,
+        );
 
         try self.printer.append("Successfully removed command!\n\n", .{}, .{ .color = .green });
         return;
     }
 
     pub fn run(self: *Command, key: []const u8) !void {
-        const zep_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
+        const zep_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+        );
         defer zep_json.deinit();
 
         for (zep_json.value.cmd) |c| {

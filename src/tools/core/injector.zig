@@ -5,7 +5,7 @@ const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
-const Manifest = @import("manifest.zig");
+const Manifest = @import("manifest.zig").Manifest;
 
 const ZigInit = @import("zig_init.zig");
 
@@ -13,11 +13,22 @@ const ZigInit = @import("zig_init.zig");
 /// package_name is required!
 pub const Injector = struct {
     allocator: std.mem.Allocator,
-    package_name: []const u8,
     printer: *Printer,
+    manifest: *Manifest,
+    package_name: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, package_name: []const u8, printer: *Printer) Injector {
-        return Injector{ .allocator = allocator, .package_name = package_name, .printer = printer };
+    pub fn init(
+        allocator: std.mem.Allocator,
+        printer: *Printer,
+        manifest: *Manifest,
+        package_name: []const u8,
+    ) Injector {
+        return Injector{
+            .allocator = allocator,
+            .printer = printer,
+            .manifest = manifest,
+            .package_name = package_name,
+        };
     }
 
     fn injector(self: *Injector, package_name: []const u8, path_name: []const u8) ![]u8 {
@@ -40,7 +51,10 @@ pub const Injector = struct {
     }
 
     pub fn initInjector(self: *Injector) !void {
-        var lock_json = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
+        var lock_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
         defer lock_json.deinit();
 
         var injected_packages = std.ArrayList([]u8).init(self.allocator);
@@ -116,8 +130,9 @@ pub const Injector = struct {
         const build_param = std.mem.trim(u8, after_build[0..param_end_index], " \t");
 
         const install_prefix_fmt = "{s}.installArtifact(";
-        const install_prefix = try std.fmt.allocPrint(self.allocator, install_prefix_fmt, .{build_param});
-        defer self.allocator.free(install_prefix);
+
+        var install_prefix_buf: [64]u8 = undefined;
+        const install_prefix = try std.fmt.bufPrint(&install_prefix_buf, install_prefix_fmt, .{build_param});
 
         const install_index = std.mem.indexOf(u8, content, install_prefix) orelse return error.MissingInstallCall;
 
@@ -126,24 +141,24 @@ pub const Injector = struct {
 
         const artifact_name = std.mem.trim(u8, after_install[0..artifact_end_index], " \t");
 
+        var inspect_line_buf: [128]u8 = undefined;
         const inject_line_fmt =
             "    @import(\".zep/injector.zig\").injectExtraImports({s}, {s});\n";
-        const inject_line = try std.fmt.allocPrint(self.allocator, inject_line_fmt, .{
+        const inject_line = try std.fmt.bufPrint(&inspect_line_buf, inject_line_fmt, .{
             build_param,
             artifact_name,
         });
-        defer self.allocator.free(inject_line);
 
         // Already injected?
         if (std.mem.indexOf(u8, content, inject_line) != null)
             return;
 
         const insert_before_fmt = "    {s}.installArtifact({s});";
-        const insert_before = try std.fmt.allocPrint(self.allocator, insert_before_fmt, .{
+        var insert_before_buf: [64]u8 = undefined;
+        const insert_before = try std.fmt.bufPrint(&insert_before_buf, insert_before_fmt, .{
             build_param,
             artifact_name,
         });
-        defer self.allocator.free(insert_before);
 
         const insert_index = std.mem.indexOf(u8, content, insert_before) orelse return error.MissingInstallCall;
 

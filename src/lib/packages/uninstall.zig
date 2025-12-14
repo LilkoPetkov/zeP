@@ -7,7 +7,7 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 const Injector = @import("core").Injector.Injector;
-const Manifest = @import("core").Manifest;
+const Manifest = @import("core").Manifest.Manifest;
 const Json = @import("core").Json.Json;
 
 /// Handles the uninstallation of a package
@@ -16,6 +16,8 @@ pub const Uninstaller = struct {
     printer: *Printer,
     paths: *Constants.Paths.Paths,
     json: *Json,
+    manifest: *Manifest,
+
     package_name: []const u8,
     package_version: []const u8,
     package_id: []const u8,
@@ -26,9 +28,13 @@ pub const Uninstaller = struct {
         printer: *Printer,
         json: *Json,
         paths: *Constants.Paths.Paths,
+        manifest: *Manifest,
         package_name: []const u8,
     ) !Uninstaller {
-        const lock = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, allocator, Constants.Extras.package_files.lock);
+        const lock = try manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
         var package_version: []const u8 = "";
         for (lock.value.packages) |package| {
             if (std.mem.startsWith(u8, package.name, package_name)) {
@@ -49,32 +55,50 @@ pub const Uninstaller = struct {
         if (package_version.len == 0) {
             return error.NotInstalled;
         }
+
+        var buf: [128]u8 = undefined;
+        const package_id = try std.fmt.bufPrint(
+            &buf,
+            "{s}@{s}",
+            .{ package_name, package_version },
+        );
         return Uninstaller{
             .allocator = allocator,
-            .package_name = package_name,
-            .package_version = package_version,
-            .package_id = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ package_name, package_version }),
             .json = json,
             .printer = printer,
             .paths = paths,
+            .manifest = manifest,
+            .package_name = package_name,
+            .package_version = package_version,
+            .package_id = package_id,
         };
     }
 
-    pub fn deinit(self: *Uninstaller) void {
-        self.allocator.free(self.package_id);
-    }
+    pub fn deinit(_: *Uninstaller) void {}
 
     /// Main uninstallation routine
     pub fn uninstall(self: *Uninstaller) !void {
         try self.printer.append("Deleting Package...\n[{s}]\n\n", .{self.package_name}, .{});
         try self.removePackageFromJson();
 
-        var injector = Injector.init(self.allocator, self.package_name, self.printer);
+        var injector = Injector.init(
+            self.allocator,
+            self.printer,
+            self.manifest,
+            self.package_name,
+        );
         try injector.initInjector();
 
         // Remove symbolic link
-        const symbolic_link_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ Constants.Extras.package_files.zep_folder, self.package_name });
-        defer self.allocator.free(symbolic_link_path);
+        var buf: [256]u8 = undefined;
+        const symbolic_link_path = try std.fmt.bufPrint(
+            &buf,
+            "{s}/{s}",
+            .{
+                Constants.Extras.package_files.zep_folder,
+                self.package_name,
+            },
+        );
         if (Fs.existsDir(symbolic_link_path)) {
             Fs.deleteTreeIfExists(symbolic_link_path) catch {};
             Fs.deleteFileIfExists(symbolic_link_path) catch {};
@@ -89,12 +113,9 @@ pub const Uninstaller = struct {
             // ! as the package can ONLY be deleted,
             // ! if no other project uses it
             // !
-            try Manifest.removePathFromManifest(
-                self.json,
-                self.package_name,
+            try self.manifest.removePathFromManifest(
                 self.package_id,
                 absolute_path,
-                self.paths,
             );
         }
         try self.removePackageFromJson();
@@ -103,8 +124,14 @@ pub const Uninstaller = struct {
 
     /// Remove package from `zep.json` and `zep.lock`
     pub fn removePackageFromJson(self: *Uninstaller) !void {
-        var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, self.allocator, Constants.Extras.package_files.manifest);
-        var lock_json = try Manifest.readManifest(Structs.ZepFiles.PackageLockStruct, self.allocator, Constants.Extras.package_files.lock);
+        var package_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageJsonStruct,
+            Constants.Extras.package_files.manifest,
+        );
+        var lock_json = try self.manifest.readManifest(
+            Structs.ZepFiles.PackageLockStruct,
+            Constants.Extras.package_files.lock,
+        );
 
         defer package_json.deinit();
         defer lock_json.deinit();
@@ -112,7 +139,12 @@ pub const Uninstaller = struct {
         const previous_verbosity = Locales.VERBOSITY_MODE;
         Locales.VERBOSITY_MODE = 0;
         try manifestRemove(&package_json.value, self.package_name, self.json);
-        try lockRemove(&lock_json.value, self.package_name, self.json);
+        try lockRemove(
+            &lock_json.value,
+            self.package_name,
+            self.json,
+            self.manifest,
+        );
         Locales.VERBOSITY_MODE = previous_verbosity;
     }
 };
@@ -139,11 +171,12 @@ fn lockRemove(
     lock: *Structs.ZepFiles.PackageLockStruct,
     package_name: []const u8,
     json: *Json,
+    manifest: *Manifest,
 ) !void {
-    const allocator = std.heap.page_allocator;
+    const alloc = std.heap.page_allocator;
 
     lock.packages = try filterOut(
-        allocator,
+        alloc,
         lock.packages,
         package_name,
         Structs.ZepFiles.LockPackageStruct,
@@ -154,7 +187,10 @@ fn lockRemove(
         }.match,
     );
 
-    var package_json = try Manifest.readManifest(Structs.ZepFiles.PackageJsonStruct, allocator, Constants.Extras.package_files.manifest);
+    var package_json = try manifest.readManifest(
+        Structs.ZepFiles.PackageJsonStruct,
+        Constants.Extras.package_files.manifest,
+    );
     defer package_json.deinit();
     lock.root = package_json.value;
 
@@ -166,10 +202,10 @@ fn manifestRemove(
     package_name: []const u8,
     json: *Json,
 ) !void {
-    const allocator = std.heap.page_allocator;
+    const alloc = std.heap.page_allocator;
 
     pkg.packages = try filterOut(
-        allocator,
+        alloc,
         pkg.packages,
         package_name,
         []const u8,

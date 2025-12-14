@@ -7,7 +7,6 @@ const Structs = @import("structs");
 const Printer = @import("cli").Printer;
 const Fs = @import("io").Fs;
 
-const Manifest = @import("core").Manifest;
 const Prompt = @import("cli").Prompt;
 
 pub const Cache = struct {
