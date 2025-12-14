@@ -272,17 +272,17 @@ fn appendUnique(
     allocator: std.mem.Allocator,
     matchFn: fn (a: T, b: T) bool,
 ) ![]T {
-    var arr = std.ArrayList(T).init(allocator);
-    defer arr.deinit();
+    var arr = try std.ArrayList(T).initCapacity(allocator, 10);
+    defer arr.deinit(allocator);
 
     for (list) |item| {
-        try arr.append(item);
+        try arr.append(allocator, item);
         if (matchFn(item, new_item))
-            return arr.toOwnedSlice();
+            return arr.toOwnedSlice(allocator);
     }
 
-    try arr.append(new_item);
-    return arr.toOwnedSlice();
+    try arr.append(allocator, new_item);
+    return arr.toOwnedSlice(allocator);
 }
 
 fn filterOut(
@@ -292,15 +292,15 @@ fn filterOut(
     comptime T: type,
     matchFn: fn (a: T, b: []const u8) bool,
 ) ![]T {
-    var out = std.ArrayList(T).init(allocator);
-    defer out.deinit();
+    var out = try std.ArrayList(T).initCapacity(allocator, 10);
+    defer out.deinit(allocator);
 
     for (list) |item| {
         if (!matchFn(item, filter))
-            try out.append(item);
+            try out.append(allocator, item);
     }
 
-    return out.toOwnedSlice();
+    return out.toOwnedSlice(allocator);
 }
 
 fn manifestAdd(

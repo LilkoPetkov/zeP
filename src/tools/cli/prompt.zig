@@ -17,7 +17,9 @@ pub fn input(
     prompt: []const u8,
     opts: InputStruct,
 ) ![]const u8 {
-    const stdout = std.io.getStdOut().writer();
+    var stdout_buf: [128]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+    const stdout = &stdout_writer.interface;
     try printer.append("{s}", .{prompt}, .{});
 
     while (true) {
@@ -25,9 +27,8 @@ pub fn input(
             _ = try stdout.write(v);
             _ = try stdout.write(" => ");
         }
-
-        var read_line = try stdin.readUntilDelimiterAlloc(allocator, '\n', Constants.Default.kb);
-        const line = if (builtin.os.tag == .windows) read_line[0 .. read_line.len - 1] else read_line;
+        const read_line = try stdin.takeDelimiterInclusive('\n');
+        const line = read_line[0 .. read_line.len - 1];
         try stdout.print("\x1b[2K\r", .{}); // clear line
         try stdout.print("\x1b[1A", .{}); // move up one line
 
@@ -54,6 +55,8 @@ pub fn input(
         }
 
         try printer.append("{s}\n", .{line}, .{});
+
+        try stdout.flush();
         return line;
     }
 }

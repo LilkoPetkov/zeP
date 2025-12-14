@@ -7,35 +7,30 @@ pub fn hashData(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
         return error.InvalidUrl;
     };
 
+    var hasher = std.crypto.hash.sha2.Sha256.init(.{});
+
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var server_header_buffer: [Constants.Default.kb * 16]u8 = undefined;
-    var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
-    defer req.deinit();
-    var hasher = std.crypto.hash.sha2.Sha256.init(.{});
+    var body = std.Io.Writer.Allocating.init(allocator);
+    const fetched = try client.fetch(std.http.Client.FetchOptions{
+        .location = .{
+            .uri = uri,
+        },
+        .method = .GET,
+        .response_writer = &body.writer,
+    });
 
-    req.send() catch {
-        return error.SendFailed;
-    };
-    try req.finish();
-    try req.wait();
-    if (req.response.status == .not_found) {
+    if (fetched.status == .not_found) {
         return error.NotFound;
     }
 
-    const reader = req.reader();
-
-    var read_buffer: [Constants.Default.kb * 4]u8 = undefined;
-    while (true) {
-        const n = try reader.read(&read_buffer);
-        if (n == 0) break;
-        hasher.update(read_buffer[0..n]);
-    }
+    const data = body.written();
+    hasher.update(data);
 
     var hash: [32]u8 = undefined;
     hasher.final(&hash);
 
-    const out = try std.fmt.allocPrint(allocator, "{x}", .{std.fmt.fmtSliceHexLower(&hash)});
+    const out = try std.fmt.allocPrint(allocator, "{x}", .{hash});
     return out;
 }

@@ -37,8 +37,8 @@ pub const Runner = struct {
             self.manifest,
         );
         try self.printer.append("\nBuilding executeable...\n\n", .{}, .{ .color = .green });
-        const target_files = try builder.build();
-        defer target_files.deinit();
+        var target_files = try builder.build();
+        defer target_files.deinit(self.allocator);
 
         var target_file = target_files.items[0];
         if (target_files.items.len > 0 and target_exe.len > 0) {
@@ -51,13 +51,13 @@ pub const Runner = struct {
             }
         }
 
-        var exec_args = std.ArrayList([]const u8).init(self.allocator);
+        var exec_args = try std.ArrayList([]const u8).initCapacity(self.allocator, 5);
         for (args) |arg| {
-            try exec_args.append(arg);
+            try exec_args.append(self.allocator, arg);
         }
 
         if (builtin.os.tag == .windows) {
-            try exec_args.insert(0, target_file);
+            try exec_args.insert(self.allocator, 0, target_file);
         } else {
             var buf: [256]u8 = undefined;
             const exec = try std.fmt.bufPrint(
@@ -65,7 +65,7 @@ pub const Runner = struct {
                 "./{s}",
                 .{target_file},
             );
-            try exec_args.insert(0, exec);
+            try exec_args.insert(self.allocator, 0, exec);
         }
 
         self.printer.pop(50);

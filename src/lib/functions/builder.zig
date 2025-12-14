@@ -75,20 +75,20 @@ pub const Builder = struct {
         const dir = try Fs.openOrCreateDir(target_directory);
         var iter = dir.iterate();
 
-        var entries = std.ArrayList([]const u8).init(self.allocator);
-        defer entries.deinit();
+        var entries = try std.ArrayList([]const u8).initCapacity(self.allocator, 5);
+        defer entries.deinit(self.allocator);
         while (try iter.next()) |entry| {
-            try entries.append(entry.name);
+            try entries.append(self.allocator, entry.name);
         }
 
         if (entries.items.len == 0) {
             return error.NoFile;
         }
 
-        var target_files = std.ArrayList([]u8).init(self.allocator);
+        var target_files = try std.ArrayList([]u8).initCapacity(self.allocator, 5);
         for (entries.items) |entry| {
             const target_file = try std.fs.path.join(self.allocator, &.{ target_directory, entry });
-            try target_files.append(target_file);
+            try target_files.append(self.allocator, target_file);
         }
         return target_files;
     }

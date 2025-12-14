@@ -38,9 +38,13 @@ pub const Command = struct {
         );
         defer zep_json.deinit();
 
-        var cmds = std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).init(self.allocator);
-        defer cmds.deinit();
-        const stdin = std.io.getStdIn().reader();
+        var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.allocator, 10);
+        defer cmds.deinit(
+            self.allocator,
+        );
+        var stdin_buf: [100]u8 = undefined;
+        var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+        const stdin = &stdin_reader.interface;
 
         try self.printer.append("--- ADDING COMMAND MODE ---\n\n", .{}, .{
             .color = .yellow,
@@ -86,7 +90,7 @@ pub const Command = struct {
 
                 continue;
             }
-            try cmds.append(c);
+            try cmds.append(self.allocator, c);
         }
 
         const command = try Prompt.input(
@@ -101,7 +105,7 @@ pub const Command = struct {
         defer self.allocator.free(command);
 
         const new_command = Structs.ZepFiles.CommandPackageJsonStrcut{ .cmd = command, .name = command_name };
-        try cmds.append(new_command);
+        try cmds.append(self.allocator, new_command);
 
         zep_json.value.cmd = cmds.items;
         try self.manifest.writeManifest(
@@ -145,11 +149,13 @@ pub const Command = struct {
         );
         defer zep_json.deinit();
 
-        var cmds = std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).init(self.allocator);
-        defer cmds.deinit();
+        var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.allocator, 5);
+        defer cmds.deinit(
+            self.allocator,
+        );
         for (zep_json.value.cmd) |c| {
             if (std.mem.eql(u8, c.name, key)) continue;
-            try cmds.append(c);
+            try cmds.append(self.allocator, c);
         }
         zep_json.value.cmd = cmds.items;
         try self.manifest.writeManifest(
@@ -184,11 +190,11 @@ pub const Command = struct {
         for (zep_json.value.cmd) |c| {
             if (std.mem.eql(u8, c.name, key)) {
                 try self.printer.append("Command was found!\n", .{}, .{ .color = .green });
-                var args = std.ArrayList([]const u8).init(self.allocator);
-                defer args.deinit();
+                var args = try std.ArrayList([]const u8).initCapacity(self.allocator, 5);
+                defer args.deinit(self.allocator);
                 var split = std.mem.splitAny(u8, c.cmd, " ");
                 while (split.next()) |arg| {
-                    try args.append(arg);
+                    try args.append(self.allocator, arg);
                 }
                 try self.printer.append("Executing:\n $ {s}\n\n", .{c.cmd}, .{ .color = .green });
                 var exec_cmd = std.process.Child.init(args.items, self.allocator);

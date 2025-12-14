@@ -58,15 +58,34 @@ pub const Compressor = struct {
                 continue;
             }
 
+            const reader_buffer: []u8 = try self.allocator.alloc(u8, 4096);
+
             const input_file = try std.fs.cwd().openFile(input_fs_path, .{ .mode = .read_only });
             defer input_file.close();
             const input_file_size: u64 = (try input_file.stat()).size;
+            var input_file_reader = input_file.reader(reader_buffer);
+            const input_file_reader_interface: *std.Io.Reader = &input_file_reader.interface;
             try tar_writer.writeFileStream(
                 tar_path,
                 input_file_size,
-                input_file.reader(),
+                input_file_reader_interface,
                 .{ .mtime = 0, .mode = 0 },
             );
+
+            // const input_file = try Fs.openFile(input_fs_path);
+            // defer input_file.close();
+            // const input_file_size: u64 = (try input_file.stat()).size;
+
+            // var b: [Constants.Default.kb * 32]u8 = undefined;
+            // const reader = input_file.reader(&b);
+            // var r = reader.interface;
+
+            // try tar_writer.writeFileStream(
+            //     tar_path,
+            //     input_file_size,
+            //     &r,
+            //     .{ .mtime = 0, .mode = 0 },
+            // );
         }
     }
 
@@ -97,10 +116,17 @@ pub const Compressor = struct {
         blk: {
             var archive_file = try std.fs.cwd().createFile(archive_path, .{
                 .truncate = true,
-                .read = false,
             });
             defer archive_file.close();
-            var tar_writer = std.tar.writer(archive_file.writer());
+            var b: [Constants.Default.kb * 32]u8 = undefined;
+            var writer = archive_file.writer(&b);
+            // var w = writer.interface;
+
+            var tar_writer = std.tar.Writer{
+                .prefix = "",
+                .underlying_writer = &writer.interface,
+            };
+
             try self.archive(&tar_writer, target_folder, "");
             break :blk;
         }
@@ -160,14 +186,19 @@ pub const Compressor = struct {
         const uncompressed_len = try std.fmt.parseInt(u64, uncompressed_len_string, 10);
 
         const compressed_data = data[64..];
-
         const decompressed = try zstd.decompress(self.allocator, compressed_data, uncompressed_len);
-        var buf = std.io.fixedBufferStream(decompressed);
-        var reader = buf.reader();
+
+        var reader = std.Io.Reader.fixed(decompressed);
 
         var extract_dir = try Fs.openDir(extract_path);
         defer extract_dir.close();
-        try std.tar.pipeToFileSystem(extract_dir, &reader, .{});
+        std.tar.pipeToFileSystem(extract_dir, &reader, .{}) catch |err| {
+            switch (err) {
+                error.EndOfStream => return true,
+                else => return false,
+            }
+        };
+
         return true;
     }
 };

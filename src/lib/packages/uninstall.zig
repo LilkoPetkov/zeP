@@ -91,15 +91,15 @@ pub const Uninstaller = struct {
         try injector.initInjector();
 
         // Remove symbolic link
-        var buf: [256]u8 = undefined;
-        const symbolic_link_path = try std.fmt.bufPrint(
-            &buf,
-            "{s}/{s}",
-            .{
+        const symbolic_link_path = try std.fs.path.join(
+            self.allocator,
+            &.{
                 Constants.Extras.package_files.zep_folder,
                 self.package_name,
             },
         );
+        defer self.allocator.free(symbolic_link_path);
+
         if (Fs.existsDir(symbolic_link_path)) {
             Fs.deleteTreeIfExists(symbolic_link_path) catch {};
             Fs.deleteFileIfExists(symbolic_link_path) catch {};
@@ -157,15 +157,15 @@ fn filterOut(
     comptime T: type,
     matchFn: fn (a: T, b: []const u8) bool,
 ) ![]T {
-    var out = std.ArrayList(T).init(allocator);
-    defer out.deinit();
+    var out = try std.ArrayList(T).initCapacity(allocator, 10);
+    defer out.deinit(allocator);
 
     for (list) |item| {
         if (!matchFn(item, filter))
-            try out.append(item);
+            try out.append(allocator, item);
     }
 
-    return out.toOwnedSlice();
+    return out.toOwnedSlice(allocator);
 }
 
 fn lockRemove(

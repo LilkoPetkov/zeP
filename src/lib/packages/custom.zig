@@ -78,7 +78,9 @@ pub const CustomPackage = struct {
     }
 
     pub fn requestPackage(self: CustomPackage) !void {
-        const stdin = std.io.getStdIn().reader();
+        var stdin_buf: [100]u8 = undefined;
+        var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+        const stdin = &stdin_reader.interface;
 
         try self.printer.append("--- ADDING CUSTOM PACKAGE MODE ---\n\n", .{}, .{
             .color = .yellow,
@@ -137,8 +139,8 @@ pub const CustomPackage = struct {
             return;
         };
 
-        var versions = std.ArrayList(Structs.Packages.PackageVersions).init(self.allocator);
-        try versions.append(v);
+        var versions = try std.ArrayList(Structs.Packages.PackageVersions).initCapacity(self.allocator, 10);
+        try versions.append(self.allocator, v);
 
         const pkg = Structs.Packages.PackageStruct{
             .name = package_name,
@@ -157,7 +159,7 @@ pub const CustomPackage = struct {
         }
 
         const package_file = try Fs.openOrCreateFile(custom_package_path);
-        const stringify = try std.json.stringifyAlloc(self.allocator, package_json, .{ .whitespace = .indent_2 });
+        const stringify = try std.json.Stringify.valueAlloc(self.allocator, package_json, .{ .whitespace = .indent_2 });
         defer self.allocator.free(stringify);
 
         _ = try package_file.write(stringify);
@@ -170,18 +172,18 @@ pub const CustomPackage = struct {
         var parsed: std.json.Parsed(Structs.Packages.PackageStruct) = try std.json.parseFromSlice(Structs.Packages.PackageStruct, self.allocator, data, .{});
         defer parsed.deinit();
 
-        var versions_array = std.ArrayList(Structs.Packages.PackageVersions).init(self.allocator);
+        var versions_array = try std.ArrayList(Structs.Packages.PackageVersions).initCapacity(self.allocator, 10);
         const versions = parsed.value.versions;
         for (versions) |v| {
             if (std.mem.eql(u8, v.version, version.version)) {
                 try self.printer.append("\nSpecified version already in use!\nOverwriting...\n", .{}, .{ .color = .red });
                 continue;
             }
-            try versions_array.append(v);
+            try versions_array.append(self.allocator, v);
         }
-        try versions_array.append(version);
+        try versions_array.append(self.allocator, version);
         parsed.value.versions = versions_array.items;
-        const stringify = try std.json.stringifyAlloc(self.allocator, parsed.value, .{ .whitespace = .indent_2 });
+        const stringify = try std.json.Stringify.valueAlloc(self.allocator, parsed.value, .{ .whitespace = .indent_2 });
         defer self.allocator.free(stringify);
 
         try package_file.seekTo(0);

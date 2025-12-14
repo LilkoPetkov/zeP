@@ -31,7 +31,7 @@ pub fn existsDir(path: []const u8) bool {
 pub fn openOrCreateFile(path: []const u8) !std.fs.File {
     if (!existsFile(path)) {
         const parent = std.fs.path.dirname(path) orelse "";
-        try std.fs.cwd().makePath(parent);
+        if (parent.len > 0) try std.fs.cwd().makePath(parent);
         return try std.fs.cwd().createFile(path, std.fs.File.CreateFlags{ .read = true });
     }
     return try std.fs.cwd().openFile(path, std.fs.File.OpenFlags{ .mode = .read_write });

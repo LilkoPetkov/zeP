@@ -100,23 +100,28 @@ pub const Artifact = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var server_header_buffer: [Constants.Default.kb * 32]u8 = undefined;
         const uri = try std.Uri.parse(
             if (self.artifact_type == .zig)
                 Constants.Default.zig_download_index
             else
                 Constants.Default.zep_download_index,
         );
-        var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
-        defer req.deinit();
 
-        try req.send();
-        try req.finish();
-        try req.wait();
+        var body = std.Io.Writer.Allocating.init(self.allocator);
+        const fetched = try client.fetch(std.http.Client.FetchOptions{
+            .location = .{
+                .uri = uri,
+            },
+            .method = .GET,
+            .response_writer = &body.writer,
+        });
 
-        var reader = req.reader();
-        const body = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 50);
-        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, body, .{});
+        if (fetched.status == .not_found) {
+            return error.NotFound;
+        }
+        const data = body.written();
+
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, data, .{});
         const obj = parsed.value.object;
 
         if (std.mem.eql(u8, target_version, "latest") or target_version.len == 0) {

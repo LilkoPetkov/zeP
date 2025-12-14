@@ -63,6 +63,14 @@ const AppendOptions = struct {
     verbosity: u8 = 1,
     color: Color = .white,
     weight: Weight = .none,
+
+    pub fn init() AppendOptions {
+        return AppendOptions{
+            .color = .white,
+            .verbosity = 1,
+            .weight = .none,
+        };
+    }
 };
 
 const PrinterData = struct {
@@ -77,8 +85,8 @@ pub const Printer = struct {
     data: std.ArrayList(PrinterData),
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) Printer {
-        const data = std.ArrayList(PrinterData).init(allocator);
+    pub fn init(allocator: std.mem.Allocator) !Printer {
+        const data = try std.ArrayList(PrinterData).initCapacity(allocator, 25);
         return Printer{
             .data = data,
             .allocator = allocator,
@@ -89,18 +97,21 @@ pub const Printer = struct {
         for (self.data.items) |d| {
             self.allocator.free(d.data);
         }
-        self.data.deinit();
+        self.data.deinit(self.allocator);
     }
 
     pub fn append(self: *Printer, comptime fmt: []const u8, args: anytype, options: AppendOptions) !void {
         if (options.verbosity > Locales.VERBOSITY_MODE) return;
         const data = try std.fmt.allocPrint(self.allocator, fmt, args);
-        try self.data.append(PrinterData{
-            .data = data,
-            .verbosity = options.verbosity,
-            .color = options.color,
-            .weight = options.weight,
-        });
+        try self.data.append(
+            self.allocator,
+            PrinterData{
+                .data = data,
+                .verbosity = options.verbosity,
+                .color = options.color,
+                .weight = options.weight,
+            },
+        );
         try self.print();
         return;
     }
@@ -117,12 +128,15 @@ pub const Printer = struct {
     fn clearLine(_: *Printer, n: usize) !void {
         if (n == 0) return;
 
-        const stdout = std.io.getStdOut().writer();
+        var stdout_buf: [1028]u8 = undefined;
+        var stdout_writer = std.fs.File.writer(std.fs.File.stdout(), &stdout_buf);
+        var stdout = &stdout_writer.interface;
         for (0..n) |i| {
             try stdout.print("\x1b[2K\r", .{}); // Clear line
             if (@as(i8, @intCast(i)) - 1 < n) try stdout.print("\x1b[1A", .{});
         }
         try stdout.print("\x1b[1A", .{});
+        try stdout.flush();
     }
 
     pub fn clearScreen(self: *Printer) !void {

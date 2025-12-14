@@ -69,8 +69,8 @@ pub fn doctor(
         try printer.append("No issues with zig versions mismatch [packages]!\n", .{}, .{ .color = .green });
     }
 
-    const lock_root_json = try std.json.stringifyAlloc(allocator, lock.value.root, .{});
-    const manifest_root_json = try std.json.stringifyAlloc(allocator, read_manifest.value, .{});
+    const lock_root_json = try std.json.Stringify.valueAlloc(allocator, lock.value.root, .{});
+    const manifest_root_json = try std.json.Stringify.valueAlloc(allocator, read_manifest.value, .{});
 
     const manifest_from_lock = std.hash.Wyhash.hash(0, lock_root_json);
     const manifest_main = std.hash.Wyhash.hash(0, manifest_root_json);
@@ -113,11 +113,11 @@ pub fn doctor(
     } else if (fix_issues) {
         try printer.append("Lock file packages mismatch with zep.json.\nzep.lock has priority!\n", .{}, .{ .color = .red });
 
-        var pkg = std.ArrayList([]const u8).init(allocator);
-        defer pkg.deinit();
+        var pkg = try std.ArrayList([]const u8).initCapacity(allocator, 20);
+        defer pkg.deinit(allocator);
 
         for (lock.value.packages) |lock_package| {
-            try pkg.append(lock_package.name);
+            try pkg.append(allocator, lock_package.name);
         }
         read_manifest.value.packages = pkg.items;
         try manifest.writeManifest(

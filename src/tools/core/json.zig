@@ -43,7 +43,7 @@ pub const Json = struct {
         path: []const u8,
         data: anytype,
     ) !void {
-        const str = try std.json.stringifyAlloc(
+        const str = try std.json.Stringify.valueAlloc(
             self.allocator,
             data,
             .{ .whitespace = .indent_2 },
@@ -60,8 +60,6 @@ pub const Json = struct {
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
 
-        var server_header_buffer: [Constants.Default.kb * 8]u8 = undefined;
-
         var buf: [128]u8 = undefined;
         const url = try std.fmt.bufPrint(
             &buf,
@@ -70,14 +68,16 @@ pub const Json = struct {
         );
         const uri = try std.Uri.parse(url);
 
-        var req = try client.open(.GET, uri, .{ .server_header_buffer = &server_header_buffer });
-        defer req.deinit();
+        var body = std.Io.Writer.Allocating.init(self.allocator);
+        const fetched = try client.fetch(std.http.Client.FetchOptions{
+            .location = .{
+                .uri = uri,
+            },
+            .method = .GET,
+            .response_writer = &body.writer,
+        });
 
-        try req.send();
-        try req.finish();
-        try req.wait();
-
-        if (req.response.status == .not_found) {
+        if (fetched.status == .not_found) {
             var local_path_buf: [128]u8 = undefined;
             const local_path = try std.fmt.bufPrint(
                 &local_path_buf,
@@ -89,8 +89,7 @@ pub const Json = struct {
             return parsed;
         }
 
-        var reader = req.reader();
-        const body = try reader.readAllAlloc(self.allocator, Constants.Default.mb * 10);
-        return try std.json.parseFromSlice(Structs.Packages.PackageStruct, self.allocator, body, .{});
+        const data = body.written();
+        return try std.json.parseFromSlice(Structs.Packages.PackageStruct, self.allocator, data, .{});
     }
 };

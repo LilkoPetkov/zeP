@@ -66,10 +66,13 @@ pub fn build(builder: *std.Build) void {
         .cwd_relative = "c/zstd/lib",
     });
 
-    const zstd = builder.addStaticLibrary(.{
+    const zstd = builder.addLibrary(.{
         .name = "zstd",
-        .target = target,
-        .optimize = optimize,
+        .root_module = builder.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
     });
 
     zstd.addIncludePath(.{

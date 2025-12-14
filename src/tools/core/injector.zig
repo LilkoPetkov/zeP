@@ -57,17 +57,17 @@ pub const Injector = struct {
         );
         defer lock_json.deinit();
 
-        var injected_packages = std.ArrayList([]u8).init(self.allocator);
-        defer injected_packages.deinit();
+        var injected_packages = try std.ArrayList([]u8).initCapacity(self.allocator, 10);
+        defer injected_packages.deinit(self.allocator);
 
         for (lock_json.value.packages) |package| {
             var split = std.mem.splitScalar(u8, package.name, '@');
             const package_name = split.first();
             const inj = try self.injector(package_name, package.root_file);
-            try injected_packages.append(inj);
+            try injected_packages.append(self.allocator, inj);
         }
 
-        const total_packages = try injected_packages.toOwnedSlice();
+        const total_packages = try injected_packages.toOwnedSlice(self.allocator);
         const injector_end = "}";
 
         if (Fs.existsFile(Constants.Extras.package_files.injector)) {

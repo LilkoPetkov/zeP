@@ -44,7 +44,9 @@ pub const ArtifactSwitcher = struct {
         artifact_type: Structs.Extras.ArtifactType,
     ) !void {
         // Update manifest with new version
-        try self.printer.append("Modifying Manifest...\n", .{}, .{});
+        try self.printer.append("Modifying Manifest...\n", .{}, .{
+            .verbosity = 2,
+        });
         const path = try std.fs.path.join(self.allocator, &.{
             if (artifact_type == .zig) self.paths.zig_root else self.paths.zep_root,
             "d",
@@ -60,7 +62,6 @@ pub const ArtifactSwitcher = struct {
             Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
         ) catch {
             return error.ManifestUpdateFailed;
-            // try self.printer.append("Updating Manifest failed!\n", .{}, .{ .color = .red });
         };
 
         // Update zep.json and zep.lock

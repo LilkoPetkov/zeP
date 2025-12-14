@@ -73,7 +73,7 @@ pub fn main() !void {
     defer args.deinit();
     _ = args.skip(); // skip program name
 
-    var printer = Printer.init(alloc);
+    var printer = try Printer.init(alloc);
     defer printer.deinit();
     try printer.append("\n", .{}, .{});
 
@@ -107,7 +107,10 @@ pub fn main() !void {
     defer arena_allocator.deinit();
 
     if (!is_created) {
-        const stdin = std.io.getStdIn().reader();
+        var stdin_buf: [100]u8 = undefined;
+        var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+        const stdin = &stdin_reader.interface;
+
         try printer.append("\nNo setup detected. Run '$ zep setup'?\n", .{}, .{
             .color = .blue,
             .weight = .bold,
@@ -123,7 +126,9 @@ pub fn main() !void {
 
     const zep_version_exists = Fs.existsFile(paths.zep_manifest);
     if (!zep_version_exists) {
-        const stdin = std.io.getStdIn().reader();
+        var stdin_buf: [100]u8 = undefined;
+        var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+        const stdin = &stdin_reader.interface;
         try printer.append("\nzep appears to be running outside fitting directory. Run '$ zep zep install'?\n", .{}, .{});
         const answer = try Prompt.input(
             allocator,
@@ -319,8 +324,8 @@ pub fn main() !void {
             &printer,
             &manifest,
         );
-        const t = try builder.build();
-        t.deinit();
+        var t = try builder.build();
+        t.deinit(allocator);
         return;
     }
 

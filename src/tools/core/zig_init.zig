@@ -5,7 +5,7 @@ const Fs = @import("io").Fs;
 
 const Constants = @import("constants");
 
-const Fingerprint = packed struct(u64) {
+pub const Fingerprint = packed struct(u64) {
     id: u32,
     checksum: u32,
 
@@ -47,7 +47,10 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
                     try printer.append(
                         "Zig is not installed!\nDefaulting to {s}!\n\n",
                         .{zig_version},
-                        .{ .color = .red },
+                        .{
+                            .color = .red,
+                            .verbosity = 0,
+                        },
                     );
                     break :blk;
                 },

@@ -101,12 +101,12 @@ pub fn parseBootstrap(allocator: std.mem.Allocator) !BootstrapArgs {
         }
     }
 
-    var deps = std.ArrayList([]const u8).init(allocator);
+    var deps = try std.ArrayList([]const u8).initCapacity(allocator, 20);
     var deps_split = std.mem.splitScalar(u8, raw_deps, ',');
     while (deps_split.next()) |d| {
         const dep = std.mem.trim(u8, d, " ");
         if (dep.len == 0) continue;
-        try deps.append(try allocator.dupe(u8, dep));
+        try deps.append(allocator, try allocator.dupe(u8, dep));
     }
 
     return BootstrapArgs{
@@ -171,12 +171,12 @@ pub fn parseRunner(allocator: std.mem.Allocator) !RunnerArgs {
         }
     }
 
-    var args = std.ArrayList([]const u8).init(allocator);
+    var args = try std.ArrayList([]const u8).initCapacity(allocator, 3);
     var args_split = std.mem.splitScalar(u8, raw_args, ' ');
     while (args_split.next()) |a| {
         const arg = std.mem.trim(u8, a, " ");
         if (arg.len == 0) continue;
-        try args.append(try allocator.dupe(u8, arg));
+        try args.append(allocator, try allocator.dupe(u8, arg));
     }
 
     return RunnerArgs{
