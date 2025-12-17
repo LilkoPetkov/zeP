@@ -28,7 +28,7 @@ fi
 
 ZEP_EXE="$USR_LOCAL_BIN/zep"
 ZIG_EXE="$USR_LOCAL_BIN/zig"
-ZEP_DIR="$LOCAL_ZEP/zep"
+ZEP_DIR="$LOCAL_ZEP/zeP"
 ZEP_ZIG_DIR="$ZEP_DIR/zig"
 ZEP_VERSION_DIR="$ZEP_DIR/zep/d/$TARGET/x86_64-linux"
 MANIFEST_ZEP="$ZEP_DIR/zep/manifest.json"
@@ -71,9 +71,9 @@ curl -L "https://zep.run/releases/$TARGET/zep_x86_64-linux_$TARGET.tar.xz" \
 
 echo "Extracting..."
 tar -xvf "$TEMP_ZEP_TAR_FILE" -C "$ZEP_VERSION_DIR"
-ZEP_VERSION_EXE=$ZEP_VERSION_DIR/zeP
+ZEP_VERSION_EXE=$ZEP_VERSION_DIR/zep
 if [ -e "$ZEP_VERSION_DIR/zep" ]; then
-    ZEP_VERSION_EXE=$ZEP_VERSION_DIR/zeP
+    ZEP_VERSION_EXE=$ZEP_VERSION_DIR/zep
 fi
 
 chmod 755 "$ZEP_VERSION_EXE"
