@@ -68,7 +68,8 @@ pub const Runner = struct {
             try exec_args.insert(self.allocator, 0, exec);
         }
 
-        try self.printer.pop(50);
+        self.printer.pop(50);
+
         const cmd = try std.mem.join(self.allocator, " ", exec_args.items);
         defer self.allocator.free(cmd);
         try self.printer.append("\nRunning...\n $ {s}\n\n\n", .{cmd}, .{ .color = .green });

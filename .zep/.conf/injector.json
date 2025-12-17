@@ -5,8 +5,8 @@
 		"zep_executeable_mod_mod"
 	],
 	"excluded_modules": [
-		"constantsMod",
 		"localesMod",
+		"constantsMod",
 		"structsMod",
 		"iosMod",
 		"clisMod",

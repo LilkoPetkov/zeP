@@ -302,7 +302,7 @@ pub const Injector = struct {
             var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
             const stdin = &stdin_reader.interface;
 
-            try self.printer.append("\nModules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
+            try self.printer.append("Modules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
             for (included_modules) |mod| {
                 try self.printer.append("  + {s}\n", .{mod}, .{});
             }
@@ -318,7 +318,10 @@ pub const Injector = struct {
             const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
             if (answer_yes) {
                 try logger.debug("injectIntoBuildZig: current imports accepted - exiting", @src());
+                try self.printer.append("Done.\n", .{}, .{});
                 return;
+            } else {
+                try self.printer.append("\n", .{}, .{});
             }
 
             break :display_module_blk;
@@ -408,30 +411,33 @@ pub const Injector = struct {
             const stdin = &stdin_reader.interface;
 
             const module_count: u8 = @intCast(new_excluded_modules.items.len + new_included_modules.items.len);
-            try self.printer.pop(module_count);
+            self.printer.pop(module_count * 2); // pop the prompt, aswell as the answer
+            try self.printer.clearLine(module_count);
 
             try self.printer.append("\nzeP import plan:\n\n", .{}, .{ .color = .blue, .weight = .bold });
+
             try self.printer.append("Will import:\n", .{}, .{});
-            var inc_diff = false;
-            for (included_modules) |mod| {
-                if (!isInArray(new_included_modules.items, mod)) {
-                    inc_diff = true;
-                    try self.printer.append("  + {s}\n", .{mod}, .{});
-                }
-            }
-            if (!inc_diff) {
-                try self.printer.append(" # none (new)\n", .{}, .{});
-            }
-            try self.printer.append("\nWill remove:\n", .{}, .{});
             var exc_diff = false;
             for (excluded_modules) |mod| {
                 if (!isInArray(new_excluded_modules.items, mod)) {
                     exc_diff = true;
-                    try self.printer.append("  - {s}\n", .{mod}, .{});
+                    try self.printer.append("  + {s}\n", .{mod}, .{});
                 }
             }
             if (!exc_diff) {
-                try self.printer.append(" # none (new)\n", .{}, .{});
+                try self.printer.append("  # none (new)\n", .{}, .{});
+            }
+
+            try self.printer.append("\nWill remove:\n", .{}, .{});
+            var inc_diff = false;
+            for (included_modules) |mod| {
+                if (!isInArray(new_included_modules.items, mod)) {
+                    inc_diff = true;
+                    try self.printer.append("  - {s}\n", .{mod}, .{});
+                }
+            }
+            if (!inc_diff) {
+                try self.printer.append("  # none (new)\n", .{}, .{});
             }
             try self.printer.append("\n", .{}, .{});
 
@@ -445,11 +451,12 @@ pub const Injector = struct {
                 );
                 const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
                 if (!answer_yes) {
+                    try self.printer.append("Ok.\n", .{}, .{});
                     try logger.debug("injectIntoBuildZig: changes rejected - exiting", @src());
                     return;
                 }
             } else {
-                try self.printer.append("\nNo changes made.\n", .{}, .{});
+                try self.printer.append("No changes made.\n", .{}, .{});
                 try logger.debug("injectIntoBuildZig: no changes made - exiting", @src());
                 return;
             }
@@ -478,6 +485,7 @@ pub const Injector = struct {
             }
             _ = try file.write(c);
         }
+        try self.printer.append("Done.\n", .{}, .{});
         try logger.info("injectIntoBuildZig: injection complete", @src());
     }
 };

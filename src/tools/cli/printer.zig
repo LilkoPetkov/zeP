@@ -116,27 +116,27 @@ pub const Printer = struct {
         return;
     }
 
-    pub fn pop(self: *Printer, pop_amount: u8) !void {
+    pub fn pop(self: *Printer, pop_amount: u8) void {
         const amount = pop_amount;
         for (0..amount) |_| {
-            try self.clearLine(1);
             const n = self.data.pop();
             if (n == null) break;
         }
         return;
     }
 
-    fn clearLine(_: *Printer, n: usize) !void {
+    pub fn clearLine(_: *Printer, n: usize) !void {
         if (n == 0) return;
 
         var stdout_buf: [1028]u8 = undefined;
         var stdout_writer = std.fs.File.writer(std.fs.File.stdout(), &stdout_buf);
         var stdout = &stdout_writer.interface;
-        for (0..n) |_| {
+        for (0..n) |i| {
             try stdout.print("\x1b[2K\r", .{}); // Clear line
-            try stdout.print("\x1b[1A", .{});
+            if (@as(i8, @intCast(i)) - 1 < n) try stdout.print("\x1b[1A", .{});
         }
-        try stdout.print("\x1b[1A", .{});
+
+        try stdout.print("\x1b[2K\r", .{}); // Clear line
         try stdout.flush();
     }
 
@@ -154,7 +154,7 @@ pub const Printer = struct {
             count += @intCast(small_count);
         }
 
-        try self.clearLine(count - 1);
+        try self.clearLine(count);
     }
 
     pub fn print(self: *Printer) !void {
