@@ -419,26 +419,26 @@ pub const Injector = struct {
             try self.printer.append("\nzeP import plan:\n\n", .{}, .{ .color = .blue, .weight = .bold });
 
             try self.printer.append("Will import:\n", .{}, .{});
-            var exc_diff = false;
-            for (excluded_modules) |mod| {
-                if (!isInArray(new_excluded_modules.items, mod)) {
-                    exc_diff = true;
+            var inc_diff = false;
+            for (new_included_modules.items) |mod| {
+                if (!isInArray(included_modules, mod)) {
+                    inc_diff = true;
                     try self.printer.append("  + {s}\n", .{mod}, .{});
                 }
             }
-            if (!exc_diff) {
+            if (!inc_diff) {
                 try self.printer.append("  # none (new)\n", .{}, .{});
             }
 
             try self.printer.append("\nWill remove:\n", .{}, .{});
-            var inc_diff = false;
-            for (included_modules) |mod| {
-                if (!isInArray(new_included_modules.items, mod)) {
-                    inc_diff = true;
+            var exc_diff = false;
+            for (new_excluded_modules.items) |mod| {
+                if (!isInArray(excluded_modules, mod)) {
+                    exc_diff = true;
                     try self.printer.append("  - {s}\n", .{mod}, .{});
                 }
             }
-            if (!inc_diff) {
+            if (!exc_diff) {
                 try self.printer.append("  # none (new)\n", .{}, .{});
             }
             try self.printer.append("\n", .{}, .{});
