@@ -6,6 +6,7 @@ const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
+const Prompt = @import("cli").Prompt;
 
 const Manifest = @import("core").Manifest.Manifest;
 
@@ -176,6 +177,26 @@ pub const Artifact = struct {
     }
 
     pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
+        if (self.artifact_type == .zep) {
+            if (!std.mem.eql(u8, Constants.Default.version, target_version)) {
+                try self.printer.append("Warning: {s} is below 0.8, which is incompatible with the newer versions.\n", .{target_version}, .{});
+                try self.printer.append("After installing this version, you will not be able to switch to 0.8 or later versions.\n", .{}, .{});
+
+                var stdin_buf: [100]u8 = undefined;
+                var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+                const stdin = &stdin_reader.interface;
+
+                const answer = try Prompt.input(self.allocator, self.printer, stdin, "Continue? (y/N) ", .{});
+                if (answer.len == 0 or
+                    std.mem.startsWith(u8, answer, "n") or
+                    std.mem.startsWith(u8, answer, "N"))
+                {
+                    try self.printer.append("\nOk.\n", .{}, .{});
+                    return;
+                }
+            }
+        }
+
         try self.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
         const version = try self.getVersion(target_version, target);
         if (version.path.len == 0) return error.VersionHasNoPath;
@@ -244,6 +265,26 @@ pub const Artifact = struct {
     }
 
     pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
+        if (self.artifact_type == .zep) {
+            if (!std.mem.eql(u8, Constants.Default.version, target_version)) {
+                try self.printer.append("Warning: {s} is below 0.8, which is incompatible with the newer versions.\n", .{target_version}, .{});
+                try self.printer.append("After switching to this version, you will not be able to switch to 0.8 or later versions.\n", .{}, .{});
+
+                var stdin_buf: [100]u8 = undefined;
+                var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+                const stdin = &stdin_reader.interface;
+
+                const answer = try Prompt.input(self.allocator, self.printer, stdin, "Continue? (y/N) ", .{});
+                if (answer.len == 0 or
+                    std.mem.startsWith(u8, answer, "n") or
+                    std.mem.startsWith(u8, answer, "N"))
+                {
+                    try self.printer.append("\nOk.\n", .{}, .{});
+                    return;
+                }
+            }
+        }
+
         try self.printer.append(
             "[{s}] Switching version: {s}\nWith target: {s}\n\n",
             .{
