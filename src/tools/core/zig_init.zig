@@ -30,14 +30,14 @@ pub const Fingerprint = packed struct(u64) {
 };
 
 pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: []const u8, default_zig_version: ?[]const u8) !void {
-    const logger = Logger.get();
+    // const logger = Logger.get();
 
     const zig_main_path = "src/main.zig";
     const zig_build_path = "build.zig";
     const zig_build_zon_path = "build.zig.zon";
 
     if (Fs.existsFile(zig_main_path) and Fs.existsFile(zig_build_path) and Fs.existsFile(zig_build_zon_path)) {
-        try logger.info("Zig project already initialized, skipping.", @src());
+        // try logger.info("Zig project already initialized, skipping.", @src());
         return;
     }
 
@@ -49,7 +49,7 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
         const child = std.process.Child.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "version" },
-        }) catch |err| {
+        }) catch {
             try printer.append(
                 "Zig is not installed!\nDefaulting to {s}!\n\n",
                 .{zig_version},
@@ -58,16 +58,16 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
                     .verbosity = 0,
                 },
             );
-            try logger.warnf("Zig not detected, defaulting to version {s}, err={}", .{ zig_version, err }, @src());
+            // try logger.warnf("Zig not detected, defaulting to version {s}, err={}", .{ zig_version, err }, @src());
             break :blk;
         };
 
         zig_version = child.stdout[0 .. child.stdout.len - 1];
-        try logger.infof("Detected Zig version: {s}", .{zig_version}, @src());
+        // try logger.infof("Detected Zig version: {s}", .{zig_version}, @src());
     }
 
     try printer.append("Initing Zig project...\n", .{}, .{});
-    try logger.info("Initializing Zig project structure...", @src());
+    // try logger.info("Initializing Zig project structure...", @src());
 
     const zig_main =
         \\
@@ -80,7 +80,7 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
     if (!Fs.existsFile(zig_main_path)) {
         const f = try Fs.openOrCreateFile(zig_main_path);
         _ = try f.write(zig_main);
-        try logger.infof("Created {s}", .{zig_main_path}, @src());
+        // try logger.infof("Created {s}", .{zig_main_path}, @src());
     }
 
     const zig_build =
@@ -108,7 +108,7 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
     if (!Fs.existsFile(zig_build_path)) {
         const f = try Fs.openOrCreateFile(zig_build_path);
         _ = try f.write(zb_replace_name);
-        try logger.infof("Created {s}", .{zig_build_path}, @src());
+        // try logger.infof("Created {s}", .{zig_build_path}, @src());
     }
 
     const zig_build_zon =
@@ -139,8 +139,8 @@ pub fn createZigProject(printer: *Printer, allocator: std.mem.Allocator, name: [
     if (!Fs.existsFile(zig_build_zon_path)) {
         const f = try Fs.openOrCreateFile(zig_build_zon_path);
         _ = try f.write(zbz_replace_zig_version);
-        try logger.infof("Created {s}", .{zig_build_zon_path}, @src());
+        // try logger.infof("Created {s}", .{zig_build_zon_path}, @src());
     }
 
-    try logger.info("Zig project initialization completed.", @src());
+    // try logger.info("Zig project initialization completed.", @src());
 }
