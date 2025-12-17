@@ -13,7 +13,7 @@ mkdir -p "$RELEASE_DIR"
 mkdir -p "$TEMP_DIR"
 
 # Windows targets
-windows_targets=("x86_64-windows" "x86-windows" "aarch64-windows" "x86_64-windows-msvc" "aarch64-windows-msvc")
+windows_targets=("x86_64-windows" "x86-windows" "aarch64-windows")
 
 for target in "${windows_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget="$target" -p "$TEMP_DIR/$target"
@@ -22,7 +22,7 @@ for target in "${windows_targets[@]}"; do
 done
 
 # Linux targets
-linux_targets=("x86_64-linux" "x86-linux" "aarch64-linux" "x86_64-linux-musl" "aarch64-linux-musl")
+linux_targets=("x86_64-linux" "x86-linux" "aarch64-linux")
 
 for target in "${linux_targets[@]}"; do
     zig build -Doptimize=ReleaseFast -freference-trace -Dtarget="$target" -p "$TEMP_DIR/$target"
@@ -44,5 +44,5 @@ rm -rf "$TEMP_DIR"
 
 echo "Build complete. Releases stored in $RELEASE_DIR"
 echo " => Moving now..."
-python set_release.py --version $VERSION_NAME
+python .release/set_release.py --version $VERSION_NAME
 echo "Moving finished, Release completed."

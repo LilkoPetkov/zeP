@@ -38,8 +38,8 @@ pub const Package = struct {
         package_name: []const u8,
         package_version: ?[]const u8,
     ) !Package {
-        const logger = Logger.get();
-        try logger.debugf("Package.init: finding package {s}", .{package_name}, @src());
+        // const logger = Logger.get();
+        // try logger.debugf("Package.init: finding package {s}", .{package_name}, @src());
 
         try printer.append("Finding the package...\n", .{}, .{});
 
@@ -48,12 +48,12 @@ pub const Package = struct {
         defer parsed_package.deinit();
 
         try printer.append("Package Found! - {s}.json\n\n", .{package_name}, .{ .color = .green });
-        try logger.infof("Package.init: package {s} found", .{package_name}, @src());
+        // try logger.infof("Package.init: package {s} found", .{package_name}, @src());
 
         const versions = parsed_package.value.versions;
         if (versions.len == 0) {
             printer.append("\nPackage has no version!\n", .{}, .{ .color = .red }) catch {};
-            try logger.warnf("Package.init: package {s} has no versions", .{package_name}, @src());
+            // try logger.warnf("Package.init: package {s} has no versions", .{package_name}, @src());
             return error.PackageVersion;
         }
 
@@ -67,7 +67,7 @@ pub const Package = struct {
             try printer.append("/ (no version specified, using latest)", .{}, .{});
         }
         try printer.append("\n\n", .{}, .{});
-        try logger.debugf("Package.init: target version is {s}", .{target_version}, @src());
+        // try logger.debugf("Package.init: target version is {s}", .{target_version}, @src());
 
         var check_selected: ?Structs.Packages.PackageVersions = null;
         for (versions) |v| {
@@ -79,16 +79,16 @@ pub const Package = struct {
 
         const selected = check_selected orelse {
             try printer.append("Package version was not found...\n\n", .{}, .{ .color = .red });
-            try logger.warnf("Package.init: version {s} not found for package {s}", .{ target_version, package_name }, @src());
+            // try logger.warnf("Package.init: version {s} not found for package {s}", .{ target_version, package_name }, @src());
             return error.PackageVersion;
         };
 
         try printer.append("Package version found!\n\n", .{}, .{ .color = .green });
-        try logger.infof("Package.init: selected version {s} for package {s}", .{ target_version, package_name }, @src());
+        // try logger.infof("Package.init: selected version {s} for package {s}", .{ target_version, package_name }, @src());
 
         // Create hash
         const hash = try Hash.hashData(allocator, selected.url);
-        try logger.debugf("Package.init: computed hash for {s}@{s}", .{ package_name, target_version }, @src());
+        // try logger.debugf("Package.init: computed hash for {s}@{s}", .{ package_name, target_version }, @src());
 
         const id = try std.fmt.allocPrint(allocator, "{s}@{s}", .{
             package_name,
@@ -110,15 +110,15 @@ pub const Package = struct {
     }
 
     pub fn deinit(self: *Package) void {
-        const logger = Logger.get();
-        logger.debugf("Package.deinit: freeing package {s}", .{self.id}, @src()) catch {};
+        // const logger = Logger.get();
+        // logger.debugf("Package.deinit: freeing package {s}", .{self.id}, @src()) catch {};
         self.allocator.free(self.id);
         self.allocator.free(self.package_hash);
     }
 
     fn getPackagePathsAmount(self: *Package) !usize {
-        const logger = Logger.get();
-        try logger.debugf("getPackagePathsAmount: checking package {s}", .{self.id}, @src());
+        // const logger = Logger.get();
+        // try logger.debugf("getPackagePathsAmount: checking package {s}", .{self.id}, @src());
 
         var package_manifest = try self.manifest.readManifest(
             Structs.Manifests.PackagesManifest,
@@ -134,13 +134,13 @@ pub const Package = struct {
             }
         }
 
-        try logger.debugf("getPackagePathsAmount: package {s} has {d} paths", .{ self.id, package_paths_amount }, @src());
+        // try logger.debugf("getPackagePathsAmount: package {s} has {d} paths", .{ self.id, package_paths_amount }, @src());
         return package_paths_amount;
     }
 
     pub fn deletePackage(self: *Package, force: bool) !void {
-        const logger = Logger.get();
-        try logger.debugf("deletePackage: attempting to delete {s}", .{self.id}, @src());
+        // const logger = Logger.get();
+        // try logger.debugf("deletePackage: attempting to delete {s}", .{self.id}, @src());
 
         var buf: [128]u8 = undefined;
         const path = try std.fmt.bufPrint(
@@ -153,13 +153,13 @@ pub const Package = struct {
         if (amount > 0 and !force) {
             try self.printer.append("\nWARNING: Atleast 1 project is using {s} [{d}]. Uninstalling it globally now might have serious consequences.\n\n", .{ self.id, amount }, .{ .color = .red });
             try self.printer.append("Use - if you do not care\n $ zep fglobal-uninstall [target]@[version]\n\n", .{}, .{ .color = .yellow });
-            try logger.warnf("deletePackage: package {s} is used by {d} projects, aborting deletion", .{ self.id, amount }, @src());
+            // try logger.warnf("deletePackage: package {s} is used by {d} projects, aborting deletion", .{ self.id, amount }, @src());
             return;
         }
 
         if (Fs.existsDir(path)) {
             try Fs.deleteTreeIfExists(path);
-            try logger.infof("deletePackage: deleted package directory {s}", .{path}, @src());
+            // try logger.infof("deletePackage: deleted package directory {s}", .{path}, @src());
         }
     }
 };

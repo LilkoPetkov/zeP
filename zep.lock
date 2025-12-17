@@ -3,7 +3,7 @@
 	"root": {
 		"author": "Xerrs",
 		"tags": [],
-		"zig_version": "0.15.1",
+		"zig_version": "0.15.2",
 		"repo": "https://github.com/XerWoho/zeP",
 		"name": "zeP",
 		"cmd": [
@@ -20,13 +20,12 @@
 		"version": "0.8",
 		"license": "GPLv3",
 		"packages": [
-			"clap@0.11.0",
-			"logly@0.0.4"
+			"clap@0.11.0"
 		],
 		"dev_packages": [],
 		"build": {
 			"entry": "/src/main.zig",
-			"target": "x86_64-windows-msvc"
+			"target": "x86_64-windows"
 		}
 	},
 	"packages": [
@@ -36,13 +35,6 @@
 			"source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
 			"zig_version": "0.15.1",
 			"root_file": "/clap.zig"
-		},
-		{
-			"name": "logly@0.0.4",
-			"hash": "f617015b68a15eb0a03df7a31c194f18965bea94633ecb664ecee6c1f9b5b619",
-			"source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.0.4.zip",
-			"zig_version": "0.15.1",
-			"root_file": "/src/logly.zig"
 		}
 	]
 }

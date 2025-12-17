@@ -206,9 +206,28 @@ pub const ArtifactInstaller = struct {
         var dir = try Fs.openOrCreateDir(temporary_path);
         defer dir.close();
 
-        var decompressed = try std.compress.xz.decompress(self.allocator, reader);
+        // ! THIS NEEDS TO BE CHANGED
+        // The reason for this hacky design is because
+        // of the horrible design choices and missing functions
+        // of Zig.
+        //
+        // In later zig versions this will hopefully get fixed,
+        // however currently this design works, even though
+        // it is a really bad eye-sore.
+        var deperecated_reader = reader.file.deprecatedReader();
+        var decompressed = try std.compress.xz.decompress(self.allocator, &deperecated_reader);
         defer decompressed.deinit();
-        const decompressed_reader = decompressed.reader();
+
+        var buf = try std.ArrayList(u8).initCapacity(self.allocator, 100);
+        defer buf.deinit(self.allocator);
+        var decompressed_reader = decompressed.reader();
+        while (true) {
+            var chunk: [4096]u8 = undefined;
+            const bytes_read = try decompressed_reader.read(chunk[0..]);
+            if (bytes_read == 0) break;
+            try buf.appendSlice(self.allocator, chunk[0..bytes_read]);
+        }
+        var r = std.Io.Reader.fixed(try buf.toOwnedSlice(self.allocator));
 
         const new_target = try std.fs.path.join(self.allocator, &.{ decompressed_path, target });
         defer self.allocator.free(new_target);
@@ -221,7 +240,8 @@ pub const ArtifactInstaller = struct {
         var diagnostics = std.tar.Diagnostics{
             .allocator = self.allocator,
         };
-        try std.tar.pipeToFileSystem(dir, decompressed_reader, .{ .mode_mode = .ignore, .diagnostics = &diagnostics });
+
+        try std.tar.pipeToFileSystem(dir, &r, .{ .mode_mode = .ignore, .diagnostics = &diagnostics });
 
         const extract_target = try std.fs.path.join(self.allocator, &.{ temporary_path, diagnostics.root_dir });
         defer self.allocator.free(extract_target);
@@ -231,9 +251,7 @@ pub const ArtifactInstaller = struct {
                 "Extracted {s} => {s}!\n",
                 .{ temporary_path, new_target },
                 .{
-                    .{
-                        .verbosity = 2,
-                    },
+                    .verbosity = 2,
                 },
             );
             try std.fs.cwd().rename(temporary_path, new_target);
@@ -242,9 +260,7 @@ pub const ArtifactInstaller = struct {
                 "Extracted {s} => {s}!\n",
                 .{ extract_target, new_target },
                 .{
-                    .{
-                        .verbosity = 2,
-                    },
+                    .verbosity = 2,
                 },
             );
             try std.fs.cwd().rename(extract_target, new_target);

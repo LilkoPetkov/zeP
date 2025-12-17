@@ -14,13 +14,13 @@ class Zep < Formula
   end
 
   def install
-    bin.install "zeP" => "zep"
+    bin.install "zep" => "zep"
   end
 
     def post_install
 		ohai "--- ZEP CONFIG REQUIRED ---"
-		puts " ==> Run 'zeP setup' to configure zeP"
-		puts " ==> Then run: zeP zep install 0.7"
+		puts " ==> Run 'zep setup' to configure zep"
+		puts " ==> Then run: zep zep install 0.7"
 	end
 
   test do
