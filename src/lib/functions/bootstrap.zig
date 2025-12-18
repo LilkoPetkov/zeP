@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const Locales = @import("locales");
 const Constants = @import("constants");
@@ -27,7 +28,10 @@ pub fn bootstrap(
     Locales.VERBOSITY_MODE = 0;
 
     var zig = try Artifact.init(allocator, printer, paths, manifest, .zig);
-    try zig.install(zig_version, Constants.Default.default_targets.windows);
+    defer zig.deinit();
+
+    const default_target = if (builtin.os.tag == .windows) Constants.Default.default_targets.windows else Constants.Default.default_targets.linux;
+    try zig.install(zig_version, default_target);
     Locales.VERBOSITY_MODE = previous_verbosity;
 
     var initer = try Init.init(
