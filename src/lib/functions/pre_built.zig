@@ -37,7 +37,7 @@ pub const PreBuilt = struct {
         var buf: [256]u8 = undefined;
         const path = try std.fmt.bufPrint(
             &buf,
-            "{s}/{s}.zstd",
+            "{s}/{s}.tar.zstd",
             .{ self.paths.prebuilt, pre_built_name },
         );
 
