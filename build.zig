@@ -43,17 +43,21 @@ pub fn build(builder: *std.Build) void {
 
     const localesMod = builder.createModule(.{ .root_source_file = builder.path("src/locales.zig") });
     const constantsMod = builder.createModule(.{ .root_source_file = builder.path("src/constants/_index.zig") });
+    const loggersMod = builder.createModule(.{ .root_source_file = builder.path("src/logger.zig") });
+    __zepinj__.imp(builder, loggersMod);
 
     const structsMod = builder.createModule(.{
         .root_source_file = builder.path("src/structs/_index.zig"),
         .imports = &.{
             std.Build.Module.Import{ .name = "constants", .module = constantsMod },
+            std.Build.Module.Import{ .name = "logger", .module = loggersMod },
         },
     });
     const iosMod = builder.createModule(.{
         .root_source_file = builder.path("src/tools/io/_index.zig"),
         .imports = &.{
             std.Build.Module.Import{ .name = "constants", .module = constantsMod },
+            std.Build.Module.Import{ .name = "logger", .module = loggersMod },
         },
     });
     const clisMod = builder.createModule(.{
@@ -63,6 +67,7 @@ pub fn build(builder: *std.Build) void {
             std.Build.Module.Import{ .name = "constants", .module = constantsMod },
             std.Build.Module.Import{ .name = "locales", .module = localesMod },
             std.Build.Module.Import{ .name = "io", .module = iosMod },
+            std.Build.Module.Import{ .name = "logger", .module = loggersMod },
         },
     });
     const coresMod = builder.createModule(.{
@@ -73,6 +78,7 @@ pub fn build(builder: *std.Build) void {
             std.Build.Module.Import{ .name = "constants", .module = constantsMod },
             std.Build.Module.Import{ .name = "io", .module = iosMod },
             std.Build.Module.Import{ .name = "cli", .module = clisMod },
+            std.Build.Module.Import{ .name = "logger", .module = loggersMod },
         },
     });
     coresMod.addIncludePath(.{
@@ -107,6 +113,7 @@ pub fn build(builder: *std.Build) void {
     zep_executeable_mod.root_module.addImport("core", coresMod);
     zep_executeable_mod.root_module.addImport("io", iosMod);
     zep_executeable_mod.root_module.addImport("cli", clisMod);
+    zep_executeable_mod.root_module.addImport("logger", loggersMod);
 
     builder.installArtifact(zep_executeable_mod);
 }

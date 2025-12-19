@@ -76,33 +76,33 @@ pub fn main() !void {
     defer args.deinit();
     _ = args.skip(); // skip program name
 
-    // const log_file_identifier = try std.fmt.allocPrint(
-    //     alloc,
-    //     "{d}.log",
-    //     .{
-    //         std.time.milliTimestamp(),
-    //     },
-    // );
-    // const log_location = try std.fs.path.join(alloc, &.{ paths.logs_root, log_file_identifier });
-    // defer {
-    //     alloc.free(log_location);
-    //     alloc.free(log_file_identifier);
-    // }
+    const log_file_identifier = try std.fmt.allocPrint(
+        alloc,
+        "{d}.log",
+        .{
+            std.time.milliTimestamp(),
+        },
+    );
+    const log_location = try std.fs.path.join(alloc, &.{ paths.logs_root, log_file_identifier });
+    defer {
+        alloc.free(log_location);
+        alloc.free(log_file_identifier);
+    }
 
-    // try Logger.init(alloc, log_location);
-    // const logger = Logger.get();
-    // defer logger.deinit();
-    // defer {
-    //     logger.flush() catch {
-    //         @panic("flushing logger failed");
-    //     };
-    // }
-    // try logger.debug("logger inited", @src());
-    // try logger.debugf("running zep={s}", .{Constants.Default.version}, @src());
+    try Logger.init(alloc, log_location);
+    const logger = Logger.get();
+    defer logger.deinit();
+    defer {
+        logger.flush() catch {
+            @panic("flushing logger failed");
+        };
+    }
+    try logger.debug("logger inited", @src());
+    try logger.debugf("running zep={s}", .{Constants.Default.version}, @src());
 
-    // errdefer {
-    //     std.debug.print("[ERR] Something failed. {s} - Report", .{log_location});
-    // }
+    errdefer {
+        std.debug.print("[ERR] Something failed. {s} - Report", .{log_location});
+    }
 
     var printer = try Printer.init(alloc);
     defer printer.deinit();
@@ -116,7 +116,7 @@ pub fn main() !void {
         try printUsage(&printer);
         return;
     };
-    // try logger.infof("subcommand={s}", .{subcommand}, @src());
+    try logger.infof("subcommand={s}", .{subcommand}, @src());
 
     const create_paths = [5][]const u8{
         paths.root,
@@ -185,19 +185,19 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "setup")) {
-        // try logger.info("running setup", @src());
+        try logger.info("running setup", @src());
         try Setup.setup(
             allocator,
             &printer,
             &paths,
         );
-        // try logger.info("setup finished", @src());
+        try logger.info("setup finished", @src());
         return;
     }
     if (std.mem.eql(u8, subcommand, "help")) {
-        // try logger.info("running help", @src());
+        try logger.info("running help", @src());
         try printUsage(&printer);
-        // try logger.info("help finished", @src());
+        try logger.info("help finished", @src());
         return;
     }
     if (std.mem.eql(u8, subcommand, "version")) {
@@ -226,15 +226,15 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, subcommand, "doctor")) {
-        // try logger.info("running doctor", @src());
+        try logger.info("running doctor", @src());
         const doctor_args = try Args.parseDoctor(&args);
         try Doctor.doctor(allocator, &printer, &manifest, doctor_args.fix);
-        // try logger.info("doctor finished", @src());
+        try logger.info("doctor finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "inject")) {
-        // try logger.info("running injector", @src());
+        try logger.info("running injector", @src());
         var injector = try Injector.init(
             allocator,
             &printer,
@@ -242,12 +242,12 @@ pub fn main() !void {
             true,
         );
         try injector.initInjector();
-        // try logger.info("injector finished", @src());
+        try logger.info("injector finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "bootstrap")) {
-        // try logger.info("running bootstrap", @src());
+        try logger.info("running bootstrap", @src());
         var bootstrap_args = try Args.parseBootstrap(allocator, &args);
         defer bootstrap_args.deinit(allocator);
 
@@ -260,12 +260,12 @@ pub fn main() !void {
             bootstrap_args.zig,
             bootstrap_args.deps,
         );
-        // try logger.info("bootstrap finished", @src());
+        try logger.info("bootstrap finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "new")) {
-        // try logger.info("running new", @src());
+        try logger.info("running new", @src());
         const new_package_name = try nextArg(&args, &printer, " > zep new <name>");
         try New.new(
             allocator,
@@ -274,19 +274,19 @@ pub fn main() !void {
             &json,
         );
 
-        // try logger.info("new finished", @src());
+        try logger.info("new finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "cache")) {
-        // try logger.info("running cache", @src());
+        try logger.info("running cache", @src());
 
         const cache_subcommand = try nextArg(
             &args,
             &printer,
             " > zep cache [list|clean|size] (package_id)",
         );
-        // try logger.infof("running cache: subcommand={s}", .{cache_subcommand}, @src());
+        try logger.infof("running cache: subcommand={s}", .{cache_subcommand}, @src());
         var cache = try Cache.init(
             allocator,
             &printer,
@@ -294,23 +294,23 @@ pub fn main() !void {
         );
         defer cache.deinit();
         if (std.mem.eql(u8, cache_subcommand, "list") or std.mem.eql(u8, cache_subcommand, "ls")) {
-            // try logger.info("running cache list", @src());
+            try logger.info("running cache list", @src());
             try cache.list();
-            // try logger.info("cache list finished", @src());
+            try logger.info("cache list finished", @src());
         } else if (std.mem.eql(u8, cache_subcommand, "clean")) {
-            // try logger.info("running cache clean", @src());
+            try logger.info("running cache clean", @src());
             const package_id = args.next();
             try cache.clean(package_id);
-            // try logger.info("cache clean finished", @src());
+            try logger.info("cache clean finished", @src());
         } else if (std.mem.eql(u8, cache_subcommand, "size")) {
-            // try logger.info("running cache size", @src());
+            try logger.info("running cache size", @src());
             try cache.size();
-            // try logger.info("cache size finished", @src());
+            try logger.info("cache size finished", @src());
         } else {
-            // try logger.warn("invalid cache mode", @src());
+            try logger.warn("invalid cache mode", @src());
             try printer.append("Invalid mode: {s}\n\n", .{cache_subcommand}, .{});
         }
-        // try logger.info("cache finished", @src());
+        try logger.info("cache finished", @src());
         return;
     }
 
@@ -319,14 +319,14 @@ pub fn main() !void {
         Fs.existsFile(Constants.Extras.package_files.manifest) and
         Fs.existsDir(Constants.Extras.package_files.zep_folder))
     {
-        // try logger.info("running within zep project", @src());
+        try logger.info("running within zep project", @src());
         const lock = try manifest.readManifest(
             Structs.ZepFiles.PackageLockStruct,
             Constants.Extras.package_files.lock,
         );
         defer lock.deinit();
         if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
-            // try logger.warn("lockfile schema is not matching with zep version", @src());
+            try logger.warn("lockfile schema is not matching with zep version", @src());
             try printer.append("Lock file schema is NOT matching with zep version.\nConsider removing them, and re-initing!\n", .{}, .{ .color = .red });
 
             try Fs.deleteFileIfExists(Constants.Extras.package_files.lock);
@@ -349,28 +349,28 @@ pub fn main() !void {
             );
             try installer.installAll();
             Locales.VERBOSITY_MODE = prev_verbosity;
-            // try logger.info("repaired zep.lock schema", @src());
+            try logger.info("repaired zep.lock schema", @src());
             return;
         }
     }
 
     if (std.mem.eql(u8, subcommand, "pkg")) {
-        // try logger.info("running package", @src());
+        try logger.info("running package", @src());
         const mode = try nextArg(&args, &printer, " > zep pkg [command]");
-        // try logger.infof("running package: subcommand={s}", .{mode}, @src());
+        try logger.infof("running package: subcommand={s}", .{mode}, @src());
         if (std.mem.eql(u8, mode, "add")) {
-            // try logger.info("running package: add", @src());
+            try logger.info("running package: add", @src());
             var custom = CustomPackage.init(
                 allocator,
                 &printer,
                 &paths,
             );
             try custom.requestPackage();
-            // try logger.info("running package: add finished", @src());
+            try logger.info("running package: add finished", @src());
             return;
         }
         if (std.mem.eql(u8, mode, "remove")) {
-            // try logger.info("running package: remove", @src());
+            try logger.info("running package: remove", @src());
             const target = args.next() orelse {
                 try printer.append("No target specified!\n\n", .{}, .{});
                 return;
@@ -381,12 +381,12 @@ pub fn main() !void {
                 &paths,
             );
             try custom.removePackage(target);
-            // try logger.info("running package: remove finished", @src());
+            try logger.info("running package: remove finished", @src());
             return;
         }
 
         if (std.mem.eql(u8, mode, "list")) {
-            // try logger.info("running package: list", @src());
+            try logger.info("running package: list", @src());
             const target = args.next();
             if (target) |package| {
                 var split = std.mem.splitScalar(u8, package, '@');
@@ -397,30 +397,30 @@ pub fn main() !void {
                     &json,
                     package_name,
                 );
-                lister.list() catch {
-                    // try logger.errf("running package: list failed, name={s} err={}", .{ package_name, err }, @src());
+                lister.list() catch |err| {
+                    try logger.errf("running package: list failed, name={s} err={}", .{ package_name, err }, @src());
                     try printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
                 };
-                // try logger.info("running package: list finished", @src());
+                try logger.info("running package: list finished", @src());
             } else {
-                // try logger.warn("missing target parameter", @src());
+                try logger.warn("missing target parameter", @src());
                 try printer.append("Missing argument;\nzep list [target]\n\n", .{}, .{ .color = .red });
             }
             return;
         }
-        // try logger.info("package finished", @src());
+        try logger.info("package finished", @src());
     }
 
     if (std.mem.eql(u8, subcommand, "init")) {
-        // try logger.info("running init", @src());
+        try logger.info("running init", @src());
         var initer = try Init.init(allocator, &printer, &json, false);
         try initer.commitInit();
-        // try logger.info("init finished", @src());
+        try logger.info("init finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "build")) {
-        // try logger.info("running build", @src());
+        try logger.info("running build", @src());
         var builder = try Builder.init(
             allocator,
             &printer,
@@ -428,29 +428,29 @@ pub fn main() !void {
         );
         var t = try builder.build();
         t.deinit(allocator);
-        // try logger.info("build finished", @src());
+        try logger.info("build finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "runner")) {
-        // try logger.info("running runner", @src());
+        try logger.info("running runner", @src());
         var runner_args = try Args.parseRunner(allocator, &args);
         defer runner_args.deinit(allocator);
 
         var runner = Runner.init(allocator, &printer, &manifest);
         try runner.run(runner_args.target, runner_args.args);
-        // try logger.info("runner finished", @src());
+        try logger.info("runner finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "lock")) {
-        // try logger.info("running lock", @src());
+        try logger.info("running lock", @src());
         var package_files = PackageFiles.init(
             allocator,
             &printer,
             &manifest,
         ) catch |err| {
-            // try logger.infof("lock: moving failed, err={}", .{err}, @src());
+            try logger.infof("lock: moving failed, err={}", .{err}, @src());
             switch (err) {
                 error.ManifestMissing => {
                     try printer.append("zep.json manifest is missing!\n $ zep init\nto get started!\n\n", .{}, .{ .color = .red });
@@ -462,20 +462,20 @@ pub fn main() !void {
                 },
             }
         };
-        // try logger.info("lock finished", @src());
+        try logger.info("lock finished", @src());
         try package_files.lock();
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "json")) {
-        // try logger.info("running json", @src());
+        try logger.info("running json", @src());
 
         var package_files = PackageFiles.init(
             allocator,
             &printer,
             &manifest,
         ) catch |err| {
-            // try logger.infof("json: moving failed, err={}", .{err}, @src());
+            try logger.infof("json: moving failed, err={}", .{err}, @src());
             switch (err) {
                 error.ManifestMissing => {
                     try printer.append("zep.json manifest is missing!\n $ zep init\nto get started!\n\n", .{}, .{ .color = .red });
@@ -488,12 +488,12 @@ pub fn main() !void {
             }
         };
         try package_files.json();
-        // try logger.info("json finished", @src());
+        try logger.info("json finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "info")) {
-        // try logger.info("running info", @src());
+        try logger.info("running info", @src());
 
         const target = try nextArg(&args, &printer, " > zep info [target]@[version]\n");
         var split = std.mem.splitScalar(u8, target, '@');
@@ -521,12 +521,12 @@ pub fn main() !void {
         std.debug.print("Zig Version: {s}\n", .{package.package.zig_version});
         std.debug.print("\n", .{});
 
-        // try logger.info("info finished", @src());
+        try logger.info("info finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "install")) {
-        // try logger.info("running install", @src());
+        try logger.info("running install", @src());
 
         const target = args.next() orelse null;
         const install_args = try Args.parseInstall(&args);
@@ -541,16 +541,19 @@ pub fn main() !void {
         defer installer.deinit();
 
         if (target) |package| {
-            // try logger.infof("install: package={s}", .{package}, @src());
+            try logger.infof("install: package={s}", .{package}, @src());
             var split = std.mem.splitScalar(u8, package, '@');
             const package_name = split.first();
             const package_version = split.next();
             installer.install(package_name, package_version) catch |err| {
-                // try logger.errf("install: failed, err={}", .{err}, @src());
+                try logger.errf("install: failed, err={}", .{err}, @src());
 
                 switch (err) {
                     error.AlreadyInstalled => {
                         try printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
+                    },
+                    error.PackageNotFound => {
+                        try printer.append("\nPackage not Found!\n\n", .{}, .{ .color = .yellow });
                     },
                     error.HashMismatch => {
                         try printer.append("  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
@@ -561,9 +564,9 @@ pub fn main() !void {
                 }
             };
         } else {
-            // try logger.info("install: all", @src());
+            try logger.info("install: all", @src());
             installer.installAll() catch |err| {
-                // try logger.infof("install all: failed, err={}", .{err}, @src());
+                try logger.infof("install all: failed, err={}", .{err}, @src());
                 switch (err) {
                     error.AlreadyInstalled => {
                         try printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
@@ -578,15 +581,15 @@ pub fn main() !void {
             };
         }
 
-        // try logger.info("install: finished", @src());
+        try logger.info("install: finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "uninstall")) {
-        // try logger.info("running uninstall", @src());
+        try logger.info("running uninstall", @src());
 
         const target = try nextArg(&args, &printer, " > zep uninstall [target]");
-        // try logger.infof("uninstall: target={s}", .{target}, @src());
+        try logger.infof("uninstall: target={s}", .{target}, @src());
 
         var split = std.mem.splitScalar(u8, target, '@');
         const package_name = split.first();
@@ -598,7 +601,7 @@ pub fn main() !void {
             &paths,
             &manifest,
         ) catch |err| {
-            // try logger.errf("uninstall: failed, err={}", .{err}, @src());
+            try logger.errf("uninstall: failed, err={}", .{err}, @src());
 
             switch (err) {
                 error.NotInstalled => {
@@ -612,19 +615,19 @@ pub fn main() !void {
             return;
         };
         defer uninstaller.deinit();
-        uninstaller.uninstall(package_name) catch {
-            // try logger.errf("uninstall: failed, err={}", .{err}, @src());
+        uninstaller.uninstall(package_name) catch |err| {
+            try logger.errf("uninstall: failed, err={}", .{err}, @src());
             try printer.append("\nUninstalling {s} has failed...\n\n", .{package_name}, .{ .color = .red });
         };
-        // try logger.info("uninstall finished", @src());
+        try logger.info("uninstall finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "global-uninstall")) {
-        // try logger.info("running global-uninstall", @src());
+        try logger.info("running global-uninstall", @src());
         const target = try nextArg(&args, &printer, " > zep global-uninstall [target]@[version]");
         var split = std.mem.splitScalar(u8, target, '@');
-        // try logger.infof("global-uninstall: target={s}", .{target}, @src());
+        try logger.infof("global-uninstall: target={s}", .{target}, @src());
 
         const package_name = split.first();
         const package_version = split.next() orelse {
@@ -644,7 +647,7 @@ pub fn main() !void {
             package_name,
             package_version,
         ) catch |err| {
-            // try logger.errf("global-uninstall: failed, err={}", .{err}, @src());
+            try logger.errf("global-uninstall: failed, err={}", .{err}, @src());
 
             switch (err) {
                 error.PackageNotFound => {
@@ -663,20 +666,20 @@ pub fn main() !void {
         };
         Locales.VERBOSITY_MODE = previous_verbosity;
 
-        package.deletePackage(false) catch {
-            // try logger.errf("global-uninstall: failed, err={}", .{err}, @src());
+        package.deletePackage(false) catch |err| {
+            try logger.errf("global-uninstall: failed, err={}", .{err}, @src());
             try printer.append("\nDeleting failed.\n\n", .{}, .{ .color = .red });
             return;
         };
-        // try logger.info("global-uninstall finished", @src());
+        try logger.info("global-uninstall finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "fglobal-uninstall")) {
-        // try logger.info("running fglobal-uninstall", @src());
+        try logger.info("running fglobal-uninstall", @src());
 
         const target = try nextArg(&args, &printer, " > zep global-uninstall [target]@[version]");
-        // try logger.infof("fglobal-uninstall: target={s}", .{target}, @src());
+        try logger.infof("fglobal-uninstall: target={s}", .{target}, @src());
 
         var split = std.mem.splitScalar(u8, target, '@');
         const package_name = split.first();
@@ -698,7 +701,7 @@ pub fn main() !void {
             package_name,
             package_version,
         ) catch |err| {
-            // try logger.errf("fglobal-uninstall: failed, err={}", .{err}, @src());
+            try logger.errf("fglobal-uninstall: failed, err={}", .{err}, @src());
 
             switch (err) {
                 error.PackageNotFound => {
@@ -717,19 +720,19 @@ pub fn main() !void {
         };
         Locales.VERBOSITY_MODE = previous_verbosity;
 
-        package.deletePackage(true) catch {
-            // try logger.errf("fglobal-uninstall: failed, err={}", .{err}, @src());
+        package.deletePackage(true) catch |err| {
+            try logger.errf("fglobal-uninstall: failed, err={}", .{err}, @src());
 
             try printer.append("\nDeleting failed.\n\n", .{}, .{ .color = .red });
             return;
         };
-        // try logger.info("fglobal-uninstall finished", @src());
+        try logger.info("fglobal-uninstall finished", @src());
         try printer.append("\nPackage deleted, consequences ignored.\n\n", .{}, .{});
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "purge")) {
-        // try logger.info("running purge", @src());
+        try logger.info("running purge", @src());
 
         try Purger.purge(
             allocator,
@@ -738,14 +741,14 @@ pub fn main() !void {
             &paths,
             &manifest,
         );
-        // try logger.info("purge finished", @src());
+        try logger.info("purge finished", @src());
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "prebuilt")) {
-        // try logger.info("running prebuilt", @src());
+        try logger.info("running prebuilt", @src());
         const mode = try nextArg(&args, &printer, " > zep prebuilt [build|use|delete] [name]");
-        // try logger.infof("prebuilt: subcommand={s}", .{mode}, @src());
+        try logger.infof("prebuilt: subcommand={s}", .{mode}, @src());
 
         var prebuilt = try PreBuilt.init(
             allocator,
@@ -754,56 +757,56 @@ pub fn main() !void {
         );
 
         if (std.mem.eql(u8, mode, "build")) {
-            // try logger.info("running prebuilt: build", @src());
+            try logger.info("running prebuilt: build", @src());
             const name = try nextArg(&args, &printer, " > zep prebuilt build [name] [target?]");
             const target = args.next() orelse blk: {
                 try printer.append("No target specified! Rolling back to default \".\"\n\n", .{}, .{});
                 break :blk ".";
             };
-            // try logger.infof("prebuilt build: name={s}", .{name}, @src());
-            // try logger.infof("prebuilt build: target={s}", .{name}, @src());
+            try logger.infof("prebuilt build: name={s}", .{name}, @src());
+            try logger.infof("prebuilt build: target={s}", .{name}, @src());
             prebuilt.build(name, target) catch {
                 try printer.append("\nBuilding prebuilt has failed...\n\n", .{}, .{ .color = .red });
             };
-            // try logger.info("prebuilt build finished", @src());
+            try logger.info("prebuilt build finished", @src());
         } else if (std.mem.eql(u8, mode, "use")) {
-            // try logger.info("running prebuilt: use", @src());
+            try logger.info("running prebuilt: use", @src());
             const name = try nextArg(&args, &printer, " > zep prebuilt use [name] [target?]");
             const target = args.next() orelse blk: {
                 try printer.append("No target specified! Rolling back to default \".\"\n\n", .{}, .{});
                 break :blk ".";
             };
-            // try logger.infof("prebuilt use: name={s}", .{name}, @src());
-            // try logger.infof("prebuilt use: target={s}", .{name}, @src());
+            try logger.infof("prebuilt use: name={s}", .{name}, @src());
+            try logger.infof("prebuilt use: target={s}", .{name}, @src());
             prebuilt.use(name, target) catch {
                 try printer.append("\nUse prebuilt has failed...\n\n", .{}, .{ .color = .red });
             };
-            // try logger.info("prebuilt use finished", @src());
+            try logger.info("prebuilt use finished", @src());
         } else if (std.mem.eql(u8, mode, "delete")) {
-            // try logger.info("running prebuilt: delete", @src());
+            try logger.info("running prebuilt: delete", @src());
             const name = try nextArg(&args, &printer, " > zep prebuilt delete [name]");
-            // try logger.infof("prebuilt delete: target={s}", .{name}, @src());
+            try logger.infof("prebuilt delete: target={s}", .{name}, @src());
 
             prebuilt.delete(name) catch {
                 try printer.append("\nDeleting prebuilt has failed...\n\n", .{}, .{ .color = .red });
             };
-            // try logger.info("prebuilt delete finished", @src());
+            try logger.info("prebuilt delete finished", @src());
         } else if (std.mem.eql(u8, mode, "list")) {
-            // try logger.info("running prebuilt: list", @src());
+            try logger.info("running prebuilt: list", @src());
             try prebuilt.list();
-            // try logger.info("prebuilt list finished", @src());
+            try logger.info("prebuilt list finished", @src());
         } else {
-            // try logger.infof("invalid prebuilt mode={s}", .{mode}, @src());
+            try logger.infof("invalid prebuilt mode={s}", .{mode}, @src());
             try printer.append("Invalid mode: {s}\n\n", .{mode}, .{});
         }
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "zig")) {
-        // try logger.info("running zig", @src());
+        try logger.info("running zig", @src());
 
         const mode = try nextArg(&args, &printer, " > zep zig [install|switch|uninstall|list] [version]");
-        // try logger.infof("zig: mode={s}", .{mode}, @src());
+        try logger.infof("zig: mode={s}", .{mode}, @src());
 
         var zig = try Artifact.init(
             allocator,
@@ -818,11 +821,11 @@ pub fn main() !void {
             const version = try nextArg(&args, &printer, " > zep zig {install|switch|uninstall} [version] [target?]");
             const target = args.next() orelse resolveDefaultTarget();
 
-            // try logger.infof("running zig {s}: version={s} target={s}", .{ mode, version, target }, @src());
+            try logger.infof("running zig {s}: version={s} target={s}", .{ mode, version, target }, @src());
 
             if (std.mem.eql(u8, mode, "install")) {
                 zig.install(version, target) catch |err| {
-                    // try logger.errf("zig install: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                    try logger.errf("zig install: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     try printer.append("ERR: {any}\n\n", .{err}, .{});
                     switch (err) {
                         error.VersionNotInstalled => {
@@ -843,17 +846,17 @@ pub fn main() !void {
                     }
                     return;
                 };
-                // try logger.info("zig install: finished", @src());
+                try logger.info("zig install: finished", @src());
             } else if (std.mem.eql(u8, mode, "uninstall")) {
-                zig.uninstall(version, target) catch {
-                    // try logger.errf("zig uninstall: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                zig.uninstall(version, target) catch |err| {
+                    try logger.errf("zig uninstall: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     try printer.append("\nUninstalling zig version {s} has failed...\n\n", .{version}, .{ .color = .red });
                     return;
                 };
-                // try logger.info("zig uninstall: finished", @src());
+                try logger.info("zig uninstall: finished", @src());
             } else {
                 zig.switchVersion(version, target) catch |err| {
-                    // try logger.errf("zig switch: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                    try logger.errf("zig switch: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     switch (err) {
                         error.VersionNotInstalled => {
                             try printer.append("\nVersion {s} is not installed...\n\n", .{version}, .{ .color = .red });
@@ -876,11 +879,11 @@ pub fn main() !void {
                     }
                     return;
                 };
-                // try logger.info("zig switch: successful", @src());
+                try logger.info("zig switch: successful", @src());
             }
         } else if (std.mem.eql(u8, mode, "list")) {
             zig.list() catch |err| {
-                // try logger.errf("zig list: failed, err={any}", .{err}, @src());
+                try logger.errf("zig list: failed, err={any}", .{err}, @src());
                 switch (err) {
                     error.ManifestNotFound => {
                         try printer.append("\nManifest path is not defined! Use\n $ zep zig switch <zig-version>\nTo fix!\n", .{}, .{ .color = .red });
@@ -891,22 +894,22 @@ pub fn main() !void {
                 }
                 return;
             };
-            // try logger.info("zig list finished", @src());
+            try logger.info("zig list finished", @src());
         } else if (std.mem.eql(u8, mode, "prune")) {
             try zig.prune();
-            // try logger.info("zig prune finished", @src());
+            try logger.info("zig prune finished", @src());
         } else {
-            // try logger.errf("Invalid zig mode: {s}", .{mode}, @src());
+            try logger.errf("Invalid zig mode: {s}", .{mode}, @src());
             try printer.append("Invalid mode: {s}\n\n", .{mode}, .{});
         }
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "zep")) {
-        // try logger.info("running zep", @src());
+        try logger.info("running zep", @src());
 
         const mode = try nextArg(&args, &printer, " > zep zep [install|switch|uninstall|list] [version]");
-        // try logger.infof("zep: mode={s}", .{mode}, @src());
+        try logger.infof("zep: mode={s}", .{mode}, @src());
 
         var zep = try Artifact.init(
             allocator,
@@ -921,15 +924,15 @@ pub fn main() !void {
             const version = try nextArg(&args, &printer, " > zep zep {install|switch|uninstall} [version]");
             const target = args.next() orelse resolveDefaultTarget();
 
-            // try logger.infof(
-            //     "running: zep {s}, version={s} target={s}",
-            //     .{ mode, version, target },
-            //     @src(),
-            // );
+            try logger.infof(
+                "running: zep {s}, version={s} target={s}",
+                .{ mode, version, target },
+                @src(),
+            );
 
             if (std.mem.eql(u8, mode, "install")) {
                 zep.install(version, target) catch |err| {
-                    // try logger.errf("zep install: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                    try logger.errf("zep install: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     switch (err) {
                         error.VersionNotInstalled => {
                             try printer.append("\nVersion {s} is not installed...\n\n", .{version}, .{ .color = .red });
@@ -949,16 +952,16 @@ pub fn main() !void {
                     }
                     return;
                 };
-                // try logger.infof("zep install: finished, version={s} target={s}", .{ version, target }, @src());
+                try logger.infof("zep install: finished, version={s} target={s}", .{ version, target }, @src());
             } else if (std.mem.eql(u8, mode, "uninstall")) {
-                zep.uninstall(version, target) catch {
-                    // try logger.errf("zep uninstall: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                zep.uninstall(version, target) catch |err| {
+                    try logger.errf("zep uninstall: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     return;
                 };
-                // try logger.infof("zep uninstall: finished, version={s} target={s}", .{ version, target }, @src());
+                try logger.infof("zep uninstall: finished, version={s} target={s}", .{ version, target }, @src());
             } else {
                 zep.switchVersion(version, target) catch |err| {
-                    // try logger.errf("zep switch: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
+                    try logger.errf("zep switch: failed, version={s} target={s} err={any}", .{ version, target, err }, @src());
                     switch (err) {
                         error.VersionNotInstalled => {
                             try printer.append("\nVersion {s} is not installed...\n\n", .{version}, .{ .color = .red });
@@ -975,38 +978,38 @@ pub fn main() !void {
                     }
                     return;
                 };
-                // try logger.infof("zep switch: finished, version={s} target={s}", .{ version, target }, @src());
+                try logger.infof("zep switch: finished, version={s} target={s}", .{ version, target }, @src());
             }
         } else if (std.mem.eql(u8, mode, "list")) {
-            // try logger.info("running zep list", @src());
-            zep.list() catch {
-                // try logger.errf("zep list: failed, err={any}", .{err}, @src());
+            try logger.info("running zep list", @src());
+            zep.list() catch |err| {
+                try logger.errf("zep list: failed, err={any}", .{err}, @src());
                 return;
             };
-            // try logger.info("zep list finished", @src());
+            try logger.info("zep list finished", @src());
         } else if (std.mem.eql(u8, mode, "prune")) {
-            // try logger.info("running zep prune", @src());
+            try logger.info("running zep prune", @src());
             try zep.prune();
-            // try logger.info("zep prune finished", @src());
+            try logger.info("zep prune finished", @src());
         } else {
-            // try logger.errf("Invalid zep mode: {s}", .{mode}, @src());
+            try logger.errf("Invalid zep mode: {s}", .{mode}, @src());
             try printer.append("Invalid mode: {s}\n\n", .{mode}, .{});
         }
         return;
     }
 
     if (std.mem.eql(u8, subcommand, "cmd")) {
-        // try logger.info("running cmd", @src());
+        try logger.info("running cmd", @src());
 
         const mode = try nextArg(&args, &printer, " > zep cmd [run|add|remove|list] <cmd>");
-        // try logger.infof("cmd: mode={s}", .{mode}, @src());
+        try logger.infof("cmd: mode={s}", .{mode}, @src());
 
         var commander = Command.init(
             allocator,
             &printer,
             &manifest,
         ) catch |err| {
-            // try logger.errf("Commander init failed | err={any}", .{err}, @src());
+            try logger.errf("Commander init failed | err={any}", .{err}, @src());
             switch (err) {
                 error.ManifestNotFound => {
                     try printer.append("zep.json manifest was not found!\n\n", .{}, .{ .color = .red });
@@ -1020,24 +1023,24 @@ pub fn main() !void {
 
         if (std.mem.eql(u8, mode, "run")) {
             const cmd = try nextArg(&args, &printer, " > zep cmd add");
-            // try logger.infof("running cmd run: cmd={s}", .{cmd}, @src());
+            try logger.infof("running cmd run: cmd={s}", .{cmd}, @src());
             try commander.run(cmd);
-            // try logger.info("cmd run finished", @src());
+            try logger.info("cmd run finished", @src());
         } else if (std.mem.eql(u8, mode, "add")) {
-            // try logger.info("running cmd add", @src());
+            try logger.info("running cmd add", @src());
             try commander.add();
-            // try logger.info("cmd add finished", @src());
+            try logger.info("cmd add finished", @src());
         } else if (std.mem.eql(u8, mode, "remove")) {
             const cmd = try nextArg(&args, &printer, " > zep cmd remove [cmd]");
-            // try logger.infof("running cmd remove: cmd={s}", .{cmd}, @src());
+            try logger.infof("running cmd remove: cmd={s}", .{cmd}, @src());
             try commander.remove(cmd);
-            // try logger.info("cmd remove finished", @src());
+            try logger.info("cmd remove finished", @src());
         } else if (std.mem.eql(u8, mode, "list")) {
-            // try logger.info("running cmd list", @src());
+            try logger.info("running cmd list", @src());
             try commander.list();
-            // try logger.info("cmd list finished", @src());
+            try logger.info("cmd list finished", @src());
         }
-        // try logger.info("cmd finished", @src());
+        try logger.info("cmd finished", @src());
         return;
     }
 

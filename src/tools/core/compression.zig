@@ -20,8 +20,8 @@ pub const Compressor = struct {
         printer: *Printer,
         paths: *Constants.Paths.Paths,
     ) !Compressor {
-        // const logger = Logger.get();
-        // try logger.debug("Compressor: init", @src());
+        const logger = Logger.get();
+        try logger.debug("Compressor: init", @src());
 
         return Compressor{
             .allocator = allocator,
@@ -31,8 +31,8 @@ pub const Compressor = struct {
     }
 
     fn archive(self: *Compressor, tar_writer: anytype, fs_path: []const u8, real_path: []const u8) !void {
-        // const logger = Logger.get();
-        // try logger.debugf("archive: running fs={s} real={s}", .{ fs_path, real_path }, @src());
+        const logger = Logger.get();
+        try logger.debugf("archive: running fs={s} real={s}", .{ fs_path, real_path }, @src());
 
         var open_target = try Fs.openDir(fs_path);
         defer open_target.close();
@@ -54,7 +54,7 @@ pub const Compressor = struct {
                 continue;
             }
 
-            // try logger.debugf("archive: adding file {s}", .{input_fs_path}, @src());
+            try logger.debugf("archive: adding file {s}", .{input_fs_path}, @src());
 
             const reader_buffer: []u8 = try self.allocator.alloc(u8, 4096);
             const input_file = try std.fs.cwd().openFile(input_fs_path, .{ .mode = .read_only });
@@ -74,26 +74,26 @@ pub const Compressor = struct {
     }
 
     pub fn compress(self: *Compressor, target_folder: []const u8, compress_path: []const u8) !bool {
-        // const logger = Logger.get();
-        // try logger.debugf("compress: {s} => {s}", .{ target_folder, compress_path }, @src());
+        const logger = Logger.get();
+        try logger.debugf("compress: {s} => {s}", .{ target_folder, compress_path }, @src());
 
         if (!Fs.existsDir(target_folder)) {
-            // try logger.warnf("compress: target folder {s} does not exist, exiting", .{target_folder}, @src());
+            try logger.warnf("compress: target folder {s} does not exist, exiting", .{target_folder}, @src());
             return false;
         }
 
         if (!Fs.existsDir(self.paths.zepped)) {
-            // try logger.infof("compress: creating directory {s}", .{self.paths.zepped}, @src());
+            try logger.infof("compress: creating directory {s}", .{self.paths.zepped}, @src());
             _ = try Fs.openOrCreateDir(self.paths.zepped);
         }
 
         var buf: [256]u8 = undefined;
         const archive_path = try std.fmt.bufPrint(&buf, "{s}/{d}.tar", .{ self.paths.pkg_root, std.time.nanoTimestamp() });
         defer {
-            Fs.deleteFileIfExists(archive_path) catch {
-                // logger.warnf("compress: could not remove temp archive {s}, err={}", .{ archive_path, err }, @src()) catch {
-                //     @panic("Logger failed");
-                // };
+            Fs.deleteFileIfExists(archive_path) catch |err| {
+                logger.warnf("compress: could not remove temp archive {s}, err={}", .{ archive_path, err }, @src()) catch {
+                    @panic("Logger failed");
+                };
                 self.printer.append(
                     "\nRemoving temp archive failed! [{s}]\n",
                     .{archive_path},
@@ -105,7 +105,7 @@ pub const Compressor = struct {
         }
 
         blk: {
-            // try logger.debugf("compress: creating archive at {s}", .{archive_path}, @src());
+            try logger.debugf("compress: creating archive at {s}", .{archive_path}, @src());
 
             var archive_file = try std.fs.cwd().createFile(archive_path, .{ .truncate = true });
             defer archive_file.close();
@@ -113,17 +113,17 @@ pub const Compressor = struct {
             var writer = archive_file.writer(&b);
 
             var tar_writer = std.tar.Writer{ .prefix = "", .underlying_writer = &writer.interface };
-            // try logger.debug("compress: running archive function", @src());
+            try logger.debug("compress: running archive function", @src());
             try self.archive(&tar_writer, target_folder, "");
             break :blk;
         }
 
-        // try logger.debugf("compress: opening archive file {s}", .{archive_path}, @src());
+        try logger.debugf("compress: opening archive file {s}", .{archive_path}, @src());
         var archive_file = try Fs.openFile(archive_path);
         defer archive_file.close();
         const archive_file_stat = try archive_file.stat();
 
-        // try logger.debugf("compress: opening compress target {s}", .{compress_path}, @src());
+        try logger.debugf("compress: opening compress target {s}", .{compress_path}, @src());
         var compress_file = try Fs.openFile(compress_path);
         defer compress_file.close();
 
@@ -131,7 +131,7 @@ pub const Compressor = struct {
         defer self.allocator.free(data);
         _ = try archive_file.readAll(data);
 
-        // try logger.debug("compress: zstd compressing", @src());
+        try logger.debug("compress: zstd compressing", @src());
         const compressed = try zstd.compress(self.allocator, data, 3);
 
         const len = data.len;
@@ -142,29 +142,29 @@ pub const Compressor = struct {
             _ = try compress_file.writeAll("0");
         }
 
-        // try logger.debug("compress: writing compression data", @src());
+        try logger.debug("compress: writing compression data", @src());
         _ = try compress_file.writeAll(len_str);
         _ = try compress_file.writeAll(compressed);
 
-        // try logger.info("compress: compression done", @src());
+        try logger.info("compress: compression done", @src());
         return true;
     }
 
     pub fn decompress(self: *Compressor, zstd_path: []const u8, extract_path: []const u8) !bool {
-        // const logger = Logger.get();
-        // try logger.debugf("decompress: {s} => {s}", .{ zstd_path, extract_path }, @src());
+        const logger = Logger.get();
+        try logger.debugf("decompress: {s} => {s}", .{ zstd_path, extract_path }, @src());
 
         if (!Fs.existsDir(extract_path)) {
-            // try logger.infof("decompress: creating directory {s}", .{extract_path}, @src());
+            try logger.infof("decompress: creating directory {s}", .{extract_path}, @src());
             _ = try Fs.openOrCreateDir(extract_path);
         }
 
         if (!Fs.existsFile(zstd_path)) {
-            // try logger.warnf("decompress: zstd file {s} does not exist, exiting", .{zstd_path}, @src());
+            try logger.warnf("decompress: zstd file {s} does not exist, exiting", .{zstd_path}, @src());
             return false;
         }
 
-        // try logger.debugf("decompress: opening {s}", .{zstd_path}, @src());
+        try logger.debugf("decompress: opening {s}", .{zstd_path}, @src());
         var file = try Fs.openFile(zstd_path);
         defer file.close();
         const file_stat = try file.stat();
@@ -188,16 +188,16 @@ pub const Compressor = struct {
 
         const compressed_data = data[64..];
 
-        // try logger.debug("decompress: zstd decompressing", @src());
+        try logger.debug("decompress: zstd decompressing", @src());
         const decompressed = try zstd.decompress(self.allocator, compressed_data, @intCast(uncompressed_len));
 
         var reader = std.Io.Reader.fixed(decompressed);
 
-        // try logger.debugf("decompress: opening extract directory {s}", .{extract_path}, @src());
+        try logger.debugf("decompress: opening extract directory {s}", .{extract_path}, @src());
         var extract_dir = try Fs.openDir(extract_path);
         defer extract_dir.close();
 
-        // try logger.debug("decompress: extracting archive", @src());
+        try logger.debug("decompress: extracting archive", @src());
         std.tar.pipeToFileSystem(extract_dir, &reader, .{}) catch |err| {
             switch (err) {
                 error.EndOfStream => return true,
@@ -205,7 +205,7 @@ pub const Compressor = struct {
             }
         };
 
-        // try logger.info("decompress: done", @src());
+        try logger.info("decompress: done", @src());
         return true;
     }
 };

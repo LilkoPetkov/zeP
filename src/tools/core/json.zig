@@ -17,8 +17,8 @@ pub const Json = struct {
         allocator: std.mem.Allocator,
         paths: *Constants.Paths.Paths,
     ) !Json {
-        // const logger = Logger.get();
-        // try logger.debug("Json: init", @src());
+        const logger = Logger.get();
+        try logger.debug("Json: init", @src());
         return Json{
             .allocator = allocator,
             .paths = paths,
@@ -31,11 +31,11 @@ pub const Json = struct {
         path: []const u8,
         max: usize,
     ) !std.json.Parsed(T) {
-        // const logger = Logger.get();
-        // try logger.debugf("parseJsonFromFile: reading {s}", .{path}, @src());
+        const logger = Logger.get();
+        try logger.debugf("parseJsonFromFile: reading {s}", .{path}, @src());
 
         if (!Fs.existsFile(path)) {
-            // try logger.warnf("parseJsonFromFile: file not found {s}", .{path}, @src());
+            try logger.warnf("parseJsonFromFile: file not found {s}", .{path}, @src());
             return error.FileNotFound;
         }
 
@@ -44,7 +44,7 @@ pub const Json = struct {
 
         const data = try file.readToEndAlloc(self.allocator, max);
         const parsed = try std.json.parseFromSlice(T, self.allocator, data, .{});
-        // try logger.debugf("parseJsonFromFile: parsed {s} successfully", .{path}, @src());
+        try logger.debugf("parseJsonFromFile: parsed {s} successfully", .{path}, @src());
         return parsed;
     }
 
@@ -53,8 +53,8 @@ pub const Json = struct {
         path: []const u8,
         data: anytype,
     ) !void {
-        // const logger = Logger.get();
-        // try logger.debugf("writePretty: writing to {s}", .{path}, @src());
+        const logger = Logger.get();
+        try logger.debugf("writePretty: writing to {s}", .{path}, @src());
 
         const str = try std.json.Stringify.valueAlloc(
             self.allocator,
@@ -66,12 +66,12 @@ pub const Json = struct {
         defer file.close();
 
         _ = try file.write(str);
-        // try logger.infof("writePretty: successfully wrote {s}", .{path}, @src());
+        try logger.infof("writePretty: successfully wrote {s}", .{path}, @src());
     }
 
     pub fn parsePackage(self: *Json, package_name: []const u8) !std.json.Parsed(Structs.Packages.PackageStruct) {
-        // const logger = Logger.get();
-        // try logger.debugf("parsePackage: fetching package {s}", .{package_name}, @src());
+        const logger = Logger.get();
+        try logger.debugf("parsePackage: fetching package {s}", .{package_name}, @src());
 
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
@@ -92,7 +92,7 @@ pub const Json = struct {
         });
 
         if (fetched.status == .not_found) {
-            // try logger.warnf("parsePackage: package not found online {s}", .{package_name}, @src());
+            try logger.warnf("parsePackage: package not found online {s}", .{package_name}, @src());
 
             var local_path_buf: [128]u8 = undefined;
             const local_path = try std.fmt.bufPrint(
@@ -101,18 +101,18 @@ pub const Json = struct {
                 .{ self.paths.custom, package_name },
             );
             if (!Fs.existsFile(local_path)) {
-                // try logger.warnf("parsePackage: package not found locally {s}", .{local_path}, @src());
+                try logger.warnf("parsePackage: package not found locally {s}", .{local_path}, @src());
                 return error.PackageNotFound;
             }
 
             const parsed = try self.parseJsonFromFile(Structs.Packages.PackageStruct, local_path, Constants.Default.mb * 10);
-            // try logger.debugf("parsePackage: loaded package from local file {s}", .{local_path}, @src());
+            try logger.debugf("parsePackage: loaded package from local file {s}", .{local_path}, @src());
             return parsed;
         }
 
         const data = body.written();
         const parsed = try std.json.parseFromSlice(Structs.Packages.PackageStruct, self.allocator, data, .{});
-        // try logger.debugf("parsePackage: successfully fetched and parsed {s} from URL", .{url}, @src());
+        try logger.debugf("parsePackage: successfully fetched and parsed {s} from URL", .{url}, @src());
         return parsed;
     }
 };

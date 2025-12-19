@@ -1,7 +1,8 @@
 {
 	"schema": 1,
 	"included_modules": [
-		"zep_executeable_mod_mod"
+		"zep_executeable_mod_mod",
+		"loggersMod"
 	],
 	"excluded_modules": [
 		"localesMod",
