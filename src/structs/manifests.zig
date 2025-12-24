@@ -14,6 +14,10 @@ pub const PackagesManifest = struct {
     packages: []PackagePaths = &[_]PackagePaths{},
 };
 
+pub const AuthManifest = struct {
+    token: []const u8 = "",
+};
+
 pub const InjectorManifest = struct {
     schema: u8 = 1,
     included_modules: [][]const u8 = &[_][]const u8{},

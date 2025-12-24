@@ -39,8 +39,14 @@ pub const Compressor = struct {
 
         var iter = open_target.iterate();
         while (try iter.next()) |input_file_path| {
+            if (std.mem.eql(u8, input_file_path.name, ".git")) continue;
+            if (std.mem.eql(u8, input_file_path.name, ".github")) continue;
             if (std.mem.eql(u8, input_file_path.name, "zig-out")) continue;
             if (std.mem.eql(u8, input_file_path.name, ".zig-cache")) continue;
+            if (std.mem.eql(u8, input_file_path.name, "c")) continue;
+            if (std.mem.eql(u8, input_file_path.name, "zstd")) continue;
+            if (std.mem.eql(u8, input_file_path.name, "zep.run")) continue;
+            if (std.mem.eql(u8, input_file_path.name, ".zep")) continue;
 
             const tar_path = try std.fs.path.join(self.allocator, &.{ real_path, input_file_path.name });
             defer self.allocator.free(tar_path);
@@ -73,7 +79,11 @@ pub const Compressor = struct {
         }
     }
 
-    pub fn compress(self: *Compressor, target_folder: []const u8, compress_path: []const u8) !bool {
+    pub fn compress(
+        self: *Compressor,
+        target_folder: []const u8,
+        compress_path: []const u8,
+    ) !bool {
         const logger = Logger.get();
         try logger.debugf("compress: {s} => {s}", .{ target_folder, compress_path }, @src());
 

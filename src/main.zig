@@ -14,6 +14,7 @@ const Manifest = @import("core").Manifest;
 const Package = @import("core").Package;
 const Json = @import("core").Json;
 const Injector = @import("core").Injector;
+const Fetch = @import("core").Fetch;
 
 const Init = @import("lib/packages/init.zig").Init;
 const Installer = @import("lib/packages/install.zig").Installer;
@@ -31,6 +32,10 @@ const New = @import("lib/functions/new.zig");
 const Doctor = @import("lib/functions/doctor.zig");
 const Cache = @import("lib/functions/cache.zig").Cache;
 const Artifact = @import("lib/artifact/artifact.zig").Artifact;
+
+const Auth = @import("lib/cloud/auth.zig").Auth;
+const Project = @import("lib/cloud/project.zig").Project;
+const Release = @import("lib/cloud/release.zig").Release;
 
 const Args = @import("args.zig");
 
@@ -110,6 +115,7 @@ pub fn main() !void {
 
     var json = try Json.init(alloc, &paths);
     var manifest = try Manifest.init(alloc, &json, &paths);
+    var fetcher = try Fetch.init(alloc, &json, &paths);
 
     const subcommand = args.next() orelse {
         std.debug.print("Missing subcommand!", .{});
@@ -137,7 +143,7 @@ pub fn main() !void {
     defer arena_allocator.deinit();
 
     if (!is_created) {
-        var stdin_buf: [100]u8 = undefined;
+        var stdin_buf: [128]u8 = undefined;
         var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
         const stdin = &stdin_reader.interface;
 
@@ -156,7 +162,7 @@ pub fn main() !void {
 
     const zep_version_exists = Fs.existsFile(paths.zep_manifest);
     if (!zep_version_exists) {
-        var stdin_buf: [100]u8 = undefined;
+        var stdin_buf: [128]u8 = undefined;
         var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
         const stdin = &stdin_reader.interface;
         try printer.append("\nzep appears to be running outside fitting directory. Run '$ zep zep install'?\n", .{}, .{});
@@ -233,6 +239,117 @@ pub fn main() !void {
         return;
     }
 
+    if (std.mem.eql(u8, subcommand, "auth")) {
+        try logger.info("running new", @src());
+        const auth_command = try nextArg(&args, &printer, " > zep auth [login|register]");
+
+        var auth = try Auth.init(
+            allocator,
+            &printer,
+            &manifest,
+            &paths,
+            &fetcher,
+        );
+
+        if (std.mem.eql(u8, auth_command, "login")) {
+            try auth.login();
+            return;
+        }
+
+        if (std.mem.eql(u8, auth_command, "register")) {
+            try auth.register();
+            return;
+        }
+
+        if (std.mem.eql(u8, auth_command, "logout")) {
+            try auth.logout();
+            return;
+        }
+        return;
+    }
+
+    if (std.mem.eql(u8, subcommand, "whoami")) {
+        var auth = try Auth.init(
+            allocator,
+            &printer,
+            &manifest,
+            &paths,
+            &fetcher,
+        );
+        try auth.whoami();
+        return;
+    }
+
+    if (std.mem.eql(u8, subcommand, "project") or
+        std.mem.eql(u8, subcommand, "projects"))
+    {
+        const project_command = try nextArg(
+            &args,
+            &printer,
+            " > zep project [create|list|delete]",
+        );
+        var project = Project.init(
+            allocator,
+            &printer,
+            &manifest,
+            &paths,
+            &fetcher,
+        );
+
+        if (std.mem.eql(u8, project_command, "create")) {
+            try project.create();
+            return;
+        }
+
+        if (std.mem.eql(u8, project_command, "list") or
+            std.mem.eql(u8, project_command, "ls"))
+        {
+            try project.list();
+            return;
+        }
+
+        if (std.mem.eql(u8, project_command, "delete")) {
+            try project.delete();
+            return;
+        }
+        return;
+    }
+
+    if (std.mem.eql(u8, subcommand, "release") or
+        std.mem.eql(u8, subcommand, "releases"))
+    {
+        const release_command = try nextArg(
+            &args,
+            &printer,
+            " > zep release [create|list|delete]",
+        );
+        var release = Release.init(
+            allocator,
+            &printer,
+            &manifest,
+            &paths,
+            &fetcher,
+        );
+
+        if (std.mem.eql(u8, release_command, "create")) {
+            try release.create();
+            return;
+        }
+
+        if (std.mem.eql(u8, release_command, "list") or
+            std.mem.eql(u8, release_command, "ls"))
+        {
+            try release.list();
+            return;
+        }
+
+        if (std.mem.eql(u8, release_command, "delete")) {
+            try release.delete();
+            return;
+        }
+        return;
+    }
+
     if (std.mem.eql(u8, subcommand, "inject")) {
         try logger.info("running injector", @src());
         var injector = try Injector.init(
@@ -257,6 +374,7 @@ pub fn main() !void {
             &json,
             &paths,
             &manifest,
+            &fetcher,
             bootstrap_args.zig,
             bootstrap_args.deps,
         );
@@ -293,7 +411,9 @@ pub fn main() !void {
             &paths,
         );
         defer cache.deinit();
-        if (std.mem.eql(u8, cache_subcommand, "list") or std.mem.eql(u8, cache_subcommand, "ls")) {
+        if (std.mem.eql(u8, cache_subcommand, "list") or
+            std.mem.eql(u8, cache_subcommand, "ls"))
+        {
             try logger.info("running cache list", @src());
             try cache.list();
             try logger.info("cache list finished", @src());
@@ -345,6 +465,7 @@ pub fn main() !void {
                 &json,
                 &paths,
                 &manifest,
+                &fetcher,
                 false,
             );
             try installer.installAll();
@@ -385,7 +506,9 @@ pub fn main() !void {
             return;
         }
 
-        if (std.mem.eql(u8, mode, "list")) {
+        if (std.mem.eql(u8, mode, "list") or
+            std.mem.eql(u8, mode, "ls"))
+        {
             try logger.info("running package: list", @src());
             const target = args.next();
             if (target) |package| {
@@ -395,6 +518,8 @@ pub fn main() !void {
                     allocator,
                     &printer,
                     &json,
+                    &paths,
+                    &fetcher,
                     package_name,
                 );
                 lister.list() catch |err| {
@@ -510,6 +635,7 @@ pub fn main() !void {
             &json,
             &paths,
             &manifest,
+            &fetcher,
             package_name,
             package_version,
         );
@@ -536,6 +662,7 @@ pub fn main() !void {
             &json,
             &paths,
             &manifest,
+            &fetcher,
             install_args.inj,
         );
         defer installer.deinit();
@@ -644,6 +771,7 @@ pub fn main() !void {
             &json,
             &paths,
             &manifest,
+            &fetcher,
             package_name,
             package_version,
         ) catch |err| {
@@ -698,6 +826,7 @@ pub fn main() !void {
             &json,
             &paths,
             &manifest,
+            &fetcher,
             package_name,
             package_version,
         ) catch |err| {
@@ -791,7 +920,9 @@ pub fn main() !void {
                 try printer.append("\nDeleting prebuilt has failed...\n\n", .{}, .{ .color = .red });
             };
             try logger.info("prebuilt delete finished", @src());
-        } else if (std.mem.eql(u8, mode, "list")) {
+        } else if (std.mem.eql(u8, mode, "list") or
+            std.mem.eql(u8, mode, "ls"))
+        {
             try logger.info("running prebuilt: list", @src());
             try prebuilt.list();
             try logger.info("prebuilt list finished", @src());
@@ -881,7 +1012,9 @@ pub fn main() !void {
                 };
                 try logger.info("zig switch: successful", @src());
             }
-        } else if (std.mem.eql(u8, mode, "list")) {
+        } else if (std.mem.eql(u8, mode, "list") or
+            std.mem.eql(u8, mode, "ls"))
+        {
             zig.list() catch |err| {
                 try logger.errf("zig list: failed, err={any}", .{err}, @src());
                 switch (err) {
@@ -980,7 +1113,9 @@ pub fn main() !void {
                 };
                 try logger.infof("zep switch: finished, version={s} target={s}", .{ version, target }, @src());
             }
-        } else if (std.mem.eql(u8, mode, "list")) {
+        } else if (std.mem.eql(u8, mode, "list") or
+            std.mem.eql(u8, mode, "ls"))
+        {
             try logger.info("running zep list", @src());
             zep.list() catch |err| {
                 try logger.errf("zep list: failed, err={any}", .{err}, @src());
@@ -1035,7 +1170,9 @@ pub fn main() !void {
             try logger.infof("running cmd remove: cmd={s}", .{cmd}, @src());
             try commander.remove(cmd);
             try logger.info("cmd remove finished", @src());
-        } else if (std.mem.eql(u8, mode, "list")) {
+        } else if (std.mem.eql(u8, mode, "list") or
+            std.mem.eql(u8, mode, "ls"))
+        {
             try logger.info("running cmd list", @src());
             try commander.list();
             try logger.info("cmd list finished", @src());

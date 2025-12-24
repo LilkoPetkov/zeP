@@ -78,7 +78,7 @@ pub const CustomPackage = struct {
     }
 
     pub fn requestPackage(self: CustomPackage) !void {
-        var stdin_buf: [100]u8 = undefined;
+        var stdin_buf: [128]u8 = undefined;
         var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
         const stdin = &stdin_reader.interface;
 

@@ -38,7 +38,7 @@ pub const PackageFiles = struct {
         );
         defer zep_json.deinit();
 
-        var stdin_buf: [100]u8 = undefined;
+        var stdin_buf: [128]u8 = undefined;
         var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
         const stdin = &stdin_reader.interface;
         try self.printer.append("--- MODIFYING JSON MODE ---\n", .{}, .{

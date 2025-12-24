@@ -107,7 +107,7 @@ pub const Injector = struct {
                 return inject_method.nothing;
         }
 
-        var stdin_buf: [100]u8 = undefined;
+        var stdin_buf: [128]u8 = undefined;
         var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
         const stdin = &stdin_reader.interface;
         const prompt = try std.fmt.allocPrint(
@@ -302,7 +302,7 @@ pub const Injector = struct {
         const excluded_modules = injector_manifest.value.excluded_modules;
 
         display_module_blk: {
-            var stdin_buf: [100]u8 = undefined;
+            var stdin_buf: [128]u8 = undefined;
             var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
             const stdin = &stdin_reader.interface;
 
@@ -410,7 +410,7 @@ pub const Injector = struct {
         }
 
         verify_module_blk: {
-            var stdin_buf: [100]u8 = undefined;
+            var stdin_buf: [128]u8 = undefined;
             var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
             const stdin = &stdin_reader.interface;
 

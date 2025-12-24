@@ -30,10 +30,12 @@ pub fn paths(allocator: std.mem.Allocator) !Paths {
         .zig_root = try std.fs.path.join(allocator, &.{ base, "zeP", "zig" }),
         .zep_root = try std.fs.path.join(allocator, &.{ base, "zeP", "zep" }),
         .logs_root = try std.fs.path.join(allocator, &.{ base, "zeP", "logs" }),
+        .auth_root = try std.fs.path.join(allocator, &.{ base, "zeP", "auth" }),
 
         .pkg_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "pkg", "manifest.json" }),
         .zig_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "zig", "manifest.json" }),
         .zep_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "zep", "manifest.json" }),
+        .auth_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "auth", "manifest.json" }),
     };
 }
 
@@ -50,10 +52,12 @@ pub const Paths = struct {
     zig_root: []const u8,
     zep_root: []const u8,
     logs_root: []const u8,
+    auth_root: []const u8,
 
     pkg_manifest: []const u8,
     zig_manifest: []const u8,
     zep_manifest: []const u8,
+    auth_manifest: []const u8,
 
     pub fn deinit(self: *Paths) void {
         // self.allocator.free(self.base);
@@ -66,9 +70,11 @@ pub const Paths = struct {
         self.allocator.free(self.zig_root);
         self.allocator.free(self.zep_root);
         self.allocator.free(self.logs_root);
+        self.allocator.free(self.auth_root);
 
         self.allocator.free(self.pkg_manifest);
         self.allocator.free(self.zig_manifest);
         self.allocator.free(self.zep_manifest);
+        self.allocator.free(self.auth_manifest);
     }
 };

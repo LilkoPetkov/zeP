@@ -10,6 +10,7 @@ const Printer = @import("cli").Printer;
 const Hash = @import("hash.zig");
 const Manifest = @import("manifest.zig").Manifest;
 const Json = @import("json.zig").Json;
+const Fetch = @import("fetch.zig").Fetch;
 
 /// Handles Packages, returns null if package is not found.
 /// Rolls back to latest version if none was specified.
@@ -35,6 +36,7 @@ pub const Package = struct {
         json: *Json,
         paths: *Constants.Paths.Paths,
         manifest: *Manifest,
+        fetcher: *Fetch,
         package_name: []const u8,
         package_version: ?[]const u8,
     ) !Package {
@@ -43,11 +45,10 @@ pub const Package = struct {
 
         try printer.append("Finding the package...\n", .{}, .{});
 
-        // Load package manifest
-        const parsed_package = try json.parsePackage(package_name);
+        const parsed_package = try fetcher.fetchPackage(package_name);
         defer parsed_package.deinit();
 
-        try printer.append("Package Found! - {s}.json\n\n", .{package_name}, .{ .color = .green });
+        try printer.append("Package Found! - {s}\n\n", .{package_name}, .{ .color = .green });
         try logger.infof("Package.init: package {s} found", .{package_name}, @src());
 
         const versions = parsed_package.value.versions;

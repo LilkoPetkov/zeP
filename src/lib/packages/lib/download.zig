@@ -7,28 +7,38 @@ const Constants = @import("constants");
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 const Package = @import("core").Package;
+const Manifest = @import("core").Manifest;
+const Fetch = @import("core").Fetch;
 
 const Cacher = @import("cache.zig").Cacher;
 
 const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
+
+const Projects = @import("../../cloud/project.zig").Project;
 
 pub const Downloader = struct {
     allocator: std.mem.Allocator,
     cacher: Cacher,
     printer: *Printer,
     paths: *Constants.Paths.Paths,
+    manifest: *Manifest,
+    fetcher: *Fetch,
 
     pub fn init(
         allocator: std.mem.Allocator,
         cacher: Cacher,
         printer: *Printer,
         paths: *Constants.Paths.Paths,
+        manifest: *Manifest,
+        fetcher: *Fetch,
     ) !Downloader {
         return Downloader{
             .allocator = allocator,
             .cacher = cacher,
             .printer = printer,
             .paths = paths,
+            .manifest = manifest,
+            .fetcher = fetcher,
         };
     }
 
@@ -58,11 +68,57 @@ pub const Downloader = struct {
 
         try self.printer.append("Installing package... [{s}]\n", .{url}, .{});
 
-        const uri = try std.Uri.parse(url);
+        var project = Projects.init(
+            self.allocator,
+            self.printer,
+            self.manifest,
+            self.paths,
+            self.fetcher,
+        );
+        var split = std.mem.splitAny(u8, package_id, "@");
+        const package_name = split.first();
+        const package_version = split.next() orelse "";
+        const fetched_project = try project.getProject(package_name);
+        defer fetched_project.project.deinit();
+        defer fetched_project.releases.deinit();
+        for (fetched_project.releases.value) |r| {
+            if (std.mem.eql(u8, r.Release, package_version)) {
+                const target_url = r.Url;
+                var compressor = self.cacher.compressor;
 
+                const uri = try std.Uri.parse(target_url);
+                var client = std.http.Client{ .allocator = self.allocator };
+                defer client.deinit();
+                var body = std.Io.Writer.Allocating.init(self.allocator);
+                const fetched = try client.fetch(std.http.Client.FetchOptions{
+                    .location = .{
+                        .uri = uri,
+                    },
+                    .method = .GET,
+                    .response_writer = &body.writer,
+                });
+
+                if (fetched.status == .not_found) {
+                    return error.NotFound;
+                }
+
+                const data = body.written();
+                const temp_path = ".zep/.ZEPtmp/tmp.tar.zstd";
+                blk: {
+                    var temp_file = try Fs.openFile(temp_path);
+                    defer temp_file.close();
+                    _ = try temp_file.write(data);
+                    break :blk;
+                }
+                _ = try compressor.decompress(temp_path, path);
+                try Fs.deleteTreeIfExists(".zep/ZEPtmp");
+                return;
+            }
+        }
+
+        const uri = try std.Uri.parse(url);
         var client = std.http.Client{ .allocator = self.allocator };
         defer client.deinit();
-
         var body = std.Io.Writer.Allocating.init(self.allocator);
         const fetched = try client.fetch(std.http.Client.FetchOptions{
             .location = .{

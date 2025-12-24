@@ -121,7 +121,6 @@ pub const Artifact = struct {
             return error.NotFound;
         }
         const data = body.written();
-
         const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, data, .{});
         const obj = parsed.value.object;
 
@@ -182,7 +181,7 @@ pub const Artifact = struct {
                 try self.printer.append("Warning: {s} is below 0.8, which is incompatible with the newer versions.\n", .{target_version}, .{});
                 try self.printer.append("After installing this version, you will not be able to switch to 0.8 or later versions.\n", .{}, .{});
 
-                var stdin_buf: [100]u8 = undefined;
+                var stdin_buf: [128]u8 = undefined;
                 var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
                 const stdin = &stdin_reader.interface;
 
@@ -270,7 +269,7 @@ pub const Artifact = struct {
                 try self.printer.append("Warning: {s} is below 0.8, which is incompatible with the newer versions.\n", .{target_version}, .{});
                 try self.printer.append("After switching to this version, you will not be able to switch to 0.8 or later versions.\n", .{}, .{});
 
-                var stdin_buf: [100]u8 = undefined;
+                var stdin_buf: [128]u8 = undefined;
                 var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
                 const stdin = &stdin_reader.interface;
 

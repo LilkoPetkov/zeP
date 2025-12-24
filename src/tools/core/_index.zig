@@ -5,3 +5,5 @@ pub const Json = @import("json.zig").Json;
 pub const Manifest = @import("manifest.zig").Manifest;
 pub const Package = @import("package.zig").Package;
 pub const ZigInit = @import("zig_init.zig");
+pub const Zstd = @import("zstd.zig");
+pub const Fetch = @import("fetch.zig").Fetch;

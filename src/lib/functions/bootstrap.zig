@@ -7,6 +7,7 @@ const Structs = @import("structs");
 
 const Manifest = @import("core").Manifest;
 const Json = @import("core").Json;
+const Fetch = @import("core").Fetch;
 const Printer = @import("cli").Printer;
 const Fs = @import("io").Fs;
 
@@ -21,6 +22,7 @@ pub fn bootstrap(
     json: *Json,
     paths: *Constants.Paths.Paths,
     manifest: *Manifest,
+    fetcher: *Fetch,
     zig_version: []const u8,
     deps: [][]const u8,
 ) !void {
@@ -53,6 +55,7 @@ pub fn bootstrap(
             json,
             paths,
             manifest,
+            fetcher,
             false,
         ) catch |err| {
             switch (err) {

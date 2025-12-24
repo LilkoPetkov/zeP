@@ -10,6 +10,7 @@ const Json = @import("core").Json;
 const Compressor = @import("core").Compressor;
 const Package = @import("core").Package;
 const Injector = @import("core").Injector;
+const Fetch = @import("core").Fetch;
 const Printer = @import("cli").Printer;
 const Manifest = @import("core").Manifest;
 
@@ -25,6 +26,7 @@ pub const Installer = struct {
     printer: *Printer,
     paths: *Constants.Paths.Paths,
     manifest: *Manifest,
+    fetcher: *Fetch,
     force_inject: bool,
 
     pub fn init(
@@ -33,6 +35,7 @@ pub const Installer = struct {
         json: *Json,
         paths: *Constants.Paths.Paths,
         manifest: *Manifest,
+        fetcher: *Fetch,
         force_inject: bool,
     ) !Installer {
         const cacher = try Cacher.init(
@@ -45,6 +48,8 @@ pub const Installer = struct {
             cacher,
             printer,
             paths,
+            manifest,
+            fetcher,
         );
 
         return Installer{
@@ -55,6 +60,7 @@ pub const Installer = struct {
             .printer = printer,
             .paths = paths,
             .manifest = manifest,
+            .fetcher = fetcher,
             .force_inject = force_inject,
         };
     }
@@ -129,6 +135,7 @@ pub const Installer = struct {
             self.json,
             self.paths,
             self.manifest,
+            self.fetcher,
             package_name,
             package_version,
         );
