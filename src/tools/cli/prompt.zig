@@ -39,6 +39,7 @@ pub fn input(
         if (opts.required and line.len == 0) {
             try logger.warn("prompt input [required], line length is zero", @src());
             try stdout.flush();
+            try printer.clearScreen();
             try printer.print();
             continue;
         }
@@ -58,6 +59,7 @@ pub fn input(
                 try logger.warn("prompt input [validation] invalid", @src());
                 try stdout.print("\x1b[2K\r", .{}); // clear line
                 try stdout.flush();
+                try printer.clearScreen();
                 try printer.print();
                 continue;
             }

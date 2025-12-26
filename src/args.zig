@@ -6,7 +6,7 @@ const DoctorArgs = struct {
 };
 pub fn parseDoctor() !DoctorArgs {
     const params = comptime clap.parseParamsComptime(
-        \\-f, --fix             Display this help and exit.
+        \\-f, --fix             Fix given suggestions?
         \\<str>...
         \\
     );
@@ -35,8 +35,8 @@ const UninstallArgs = struct {
 };
 pub fn parseUninstall() !UninstallArgs {
     const params = comptime clap.parseParamsComptime(
-        \\-g, --global             Display this help and exit.
-        \\-f, --force             Display this help and exit.
+        \\-g, --global             Uninstall global package?
+        \\-f, --force             Force package uninstall?
         \\<str>...
         \\
     );
@@ -66,8 +66,8 @@ const InstallArgs = struct {
 };
 pub fn parseInstall() !InstallArgs {
     const params = comptime clap.parseParamsComptime(
-        \\-i, --inject             Display this help and exit.
-        \\-u, --unverified             Display this help and exit.
+        \\-i, --inject             Inject package into inject.zig?
+        \\-u, --unverified             Install packages from unverified source?
         \\<str>...
         \\
     );
@@ -97,8 +97,8 @@ const BootstrapArgs = struct {
 };
 pub fn parseBootstrap() !BootstrapArgs {
     const params = comptime clap.parseParamsComptime(
-        \\-z, --zig <str>  An option parameter which can be specified multiple times.
-        \\-d, --deps <str>  An option parameter which can be specified multiple times.
+        \\-z, --zig <str>  Zig version.
+        \\-d, --deps <str>  Packages to install.
         \\<str>...
         \\
     );
@@ -139,8 +139,8 @@ const RunnerArgs = struct {
 };
 pub fn parseRunner() !RunnerArgs {
     const params = comptime clap.parseParamsComptime(
-        \\-t, --target <str>  An option parameter which can be specified multiple times.
-        \\-a, --args <str>  An option parameter which can be specified multiple times.
+        \\-t, --target <str>  Target exe to run.
+        \\-a, --args <str>  Arguments to pass into exe.
         \\<str>...
         \\
     );

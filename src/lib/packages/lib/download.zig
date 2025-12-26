@@ -76,8 +76,11 @@ fn resolveCloudUrl(
     project: *Projects,
     name: []const u8,
     version: []const u8,
-) !?[]const u8 {
-    const fetched = project.getProject(name) catch return null;
+) ?[]const u8 {
+    const f = project.getProject(name) catch return null;
+    if (f == null) return null;
+    const fetched = f orelse return null;
+
     defer fetched.project.deinit();
     defer fetched.releases.deinit();
 
@@ -146,7 +149,7 @@ fn fetchPackage(
 
     try self.ctx.printer.append("{any}\n\n", .{install_unverified_packages}, .{});
     if (install_unverified_packages) {
-        const u = try resolveCloudUrl(&project, package_name, package_version);
+        const u = resolveCloudUrl(&project, package_name, package_version);
         if (u) |cloud_url| {
             try self.downloadAndExtract(
                 cloud_url,

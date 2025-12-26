@@ -94,6 +94,11 @@ pub fn register(self: *Auth) !void {
         return;
     }
 
+    try self.ctx.printer.append("--- REGISTER MODE ---\n\n", .{}, .{
+        .color = .yellow,
+        .weight = .bold,
+    });
+
     var stdin_buf: [128]u8 = undefined;
     var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
     const stdin = &stdin_reader.interface;
@@ -188,6 +193,11 @@ pub fn register(self: *Auth) !void {
 }
 
 pub fn login(self: *Auth) !void {
+    try self.ctx.printer.append("--- LOGIN MODE ---\n\n", .{}, .{
+        .color = .yellow,
+        .weight = .bold,
+    });
+
     var stdin_buf: [128]u8 = undefined;
     var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
     const stdin = &stdin_reader.interface;

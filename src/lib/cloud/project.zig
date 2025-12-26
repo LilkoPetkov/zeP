@@ -62,7 +62,7 @@ pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
     return parsed_projects_duped;
 }
 
-pub fn getProject(self: *Project, name: []const u8) !struct {
+pub fn getProject(self: *Project, name: []const u8) !?struct {
     project: std.json.Parsed(Structs.Fetch.ProjectStruct),
     releases: std.json.Parsed([]Structs.Fetch.ReleaseStruct),
 } {
@@ -85,9 +85,8 @@ pub fn getProject(self: *Project, name: []const u8) !struct {
     defer get_project_response.deinit();
     const get_project_object = get_project_response.value.object;
     const is_get_project_successful = get_project_object.get("success") orelse return error.InvalidFetch;
-    if (!is_get_project_successful.bool) {
-        return error.InvalidFetch;
-    }
+    if (!is_get_project_successful.bool) return null;
+
     const project = get_project_object.get("project") orelse return error.InvalidFetch;
     const project_decoded = try self.ctx.allocator.alloc(
         u8,
@@ -158,7 +157,7 @@ pub fn delete(self: *Project) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const fetched_project = try self.getProject(target.Name);
+    const fetched_project = try self.getProject(target.Name) orelse return error.NotFound;
     const project = fetched_project.project;
     defer project.deinit();
 
@@ -244,19 +243,49 @@ pub fn list(self: *Project) !void {
     try self.ctx.printer.append("\n", .{}, .{});
 }
 
+fn projectNameAvailable(project_name: []const u8) bool {
+    const allocator = std.heap.page_allocator;
+    const url = std.fmt.allocPrint(
+        allocator,
+        "http://localhost:5000/api/get/project?name={s}",
+        .{project_name},
+    ) catch return false;
+    defer allocator.free(url);
+    var client = std.http.Client{ .allocator = allocator };
+    defer client.deinit();
+    const f = client.fetch(
+        .{
+            .method = .GET,
+            .location = .{ .url = url },
+        },
+    ) catch return false;
+    return f.status != .ok;
+}
+
 pub fn create(self: *Project) !void {
+    try self.ctx.printer.append("--- CREATING PROJECT MODE ---\n\n", .{}, .{
+        .color = .yellow,
+        .weight = .bold,
+    });
+
     var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth_manifest.deinit();
     var stdin_buf: [128]u8 = undefined;
     var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
     const stdin = &stdin_reader.interface;
-    const project_release = try Prompt.input(
+    const project_name = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
         stdin,
         " > Name*: ",
-        .{ .required = true },
+        .{ .required = true, .validate = &projectNameAvailable },
     );
+
+    // const p = try self.getProject(project_name);
+    // if(p == null) return false;
+
+    // const n = project_name;
+
     const project_description = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
@@ -285,7 +314,7 @@ pub fn create(self: *Project) !void {
         description: []const u8,
     };
     const project_payload = ProjectPayload{
-        .name = project_release,
+        .name = project_name,
         .docs = project_docs,
         .description = project_description,
         .tags = project_tags,

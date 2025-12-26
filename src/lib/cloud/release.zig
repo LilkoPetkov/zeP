@@ -71,7 +71,8 @@ pub fn delete(self: *Release) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const fetched_project = try initted_project.getProject(project_target.Name);
+    const fetched = try initted_project.getProject(project_target.Name);
+    const fetched_project = fetched orelse return error.NotFound;
     const project = fetched_project.project;
     defer project.deinit();
 
@@ -170,7 +171,8 @@ pub fn list(self: *Release) !void {
         return error.InvalidSelection;
 
     const project_target = projects[project_index];
-    const fetched_project = try initted_project.getProject(project_target.Name);
+    const fetch = try initted_project.getProject(project_target.Name);
+    const fetched_project = fetch orelse return error.NotFound;
     const project = fetched_project.project;
     defer project.deinit();
 
@@ -188,11 +190,12 @@ pub fn list(self: *Release) !void {
     try self.ctx.printer.append("\n", .{}, .{});
 }
 
-const target_output_file = ".zep/.pkg/pkg.tar.zstd";
+const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
+const TEMPORARY_FILE = "pkg.tar.zstd";
 fn compressProject(
     self: *Release,
 ) ![]const u8 {
-    const output = target_output_file;
+    const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
 
     if (try self.ctx.compressor.compress("", output)) {
         try self.ctx.printer.append(
@@ -240,6 +243,11 @@ fn formFileHeader(
 }
 
 pub fn create(self: *Release) !void {
+    try self.ctx.printer.append("--- CREATING RELEASE MODE ---\n\n", .{}, .{
+        .color = .yellow,
+        .weight = .bold,
+    });
+
     var auth = try self.ctx.manifest.readManifest(
         Structs.Manifests.AuthManifest,
         self.ctx.paths.auth_manifest,
@@ -341,11 +349,12 @@ pub fn create(self: *Release) !void {
     const hash_hex =
         try std.fmt.allocPrint(self.ctx.allocator, "{x}", .{digest});
 
+    const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
     const body = try std.mem.concat(
         self.ctx.allocator,
         u8,
         &.{
-            try self.formFileHeader(target_output_file, "application/zstd"),
+            try self.formFileHeader(output, "application/zstd"),
             data,
             "\r\n",
             try self.formField("project_id", target.ID),

@@ -19,15 +19,19 @@ pub fn _controller(ctx: *Context) !void {
     Dispatcher.dispatcher(ctx, c) catch |err| {
         switch (err) {
             error.InvalidCommand => {
-                std.debug.print("Invalid Command.\n", .{});
+                try ctx.printer.append("Invalid Command.\n", .{}, .{});
+                return;
+            },
+            error.MissingSubcommand => {
+                try ctx.printer.append("Invalid Subcommand.\n", .{}, .{});
                 return;
             },
             error.MissingArguments => {
-                std.debug.print("Arguments Missing.\n", .{});
+                try ctx.printer.append("Arguments Missing.\n", .{}, .{});
                 return;
             },
             else => {
-                std.debug.print("Command failed.\n", .{});
+                try ctx.printer.append("Command failed.\n", .{}, .{});
                 return err;
             },
         }
