@@ -9,7 +9,7 @@ const Constants = @import("constants");
 const Fs = @import("io").Fs;
 const Package = @import("core").Package;
 
-const EXTRACT_DIRECTORY_PATH = ".zep/.ZEPtmp";
+const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 
 const Cacher = @import("cache.zig");
 const Projects = @import("../../cloud/project.zig");
@@ -94,10 +94,10 @@ fn resolveCloudUrl(
 
 fn extractZip(self: *Downloader, extract_path: []const u8, path: []const u8) !void {
     // create/open extract directory
-    var extract_directory = try Fs.openOrCreateDir(EXTRACT_DIRECTORY_PATH);
+    var extract_directory = try Fs.openOrCreateDir(TEMPORARY_DIRECTORY_PATH);
     defer extract_directory.close();
     defer {
-        Fs.deleteTreeIfExists(EXTRACT_DIRECTORY_PATH) catch {
+        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
             self.ctx.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = .red }) catch {};
         };
     }
@@ -119,7 +119,7 @@ fn extractZip(self: *Downloader, extract_path: []const u8, path: []const u8) !vo
         &buf,
         "{s}/{s}",
         .{
-            EXTRACT_DIRECTORY_PATH,
+            TEMPORARY_DIRECTORY_PATH,
             diagnostics.root_dir,
         },
     );

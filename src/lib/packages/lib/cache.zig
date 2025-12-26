@@ -95,9 +95,7 @@ pub fn getPackageFromCache(
     var temporary_directory = try Fs.openOrCreateDir(temporary_output_path);
     defer {
         temporary_directory.close();
-        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
-            self.ctx.printer.append("\nFailed to delete {s}!\n", .{TEMPORARY_DIRECTORY_PATH}, .{ .color = .red }) catch {};
-        };
+        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
         self.ctx.allocator.free(temporary_output_path);
     }
 

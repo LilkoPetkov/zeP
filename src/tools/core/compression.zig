@@ -13,12 +13,12 @@ const zstd = @import("zstd.zig");
 /// Handles compression using zstd, and
 /// recursion.
 allocator: std.mem.Allocator,
-printer: *Printer,
+printer: Printer,
 paths: Constants.Paths.Paths,
 
 pub fn init(
     allocator: std.mem.Allocator,
-    printer: *Printer,
+    printer: Printer,
     paths: Constants.Paths.Paths,
 ) Compressor {
     return Compressor{
@@ -113,11 +113,11 @@ pub fn compress(
         break :blk;
     }
 
-    var archive_file = try Fs.openFile(archive_path);
+    var archive_file = try Fs.openOrCreateFile(archive_path);
     defer archive_file.close();
     const archive_file_stat = try archive_file.stat();
 
-    var compress_file = try Fs.openFile(compress_path);
+    var compress_file = try Fs.openOrCreateFile(compress_path);
     defer compress_file.close();
 
     const data = try self.allocator.alloc(u8, @intCast(archive_file_stat.size));

@@ -70,12 +70,13 @@ const User = struct {
 };
 
 fn getUserData(self: *Auth) !std.json.Parsed(User) {
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
-    if (auth_manifest.value.token.len == 0) return error.NotAuthed;
+    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer auth.deinit();
+    if (auth.value.token.len == 0) return error.NotAuthed;
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
+
     const profile_response = try self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/whoami",
         &client,
@@ -83,8 +84,8 @@ fn getUserData(self: *Auth) !std.json.Parsed(User) {
             .method = .GET,
             .headers = &.{
                 std.http.Header{
-                    .name = "Bearer",
-                    .value = auth_manifest.value.token,
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
                 },
             },
         },
@@ -133,7 +134,7 @@ pub fn register(self: *Auth) !void {
             is_error = true;
         };
         if (is_error) break :blk;
-        return;
+        return error.AlreadyAuthed;
     }
 
     try self.ctx.printer.append("--- REGISTER MODE ---\n\n", .{}, .{
@@ -181,7 +182,7 @@ pub fn register(self: *Auth) !void {
         };
 
         const obj = check.value.object;
-        const success = obj.get("success") orelse return error.InvalidFetch;
+        const success = obj.get("success") orelse return error.FetchFailed;
         if (success.bool) {
             try self.ctx.printer.append("\nEmail already in use! Login via\n $ zep auth login\n\n", .{}, .{});
             return;
@@ -221,15 +222,17 @@ pub fn register(self: *Auth) !void {
         .password = password,
     };
 
-    const register_response = try self.ctx.fetcher.fetch(
+    const register_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/auth/register",
         &client,
         .{ .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, register_payload, .{}) },
-    );
+    ) catch return error.FetchFailed;
+
     defer register_response.deinit();
     const register_object = register_response.value.object;
     const is_register_successful = register_object.get("success") orelse return;
     if (!is_register_successful.bool) {
+        try self.ctx.printer.append("Register failed.\n", .{}, .{});
         return;
     }
 
@@ -249,24 +252,28 @@ pub fn register(self: *Auth) !void {
         .code = code,
         .email = email,
     };
-    const verify_response = try self.ctx.fetcher.fetch(
+    const verify_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/auth/verify",
         &client,
         .{
             .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, verify_payload, .{}),
         },
-    );
+    ) catch return error.FetchFailed;
     defer verify_response.deinit();
     const verify_object = verify_response.value.object;
     const is_verify_successful = verify_object.get("success") orelse return;
     if (!is_verify_successful.bool) {
+        try self.ctx.printer.append("Invalid code.\n", .{}, .{});
         return;
     }
+    try self.ctx.printer.append("Verified.\n", .{}, .{});
+
     const jwt_token = verify_object.get("jwt") orelse return;
     var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth_manifest.deinit();
     auth_manifest.value.token = jwt_token.string;
     try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+    try self.ctx.printer.append("Logged in.\n", .{}, .{});
 }
 
 pub fn login(self: *Auth) !void {
@@ -307,46 +314,53 @@ pub fn login(self: *Auth) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const login_response = try self.ctx.fetcher.fetch(
+    const login_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/auth/login",
         &client,
         .{ .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, login_payload, .{}) },
-    );
+    ) catch return error.FetchFailed;
     defer login_response.deinit();
     const login_object = login_response.value.object;
     const is_login_successful = login_object.get("success") orelse return;
-    if (!is_login_successful.bool) {
-        return;
-    }
+    if (!is_login_successful.bool) return error.InvalidPassword;
 
-    const token = login_object.get("jwt") orelse {
-        return;
-    };
+    const token = login_object.get("jwt") orelse return error.FetchFailed;
     var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth_manifest.deinit();
     auth_manifest.value.token = token.string;
     try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+
+    try self.ctx.printer.append("Logged in.\n", .{}, .{});
 }
 
 pub fn logout(self: *Auth) !void {
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
+    var is_error = false;
+    _ = self.getUserData() catch {
+        is_error = true;
+    };
+    if (is_error) return error.NotAuthed;
+
+    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer auth.deinit();
+    const bearer = try auth.value.bearer();
+    auth.value.token = "";
+    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth.value);
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
-    const logout_response = try self.ctx.fetcher.fetch(
+    const logout_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/auth/logout",
         &client,
         .{
             .method = .GET,
             .headers = &.{
                 std.http.Header{
-                    .name = "Bearer",
-                    .value = auth_manifest.value.token,
+                    .name = "Authorization",
+                    .value = bearer,
                 },
             },
         },
-    );
+    ) catch return error.FetchFailed;
     defer logout_response.deinit();
     const logout_object = logout_response.value.object;
     const logout_success = logout_object.get("success") orelse return error.FetchFailed;
@@ -354,6 +368,5 @@ pub fn logout(self: *Auth) !void {
         return error.FetchFailed;
     }
 
-    auth_manifest.value.token = "";
-    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+    try self.ctx.printer.append("Logged out.\n", .{}, .{});
 }

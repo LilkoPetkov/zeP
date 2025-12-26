@@ -63,16 +63,18 @@ pub fn input(
     var reader = std.fs.File.stdin().reader(&stdin_buf);
     const stdin = &reader.interface;
 
-    if (opts.password) {
-        switch (builtin.os.tag) {
-            .windows => try setEchoW(false),
-            else => try setEcho(false, reader.file.handle),
-        }
-        defer {
+    defer {
+        if (opts.password) {
             switch (builtin.os.tag) {
                 .windows => setEchoW(true) catch {},
                 else => setEcho(true, reader.file.handle) catch {},
             }
+        }
+    }
+    if (opts.password) {
+        switch (builtin.os.tag) {
+            .windows => try setEchoW(false),
+            else => try setEcho(false, reader.file.handle),
         }
     } else {
         switch (builtin.os.tag) {
@@ -143,7 +145,11 @@ pub fn input(
             printer.pop(1);
         }
 
-        try printer.append("{s}\n", .{result}, .{});
+        if (!opts.password) {
+            try printer.append("{s}\n", .{result}, .{});
+        } else {
+            try printer.append("\n", .{}, .{});
+        }
         return result;
     }
 }

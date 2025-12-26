@@ -10,6 +10,7 @@ const Fs = @import("io").Fs;
 const Compressor = @import("core").Compressor;
 
 const Context = @import("context");
+const mvzr = @import("mvzr");
 
 /// Handles Projects
 ctx: *Context,
@@ -26,24 +27,29 @@ pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
         self.ctx.paths.auth_manifest,
     );
     defer auth.deinit();
+    if (auth.value.token.len == 0) return error.NotAuthed;
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const res = try self.ctx.fetcher.fetch(
+    const res = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/get/projects",
         &client,
         .{
             .method = .GET,
             .headers = &.{
-                .{ .name = "Bearer", .value = auth.value.token },
+                .{
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
+                },
             },
         },
-    );
+    ) catch return error.FetchFailed;
+
     defer res.deinit();
 
     const encoded = res.value.object
-        .get("projects") orelse return error.InvalidFetch;
+        .get("projects") orelse return error.FetchFailed;
     const decoded = try self.ctx.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(encoded.string),
@@ -75,19 +81,20 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
-    const get_project_response = try self.ctx.fetcher.fetch(
+    const get_project_response = self.ctx.fetcher.fetch(
         url,
         &client,
         .{
             .method = .GET,
         },
-    );
+    ) catch return error.FetchFailed;
+
     defer get_project_response.deinit();
     const get_project_object = get_project_response.value.object;
-    const is_get_project_successful = get_project_object.get("success") orelse return error.InvalidFetch;
+    const is_get_project_successful = get_project_object.get("success") orelse return error.FetchFailed;
     if (!is_get_project_successful.bool) return null;
 
-    const project = get_project_object.get("project") orelse return error.InvalidFetch;
+    const project = get_project_object.get("project") orelse return error.FetchFailed;
     const project_decoded = try self.ctx.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(project.string),
@@ -100,7 +107,7 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
         .{},
     );
 
-    const releases = get_project_object.get("releases") orelse return error.InvalidFetch;
+    const releases = get_project_object.get("releases") orelse return error.FetchFailed;
     const release_decoded = try self.ctx.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(releases.string),
@@ -120,11 +127,15 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
 }
 
 pub fn delete(self: *Project) !void {
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
+    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer auth.deinit();
 
     const projects = try self.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
+    if (projects.len == 0) {
+        try self.ctx.printer.append("-- No projects --\n", .{}, .{});
+        return;
+    }
     for (projects, 0..) |p, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, p.Name }, .{});
     }
@@ -136,7 +147,6 @@ pub fn delete(self: *Project) !void {
         "TARGET >> ",
         .{ .required = true },
     );
-    try self.ctx.printer.append("\n", .{}, .{});
 
     const index = try std.fmt.parseInt(
         usize,
@@ -161,7 +171,7 @@ pub fn delete(self: *Project) !void {
     defer releases.deinit();
     if (releases.value.len != 0) {
         try self.ctx.printer.append(
-            " ! Selected project has {d} release(s)\n\n",
+            "! Selected project has {d} release(s)\n\n",
             .{releases.value.len},
             .{
                 .color = .red,
@@ -200,38 +210,42 @@ pub fn delete(self: *Project) !void {
         );
     }
 
-    const DeleteProjectPayload = struct {
-        id: []const u8,
-    };
-    const delete_project_payload = DeleteProjectPayload{
-        .id = target_id,
-    };
-
-    const delete_project_response = try self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/delete/project",
+    const url = try std.fmt.allocPrint(
+        self.ctx.allocator,
+        Constants.Default.zep_url ++ "/api/delete/project?id={s}",
+        .{target_id},
+    );
+    defer self.ctx.allocator.free(url);
+    const delete_project_response = self.ctx.fetcher.fetch(
+        url,
         &client,
         .{
             .method = .DELETE,
             .headers = &.{
                 std.http.Header{
-                    .name = "Bearer",
-                    .value = auth_manifest.value.token,
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
                 },
             },
-            .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, delete_project_payload, .{}),
         },
-    );
+    ) catch return error.FetchFailed;
     defer delete_project_response.deinit();
     const delete_project_object = delete_project_response.value.object;
     const is_delete_project_successful = delete_project_object.get("success") orelse return;
     if (!is_delete_project_successful.bool) {
+        try self.ctx.printer.append("Failed.\n", .{}, .{ .color = .red });
         return;
     }
+
+    try self.ctx.printer.append("Deleted.\n", .{}, .{});
 }
 
 pub fn list(self: *Project) !void {
     const projects = try self.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
+    if (projects.len == 0) {
+        try self.ctx.printer.append("-- No projects --\n", .{}, .{});
+    }
     for (projects) |r| {
         try self.ctx.printer.append(" - {s}\n  > {s}\n", .{ r.Name, r.ID }, .{});
     }
@@ -239,6 +253,10 @@ pub fn list(self: *Project) !void {
 }
 
 fn projectNameAvailable(project_name: []const u8) bool {
+    const project_patt = "^[a-zA-Z]{2,}";
+    const project_regex = mvzr.compile(project_patt).?;
+    if (!project_regex.isMatch(project_name)) return false;
+
     const allocator = std.heap.page_allocator;
     const url = std.fmt.allocPrint(
         allocator,
@@ -263,13 +281,19 @@ pub fn create(self: *Project) !void {
         .weight = .bold,
     });
 
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
+    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer auth.deinit();
+    if (auth.value.token.len == 0) return error.NotAuthed;
+
     const project_name = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
         " > Name*: ",
-        .{ .required = true, .validate = &projectNameAvailable },
+        .{
+            .required = true,
+            .validate = &projectNameAvailable,
+            .invalid_error_msg = "(invalid / occupied) project name",
+        },
     );
 
     const project_description = try Prompt.input(
@@ -304,23 +328,26 @@ pub fn create(self: *Project) !void {
     };
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
-    const project_response = try self.ctx.fetcher.fetch(
+    const project_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/post/project",
         &client,
         .{
             .headers = &.{
                 std.http.Header{
-                    .name = "Bearer",
-                    .value = auth_manifest.value.token,
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
                 },
             },
             .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, project_payload, .{}),
         },
-    );
+    ) catch return error.FetchFailed;
     defer project_response.deinit();
     const project_object = project_response.value.object;
     const is_project_successful = project_object.get("success") orelse return;
     if (!is_project_successful.bool) {
+        try self.ctx.printer.append("Failed.\n", .{}, .{ .color = .bright_red });
         return;
     }
+
+    try self.ctx.printer.append("Create.\n", .{}, .{});
 }

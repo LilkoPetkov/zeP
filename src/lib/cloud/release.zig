@@ -25,22 +25,25 @@ const Context = @import("context");
 /// Handles Projects
 ctx: *Context,
 
-pub fn init(
-    ctx: *Context,
-) Release {
+pub fn init(ctx: *Context) Release {
     return .{
         .ctx = ctx,
     };
 }
 
 pub fn delete(self: *Release) !void {
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
+    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer auth.deinit();
+    if (auth.value.token.len == 0) return error.NotAuthed;
 
     var initted_project = Projects.init(self.ctx);
-
     const projects = try initted_project.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
+    if (projects.len == 0) {
+        try self.ctx.printer.append("-- No projects --\n", .{}, .{});
+        return;
+    }
+
     for (projects, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
@@ -76,6 +79,10 @@ pub fn delete(self: *Release) !void {
     defer releases.deinit();
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
+    if (releases.value.len == 0) {
+        try self.ctx.printer.append("-- No releases --\n", .{}, .{});
+        return;
+    }
     for (releases.value, 0..) |v, i| {
         try self.ctx.printer.append(
             "  [{d}] - {s} {s}\n",
@@ -103,42 +110,45 @@ pub fn delete(self: *Release) !void {
 
     const release_target = releases.value[release_index];
 
-    const DeleteReleasePayload = struct {
-        id: []const u8,
-        project_id: []const u8,
-    };
-    const delete_release_payload = DeleteReleasePayload{
-        .id = release_target.ID,
-        .project_id = project_target.ID,
-    };
-
-    const delete_release_response = try self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/delete/release",
+    const url = try std.fmt.allocPrint(
+        self.ctx.allocator,
+        Constants.Default.zep_url ++ "/api/delete/release?id={s}&project_id={s}",
+        .{ release_target.ID, project_target.ID },
+    );
+    const delete_release_response = self.ctx.fetcher.fetch(
+        url,
         &client,
         .{
             .method = .DELETE,
             .headers = &.{
                 std.http.Header{
-                    .name = "Bearer",
-                    .value = auth_manifest.value.token,
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
                 },
             },
-            .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, delete_release_payload, .{}),
         },
-    );
+    ) catch return error.FetchFailed;
+
     defer delete_release_response.deinit();
     const delete_release_object = delete_release_response.value.object;
     const is_delete_release_successful = delete_release_object.get("success") orelse return;
     if (!is_delete_release_successful.bool) {
+        try self.ctx.printer.append("Failed.\n", .{}, .{ .color = .bright_red });
         return;
     }
+
+    try self.ctx.printer.append("Deleted.\n", .{}, .{});
 }
 
 pub fn list(self: *Release) !void {
     var initted_project = Projects.init(self.ctx);
-
     const projects = try initted_project.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
+    if (projects.len == 0) {
+        try self.ctx.printer.append("-- No projects --\n\n", .{}, .{});
+        return;
+    }
+
     for (projects, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
@@ -171,6 +181,10 @@ pub fn list(self: *Release) !void {
     defer releases.deinit();
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
+    if (releases.value.len == 0) {
+        try self.ctx.printer.append("-- No releases --\n", .{}, .{});
+    }
+
     for (releases.value, 0..) |v, i| {
         try self.ctx.printer.append(
             "  [{d}] - {s} {s}\n",
@@ -186,8 +200,11 @@ const TEMPORARY_FILE = "pkg.tar.zstd";
 fn compressProject(
     self: *Release,
 ) ![]const u8 {
+    defer {
+        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
+    }
     const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
-    try self.ctx.compressor.compress("", output);
+    try self.ctx.compressor.compress(".", output);
 
     try self.ctx.printer.append(
         "Compressed!\n\n",
@@ -237,6 +254,7 @@ pub fn create(self: *Release) !void {
         self.ctx.paths.auth_manifest,
     );
     defer auth.deinit();
+    if (auth.value.token.len == 0) return error.NotAuthed;
 
     var initted_project = Projects.init(self.ctx);
 
@@ -253,7 +271,7 @@ pub fn create(self: *Release) !void {
     }
 
     try self.ctx.printer.append(
-        "Select Project target:\n\n",
+        "Select Project target:\n",
         .{},
         .{ .color = .blue, .weight = .bold },
     );
@@ -273,7 +291,6 @@ pub fn create(self: *Release) !void {
         "TARGET >> ",
         .{ .required = true },
     );
-    try self.ctx.printer.append("\n", .{}, .{});
 
     const index = try std.fmt.parseInt(
         usize,
@@ -289,7 +306,7 @@ pub fn create(self: *Release) !void {
     const p_release = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
-        " > Release*: ",
+        " > [Version] Release*: ",
         .{ .required = true },
     );
 
@@ -357,18 +374,14 @@ pub fn create(self: *Release) !void {
     var req = try client.request(.POST, uri, .{});
     defer req.deinit();
 
-    req.headers.content_type = .{
-        .override = "multipart/form-data; boundary=" ++ boundary,
-    };
+    req.headers.content_type = .{ .override = "multipart/form-data; boundary=" ++ boundary };
+    req.headers.authorization = .{ .override = try auth.value.bearer() };
     req.transfer_encoding = .{ .content_length = body.len };
-    req.extra_headers = &.{
-        .{ .name = "Bearer", .value = auth.value.token },
-    };
 
-    _ = try req.sendBodyComplete(body);
+    _ = req.sendBodyComplete(body) catch return error.FetchFailed;
 
     var head_buf: [Constants.Default.kb]u8 = undefined;
-    var head = try req.receiveHead(&head_buf);
+    var head = req.receiveHead(&head_buf) catch return error.FetchFailed;
 
     var read_buf: [Constants.Default.kb]u8 = undefined;
     var response_reader = head.reader(&read_buf);

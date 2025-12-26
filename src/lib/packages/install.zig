@@ -36,7 +36,7 @@ pub fn deinit(self: *Installer) void {
     self.downloader.deinit();
 }
 
-fn checkIfPackageInstalled(
+fn isPackageFetched(
     self: *Installer,
     package_id: []const u8,
 ) !bool {
@@ -45,6 +45,21 @@ fn checkIfPackageInstalled(
         &.{
             self.ctx.paths.pkg_root,
             package_id,
+        },
+    );
+    defer self.ctx.allocator.free(target_path);
+    return Fs.existsDir(target_path);
+}
+
+fn isPackageInstalled(
+    self: *Installer,
+    package_name: []const u8,
+) !bool {
+    const target_path = try std.fs.path.join(
+        self.ctx.allocator,
+        &.{
+            Constants.Extras.package_files.zep_folder,
+            package_name,
         },
     );
     defer self.ctx.allocator.free(target_path);
@@ -64,6 +79,11 @@ fn uninstallPrevious(
         var uninstaller = Uninstaller.init(self.ctx);
         defer uninstaller.deinit();
         if (std.mem.eql(u8, lock_package.name, package.id)) {
+            try self.setPackage(package);
+            return error.AlreadyInstalled;
+        }
+
+        if (std.mem.startsWith(u8, lock_package.name, package.package_name)) {
             try self.setPackage(package);
 
             try self.ctx.printer.append(
@@ -88,9 +108,14 @@ pub fn install(
     package_name: []const u8,
     package_version: ?[]const u8,
 ) !void {
-    if (package_version) |v| {
+    blk: {
+        const v = package_version orelse break :blk;
         const package_id = try std.fmt.allocPrint(self.ctx.allocator, "{s}@{s}", .{ package_name, v });
-        if (try self.checkIfPackageInstalled(package_id)) return error.AlreadyInstalled;
+
+        if (try self.isPackageFetched(package_id)) {
+            if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
+        }
+        break :blk;
     }
 
     self.ctx.fetcher.install_unverified_packages = self.install_unverified_packages;
@@ -102,6 +127,16 @@ pub fn install(
         package_version,
     );
     defer package.deinit();
+    if (try self.isPackageFetched(package.id)) {
+        if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
+        try self.setPackage(package);
+        try self.ctx.printer.append(
+            "Successfully installed - {s}\n\n",
+            .{package.package_name},
+            .{ .color = .green },
+        );
+        return;
+    }
 
     const parsed = package.package;
     try self.uninstallPrevious(package);

@@ -32,7 +32,9 @@ pub fn list(self: *Cache) !void {
     var opened_cached_iter = opened_cached.iterate();
 
     try self.ctx.printer.append("\nListing cached items:\n", .{}, .{});
+    var is_items_listed = false;
     while (try opened_cached_iter.next()) |entry| {
+        is_items_listed = true;
         if (std.mem.endsWith(u8, entry.name, ".zep")) {
             const path = try std.fs.path.join(self.ctx.allocator, &.{ cached_path, entry.name });
             defer self.ctx.allocator.free(path);
@@ -42,6 +44,9 @@ pub fn list(self: *Cache) !void {
             continue;
         }
         try self.ctx.printer.append(" - {s}\n", .{entry.name}, .{});
+    }
+    if (!is_items_listed) {
+        try self.ctx.printer.append("No items cached\n", .{}, .{ .color = .red });
     }
     try self.ctx.printer.append("\n", .{}, .{});
 }

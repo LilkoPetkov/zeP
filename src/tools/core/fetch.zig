@@ -47,11 +47,11 @@ pub fn fetch(
     if (res.status == .not_found) {
         return error.NotFound;
     }
-
+    const written = body.written();
     return std.json.parseFromSlice(
         std.json.Value,
         self.allocator,
-        body.written(),
+        written,
         .{},
     );
 }
@@ -78,11 +78,11 @@ pub fn fetchProject(self: *Fetch, name: []const u8) !struct {
     );
     defer get_project_response.deinit();
     const get_project_object = get_project_response.value.object;
-    const is_get_project_successful = get_project_object.get("success") orelse return error.InvalidFetch;
+    const is_get_project_successful = get_project_object.get("success") orelse return error.FetchFailed;
     if (!is_get_project_successful.bool) {
-        return error.InvalidFetch;
+        return error.FetchFailed;
     }
-    const project = get_project_object.get("project") orelse return error.InvalidFetch;
+    const project = get_project_object.get("project") orelse return error.FetchFailed;
     const project_decoded = try self.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(project.string),
@@ -95,7 +95,7 @@ pub fn fetchProject(self: *Fetch, name: []const u8) !struct {
         .{},
     );
 
-    const releases = get_project_object.get("releases") orelse return error.InvalidFetch;
+    const releases = get_project_object.get("releases") orelse return error.FetchFailed;
     const release_decoded = try self.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(releases.string),
@@ -133,9 +133,8 @@ fn fetchFromProject(
         });
     }
 
-    const arena = try self.allocator.create(std.heap.ArenaAllocator);
-    return std.json.Parsed(Structs.Packages.PackageStruct){
-        .arena = arena, // or your arena
+    const p = std.json.Parsed(Structs.Packages.PackageStruct){
+        .arena = undefined,
         .value = .{
             .author = fetched.project.value.UserID,
             .name = fetched.project.value.Name,
@@ -143,6 +142,14 @@ fn fetchFromProject(
             .versions = versions.items,
         },
     };
+
+    const s = try std.json.Stringify.valueAlloc(self.allocator, p.value, .{});
+    return std.json.parseFromSlice(
+        Structs.Packages.PackageStruct,
+        self.allocator,
+        s,
+        .{},
+    );
 }
 
 fn fetchFromUrl(
@@ -152,7 +159,7 @@ fn fetchFromUrl(
     var buf: [128]u8 = undefined;
     const url = try std.fmt.bufPrint(
         &buf,
-        "https://zep.run/packages/{s}.json",
+        Constants.Default.zep_url ++ "/packages/{s}.json",
         .{package_name},
     );
 

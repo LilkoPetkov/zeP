@@ -3,18 +3,86 @@ const std = @import("std");
 const Auth = @import("../../lib/cloud/auth.zig");
 const Context = @import("context");
 
-fn authLogin(_: *Context, auth: *Auth) !void {
-    try auth.login();
+fn authLogin(ctx: *Context, auth: *Auth) !void {
+    auth.login() catch |err| {
+        switch (err) {
+            error.InvalidPassword => {
+                try ctx.printer.append("Invalid password.\n", .{}, .{});
+            },
+            error.FetchFailed => {
+                try ctx.printer.append(
+                    "Fetching login failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            else => {
+                try ctx.printer.append(
+                    "Login failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
     return;
 }
 
-fn authRegister(_: *Context, auth: *Auth) !void {
-    try auth.register();
+fn authRegister(ctx: *Context, auth: *Auth) !void {
+    auth.register() catch |err| {
+        switch (err) {
+            error.AlreadyAuthed => {
+                try ctx.printer.append(
+                    "Already authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.printer.append(
+                    "Fetching logout failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            else => {
+                try ctx.printer.append(
+                    "Logout failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
     return;
 }
 
-fn authLogout(_: *Context, auth: *Auth) !void {
-    try auth.logout();
+fn authLogout(ctx: *Context, auth: *Auth) !void {
+    auth.logout() catch |err| {
+        switch (err) {
+            error.NotAuthed => {
+                try ctx.printer.append(
+                    "Not authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.printer.append(
+                    "Fetching logout failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            else => {
+                try ctx.printer.append(
+                    "Logout failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
 }
 
 pub fn _authController(ctx: *Context) !void {

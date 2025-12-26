@@ -4,19 +4,17 @@ const Cache = @import("../../lib/functions/cache.zig");
 const Context = @import("context");
 
 fn cacheClean(ctx: *Context, cache: *Cache) !void {
-    const cache_name = ctx.args[3];
+    const cache_name = if (ctx.args.len < 4) null else ctx.args[3];
     try cache.clean(cache_name);
     return;
 }
 
-fn cacheSize(ctx: *Context, cache: *Cache) !void {
-    _ = ctx;
+fn cacheSize(_: *Context, cache: *Cache) !void {
     try cache.size();
     return;
 }
 
-fn cacheList(ctx: *Context, cache: *Cache) !void {
-    _ = ctx;
+fn cacheList(_: *Context, cache: *Cache) !void {
     try cache.list();
     return;
 }

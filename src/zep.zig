@@ -44,7 +44,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
 
     const compressor = Compressor.init(
         alloc,
-        &printer,
+        printer,
         paths,
     );
 

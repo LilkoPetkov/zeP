@@ -15,6 +15,7 @@ pub fn init(
 
     var config = logly.Config.default();
     config.auto_sink = false;
+    config.check_for_updates = false;
     config.console = false;
     config.debug_mode = false;
     config.global_console_display = false;

@@ -14,6 +14,18 @@ pub fn help(ctx: *Context) void {
         .{},
     );
     std.debug.print(
+        "--- AUTH COMMANDS ---\n  zep auth login\n  zep auth register\n  zep auth logout\n  zep whoami\n\n",
+        .{},
+    );
+    std.debug.print(
+        "--- RELEASE COMMANDS ---\n  zep release list\n  zep release create\n  zep release delete\n\n",
+        .{},
+    );
+    std.debug.print(
+        "--- PROJECT COMMANDS ---\n  zep project list\n  zep project create\n  zep project delete\n\n",
+        .{},
+    );
+    std.debug.print(
         "--- MANIFEST COMMANDS ---\n  zep init\n  zep manifest modify\n  zep manifest sync\n\n",
         .{},
     );
