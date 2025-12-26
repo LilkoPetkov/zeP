@@ -148,7 +148,7 @@ fn setPackage(
 ) !void {
     try self.addPackageToJson(package);
 
-    var injector = try Injector.init(
+    var injector = Injector.init(
         self.ctx.allocator,
         &self.ctx.printer,
         &self.ctx.manifest,

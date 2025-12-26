@@ -22,12 +22,12 @@ pub fn init(
 
     _ = try logger.add(.{
         .path = log_location,
-        .size_limit = 10 * 1024 * 1024,
+        .size_limit = 10 * Constants.Default.mb,
         .retention = 5,
     });
 
     try logger.bind("app", .{ .string = "zep" });
-    try logger.bind("version", .{ .string = "0.8.0" });
+    try logger.bind("version", .{ .string = "0.9.0" });
 
     logger_instance = logger;
 }

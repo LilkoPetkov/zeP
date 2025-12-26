@@ -6,8 +6,6 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn install(ctx: *Context) !void {
-    try ctx.logger.info("running install", @src());
-
     const install_args = try Args.parseInstall();
 
     const target = if (ctx.args.len < 3) null else ctx.args[2]; // package name;
@@ -18,13 +16,10 @@ fn install(ctx: *Context) !void {
     defer installer.deinit();
 
     if (target) |package| {
-        try ctx.logger.infof("install: package={s}", .{package}, @src());
         var split = std.mem.splitScalar(u8, package, '@');
         const package_name = split.first();
         const package_version = split.next();
         installer.install(package_name, package_version) catch |err| {
-            try ctx.logger.errf("install: failed, err={}", .{err}, @src());
-
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
@@ -41,9 +36,7 @@ fn install(ctx: *Context) !void {
             }
         };
     } else {
-        try ctx.logger.info("install: all", @src());
         installer.installAll() catch |err| {
-            try ctx.logger.infof("install all: failed, err={}", .{err}, @src());
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
@@ -57,8 +50,6 @@ fn install(ctx: *Context) !void {
             }
         };
     }
-
-    try ctx.logger.info("install: finished", @src());
     return;
 }
 

@@ -53,7 +53,6 @@ fn uninstall(ctx: *Context) !void {
     var uninstaller = Uninstaller.init(ctx);
     defer uninstaller.deinit();
 
-    try ctx.logger.infof("uninstall: package={s}", .{package}, @src());
     uninstaller.uninstall(package_name) catch |err| {
         switch (err) {
             error.NotInstalled => {
@@ -72,7 +71,6 @@ fn uninstall(ctx: *Context) !void {
                 try ctx.printer.append("\nUninstalling {s} has failed...\n\n", .{package_name}, .{ .color = .red });
             },
         }
-        try ctx.logger.errf("install: failed, err={}", .{err}, @src());
     };
     return;
 }

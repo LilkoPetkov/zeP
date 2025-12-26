@@ -7,37 +7,37 @@ const Package = @import("core").Package;
 const Context = @import("context");
 
 fn packageAdd(ctx: *Context) !void {
-    try ctx.logger.info("running package: add", @src());
     var custom = Custom.init(ctx);
     try custom.requestPackage();
-    try ctx.logger.info("running package: add finished", @src());
     return;
 }
 
 fn packageRemove(ctx: *Context) !void {
     if (ctx.args.len < 4) return error.MissingArguments;
-
-    try ctx.logger.info("running package: remove", @src());
     const package = ctx.args[3];
     var custom = Custom.init(ctx);
     try custom.removePackage(package);
-    try ctx.logger.info("running package: remove finished", @src());
     return;
 }
 
 fn packageList(ctx: *Context) !void {
     if (ctx.args.len < 4) return error.MissingArguments;
 
-    try ctx.logger.info("running package: list", @src());
     const package = ctx.args[3];
     var split = std.mem.splitScalar(u8, package, '@');
     const package_name = split.first();
     var lister = Lister.init(ctx, package_name);
     lister.list() catch |err| {
-        try ctx.logger.errf("running package: list failed, name={s} err={}", .{ package_name, err }, @src());
-        try ctx.printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
+        switch (err) {
+            error.PackageNotFound => {
+                try ctx.printer.append("Package not found...\n\n", .{}, .{ .color = .red });
+                return;
+            },
+            else => {
+                try ctx.printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
+            },
+        }
     };
-    try ctx.logger.info("running package: list finished", @src());
 }
 
 fn packageInfo(ctx: *Context) !void {

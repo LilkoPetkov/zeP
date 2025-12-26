@@ -53,10 +53,7 @@ pub fn init(
     printer: *Printer,
     manifest: *Manifest,
     force_inject: bool,
-) !Injector {
-    const logger = Logger.get();
-    try logger.info("Injector: init", @src());
-
+) Injector {
     return Injector{
         .allocator = allocator,
         .printer = printer,
@@ -66,11 +63,7 @@ pub fn init(
 }
 
 fn injector(self: *Injector, package_name: []const u8, path_name: []const u8) ![]u8 {
-    const logger = Logger.get();
-    try logger.infof("injector: creating template for package={s} path={s}", .{ package_name, path_name }, @src());
-
     const template = try self.renderInjector(package_name, path_name);
-    try logger.infof("injector: template replaced for package={s}", .{package_name}, @src());
 
     return template;
 }
@@ -141,9 +134,6 @@ fn shouldInject(
 }
 
 pub fn initInjector(self: *Injector) !void {
-    const logger = Logger.get();
-    try logger.info("initInjector: start", @src());
-
     var lock = try self.manifest.readManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
@@ -278,24 +268,15 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         if (!self.force_inject) return;
     }
 
-    const logger = Logger.get();
-    try logger.info("injectIntoBuildZig: start", @src());
-
     try ZigInit.createZigProject(self.printer, self.allocator, "myproject", null);
-    try logger.info("injectIntoBuildZig: created Zig project", @src());
-
     const path = "build.zig";
-    try logger.info("injectIntoBuildZig: opening build.zig", @src());
     var file = try Fs.openFile(path);
     defer file.close();
 
-    try logger.info("injectIntoBuildZig: read build.zig content", @src());
     const content = try file.readToEndAlloc(self.allocator, Constants.Default.mb * 2);
     defer self.allocator.free(content);
 
-    try logger.info("injectIntoBuildZig: finding build parameter", @src());
     const build_param = try self.findBuildParam(content);
-    try logger.infof("injectIntoBuildZig: build parameter={s}", .{build_param}, @src());
 
     var injector_manifest = try self.manifest.readManifest(Structs.Manifests.InjectorManifest, Constants.Extras.package_files.injector_manifest);
     defer injector_manifest.deinit();
@@ -322,7 +303,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         );
         const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
         if (answer_yes) {
-            try logger.info("injectIntoBuildZig: current imports accepted - exiting", @src());
             return;
         } else {
             try self.printer.append("\n", .{}, .{});
@@ -350,7 +330,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
 
     var split_data = std.mem.splitAny(u8, content, "\n");
 
-    try logger.info("injectIntoBuildZig: reading injector.json", @src());
     var new_included_modules = try std.ArrayList([]const u8).initCapacity(self.allocator, 10);
     defer new_included_modules.deinit(self.allocator);
     try new_included_modules.appendSlice(self.allocator, included_modules);
@@ -359,7 +338,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
     defer new_excluded_modules.deinit(self.allocator);
     try new_excluded_modules.appendSlice(self.allocator, excluded_modules);
 
-    try logger.info("injectIntoBuildZig: iterating over lines", @src());
     while (split_data.next()) |line| {
         if (contains(line, "__zepinj__")) continue;
         if (contains(line, "@import(\".zep/inject\")")) continue;
@@ -456,19 +434,16 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
             const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
             if (!answer_yes) {
                 try self.printer.append("Ok.\n", .{}, .{});
-                try logger.info("injectIntoBuildZig: changes rejected - exiting", @src());
                 return;
             }
         } else {
             try self.printer.append("No changes made.\n", .{}, .{});
-            try logger.info("injectIntoBuildZig: no changes made - exiting", @src());
             return;
         }
 
         break :verify_module_blk;
     }
 
-    try logger.info("injectIntoBuildZig: writing to manifest", @src());
     try self.manifest.writeManifest(
         Structs.Manifests.InjectorManifest,
         Constants.Extras.package_files.injector_manifest,
@@ -478,7 +453,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         },
     );
 
-    try logger.info("injectIntoBuildZig: writing to build.zig", @src());
     try file.seekTo(0);
     try file.setEndPos(0);
     const import_injector = "const __zepinj__ = @import(\".zep/injector.zig\");\n";
@@ -489,5 +463,4 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         }
         _ = try file.write(c);
     }
-    try logger.info("injectIntoBuildZig: injection complete", @src());
 }

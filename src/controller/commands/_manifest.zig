@@ -4,19 +4,14 @@ const PackageFiles = @import("../../lib/functions/package_files.zig");
 
 const Context = @import("context");
 
-fn manifestSync(ctx: *Context, pf: *PackageFiles) !void {
-    try ctx.logger.info("running manifest", @src());
+fn manifestSync(_: *Context, pf: *PackageFiles) !void {
     try pf.sync();
-
-    try ctx.logger.info("manifest finished", @src());
     return;
 }
 
-fn manifestModify(ctx: *Context, pf: *PackageFiles) !void {
-    try ctx.logger.info("running manifest", @src());
+fn manifestModify(_: *Context, pf: *PackageFiles) !void {
     try pf.modify();
     try pf.sync();
-    try ctx.logger.info("manifest finished", @src());
     return;
 }
 

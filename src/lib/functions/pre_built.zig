@@ -72,12 +72,8 @@ pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u
 
     try self.ctx.printer.append("Compressing now...\n", .{}, .{});
 
-    const is_compressed = try self.ctx.compressor.compress(target_path, path);
-    if (is_compressed) {
-        try self.ctx.printer.append("Compressed!\n\n", .{}, .{ .color = .green });
-    } else {
-        try self.ctx.printer.append("Compression failed...\n\n", .{}, .{ .color = .red });
-    }
+    try self.ctx.compressor.compress(target_path, path);
+    try self.ctx.printer.append("Compressed!\n\n", .{}, .{ .color = .green });
 }
 
 /// Deletes a pre-built package if it exists

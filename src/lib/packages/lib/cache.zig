@@ -91,9 +91,7 @@ pub fn getPackageFromCache(
 ) !void {
     try self.ctx.printer.append(" > CACHE HIT!\n", .{}, .{ .color = .green });
 
-    const temporary_output_path = try self.tmpOutputPath(
-        package_id,
-    );
+    const temporary_output_path = try self.tmpOutputPath(package_id);
     var temporary_directory = try Fs.openOrCreateDir(temporary_output_path);
     defer {
         temporary_directory.close();
@@ -103,19 +101,13 @@ pub fn getPackageFromCache(
         self.ctx.allocator.free(temporary_output_path);
     }
 
-    const cache_path = try self.cacheFilePath(
-        package_id,
-    );
+    const cache_path = try self.cacheFilePath(package_id);
     defer self.ctx.allocator.free(cache_path);
 
-    const extract_path = try self.extractPath(
-        package_id,
-    );
+    const extract_path = try self.extractPath(package_id);
     defer self.ctx.allocator.free(extract_path);
 
-    self.ctx.compressor.decompress(cache_path, extract_path) catch {
-        try self.ctx.printer.append(" ! CACHING FAILED!\n\n", .{}, .{ .color = .red });
-    };
+    try self.ctx.compressor.decompress(cache_path, extract_path);
 }
 
 pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
@@ -132,12 +124,8 @@ pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
 
     try self.ctx.printer.append("Caching now...\n", .{}, .{});
     const compress_path = try self.cacheFilePath(package_id);
-    const is_cached = try self.ctx.compressor.compress(target_folder, compress_path);
-    if (is_cached) {
-        try self.ctx.printer.append(" > PACKAGE CACHED!\n\n", .{}, .{ .color = .green });
-    } else {
-        try self.ctx.printer.append(" ! CACHING FAILED!\n\n", .{}, .{ .color = .red });
-    }
+    try self.ctx.compressor.compress(target_folder, compress_path);
+    try self.ctx.printer.append(" > PACKAGE CACHED!\n\n", .{}, .{ .color = .green });
 }
 
 pub fn deletePackageFromCache(

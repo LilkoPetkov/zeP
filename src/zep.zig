@@ -35,15 +35,12 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     try Logger.init(alloc, log_location);
     const logger = Logger.get();
 
-    try logger.info("logger inited", @src());
-    try logger.infof("running zep={s}", .{Constants.Default.version}, @src());
-
     var printer = try Printer.init(alloc);
     try printer.append("\n", .{}, .{});
 
-    const json = try Json.init(alloc, paths);
-    var manifest = try Manifest.init(alloc, json, paths);
-    const fetcher = try Fetch.init(alloc, json, paths);
+    const json = Json.init(alloc, paths);
+    var manifest = Manifest.init(alloc, json, paths);
+    const fetcher = Fetch.init(alloc, json, paths);
 
     const compressor = Compressor.init(
         alloc,
@@ -131,14 +128,12 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         Fs.existsFile(Constants.Extras.package_files.manifest) and
         Fs.existsDir(Constants.Extras.package_files.zep_folder))
     {
-        try logger.info("running within zep project", @src());
         const lock = try manifest.readManifest(
             Structs.ZepFiles.PackageLockStruct,
             Constants.Extras.package_files.lock,
         );
         defer lock.deinit();
         if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
-            try logger.warn("lockfile schema is not matching with zep version", @src());
             try printer.append("Lock file schema is NOT matching with zep version.\nAttempting to fix!\n", .{}, .{ .color = .red });
 
             try Fs.deleteFileIfExists(Constants.Extras.package_files.lock);
@@ -152,7 +147,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
 
             try installer.installAll();
             Locales.VERBOSITY_MODE = prev_verbosity;
-            try logger.info("repaired zep.lock schema", @src());
             try printer.append("Fixed.\n\n", .{}, .{ .color = .green });
         }
     }

@@ -60,7 +60,7 @@ pub fn uninstall(
     try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{});
     try self.removePackageFromJson(package_id);
 
-    var injector = try Injector.init(
+    var injector = Injector.init(
         self.ctx.allocator,
         &self.ctx.printer,
         &self.ctx.manifest,

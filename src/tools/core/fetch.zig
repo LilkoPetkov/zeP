@@ -19,9 +19,7 @@ pub fn init(
     allocator: std.mem.Allocator,
     json: Json,
     paths: Constants.Paths.Paths,
-) !Fetch {
-    const logger = Logger.get();
-    try logger.info("Fetch: init", @src());
+) Fetch {
     return Fetch{
         .allocator = allocator,
         .paths = paths,
@@ -202,9 +200,6 @@ pub fn fetchPackage(
     self: *Fetch,
     package_name: []const u8,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
-    const logger = Logger.get();
-    try logger.infof("fetchPackage: {s}", .{package_name}, @src());
-
     if (self.install_unverified_packages) {
         if (self.fetchFromProject(package_name)) |pkg| {
             return pkg;
@@ -219,6 +214,5 @@ pub fn fetchPackage(
         return pkg;
     } else |_| {}
 
-    try logger.warnf("fetchPackage: package not found {s}", .{package_name}, @src());
     return error.PackageNotFound;
 }

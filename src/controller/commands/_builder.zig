@@ -4,7 +4,6 @@ const Builder = @import("../../lib/functions/builder.zig");
 const Context = @import("context");
 
 fn builder(ctx: *Context) !void {
-    try ctx.logger.info("running builder", @src());
     var b = try Builder.init(ctx);
     _ = b.build() catch |err| {
         switch (err) {
@@ -21,7 +20,6 @@ fn builder(ctx: *Context) !void {
         }
     };
 
-    try ctx.logger.info("builder finished", @src());
     return;
 }
 

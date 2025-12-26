@@ -17,18 +17,7 @@ pub fn init(
 }
 
 pub fn list(self: *Lister) !void {
-    const parsed_package = self.ctx.fetcher.fetchPackage(self.package_name) catch |err| {
-        switch (err) {
-            error.PackageNotFound => {
-                try self.ctx.printer.append("Package not found...\n\n", .{}, .{ .color = .red });
-                return;
-            },
-            else => {
-                try self.ctx.printer.append("Parsing package failed...\n\n", .{}, .{ .color = .red });
-                return;
-            },
-        }
-    };
+    const parsed_package = try self.ctx.fetcher.fetchPackage(self.package_name);
     defer parsed_package.deinit();
 
     try self.ctx.printer.append("Package Found! - {s}\n\n", .{self.package_name}, .{ .color = .green });
@@ -44,6 +33,5 @@ pub fn list(self: *Lister) !void {
         }
     }
     try self.ctx.printer.append("\n", .{}, .{});
-
     return;
 }

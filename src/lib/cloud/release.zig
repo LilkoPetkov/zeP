@@ -196,20 +196,13 @@ fn compressProject(
     self: *Release,
 ) ![]const u8 {
     const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
+    try self.ctx.compressor.compress("", output);
 
-    if (try self.ctx.compressor.compress("", output)) {
-        try self.ctx.printer.append(
-            "Compressed!\n\n",
-            .{},
-            .{ .color = .green },
-        );
-    } else {
-        try self.ctx.printer.append(
-            "Compression failed...\n\n",
-            .{},
-            .{ .color = .red },
-        );
-    }
+    try self.ctx.printer.append(
+        "Compressed!\n\n",
+        .{},
+        .{ .color = .green },
+    );
 
     return output;
 }
