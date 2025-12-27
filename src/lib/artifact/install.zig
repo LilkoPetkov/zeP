@@ -208,8 +208,11 @@ fn decompressPosix(
     // In later zig versions this will hopefully get fixed,
     // however currently this design works, even though
     // it is a really bad eye-sore.
-    var deperecated_reader = reader.file.deprecatedReader();
-    var decompressed = try std.compress.xz.decompress(self.ctx.allocator, &deperecated_reader);
+    const deperecated_reader = reader.file.deprecatedReader();
+    var decompressed = try std.compress.xz.decompress(
+        self.ctx.allocator,
+        deperecated_reader,
+    );
     defer decompressed.deinit();
 
     var buf = try std.ArrayList(u8).initCapacity(self.ctx.allocator, 100);

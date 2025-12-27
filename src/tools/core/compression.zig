@@ -28,7 +28,7 @@ pub fn init(
     };
 }
 
-fn archive(self: *Compressor, tar_writer: anytype, fs_path: []const u8, real_path: []const u8) !void {
+fn archive(self: *Compressor, tar_writer: *std.tar.Writer, fs_path: []const u8, real_path: []const u8) !void {
     const alloc = std.heap.page_allocator;
 
     var open_target = try Fs.openDir(fs_path);

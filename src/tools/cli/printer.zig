@@ -131,16 +131,16 @@ pub fn pop(self: *Printer, pop_amount: u8) void {
 pub fn clearLines(_: *Printer, n: usize) !void {
     if (n == 0) return;
 
-    var stdout_buf: [1028]u8 = undefined;
-    var stdout_writer = std.fs.File.writer(std.fs.File.stdout(), &stdout_buf);
-    var stdout = &stdout_writer.interface;
+    var buf: [512 * 16]u8 = undefined;
+    var writer = std.fs.File.writer(std.fs.File.stdout(), &buf);
+    var w = &writer.interface;
 
     for (0..n) |i| {
-        try stdout.print("\x1b[2K\r", .{}); // clear line
-        if (@as(i8, @intCast(i)) - 1 < n) try stdout.print("\x1b[1A", .{}); // move up
+        try w.print("\x1b[2K\r", .{}); // clear line
+        if (@as(i8, @intCast(i)) - 1 < n) try w.print("\x1b[1A", .{}); // move up
     }
-    try stdout.print("\x1b[2K\r", .{}); // clear line
-    try stdout.flush();
+    try w.print("\x1b[2K\r", .{}); // clear line
+    try w.flush();
 }
 
 fn lineCount(s: []const u8) usize {
@@ -166,8 +166,8 @@ pub fn clearScreen(self: *Printer) !void {
 
 pub fn print(self: *Printer) !void {
     var buf: [512 * 16]u8 = undefined;
-    const writer = std.fs.File.stdout().writer(&buf);
-    var w = writer.interface;
+    var writer = std.fs.File.writer(std.fs.File.stdout(), &buf);
+    var w = &writer.interface;
 
     for (self.data.items) |d| {
         try w.print("{s}{s}{s}\x1b[0m", .{

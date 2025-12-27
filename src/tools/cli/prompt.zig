@@ -14,7 +14,7 @@ pub const InputStruct = struct {
 
 fn handleInvalid(
     printer: *Printer,
-    stdout: anytype,
+    stdout: *std.Io.Writer,
     opts: InputStruct,
     invalid_attempt: *bool,
 ) !void {
@@ -59,9 +59,9 @@ pub fn input(
     prompt: []const u8,
     opts: InputStruct,
 ) ![]const u8 {
-    var stdin_buf: [128]u8 = undefined;
-    var reader = std.fs.File.stdin().reader(&stdin_buf);
-    const stdin = &reader.interface;
+    var reader_buf: [512 * 16]u8 = undefined;
+    var reader = std.fs.File.reader(std.fs.File.stdin(), &reader_buf);
+    var r = &reader.interface;
 
     defer {
         if (opts.password) {
@@ -85,9 +85,9 @@ pub fn input(
 
     try printer.append("{s}", .{prompt}, .{});
 
-    var stdout_buf: [128]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
-    const stdout = &stdout_writer.interface;
+    var writer_buf: [128]u8 = undefined;
+    var writer = std.fs.File.writer(std.fs.File.stdout(), &writer_buf);
+    var w = &writer.interface;
 
     var invalid_attempt = false;
 
@@ -96,16 +96,16 @@ pub fn input(
             try printer.append("{s} => ", .{v}, .{});
         }
 
-        const raw = try stdin.takeDelimiterInclusive('\n');
+        const raw = try r.takeDelimiterInclusive('\n');
         defer allocator.free(raw);
 
         const line = std.mem.trimRight(u8, raw, "\r\n");
 
-        try stdout.print("\x1b[2K\r\x1b[1A", .{}); // clear + move up
+        try w.print("\x1b[2K\r\x1b[1A", .{}); // clear + move up
 
         // Required check
         if (opts.required and line.len == 0) {
-            try stdout.flush();
+            try w.flush();
             try printer.clearScreen();
             try printer.print();
             continue;
@@ -114,7 +114,7 @@ pub fn input(
         // Empty input => initial value
         if (line.len == 0) {
             if (opts.initial_value) |v| {
-                try stdout.flush();
+                try w.flush();
                 printer.pop(1);
                 try printer.append("{s}\n", .{v}, .{});
                 return try allocator.dupe(u8, v);
@@ -124,7 +124,7 @@ pub fn input(
         // Validation
         if (opts.validate) |validate_fn| {
             if (!validate_fn(line)) {
-                try handleInvalid(printer, stdout, opts, &invalid_attempt);
+                try handleInvalid(printer, w, opts, &invalid_attempt);
                 continue;
             }
         }
@@ -132,12 +132,12 @@ pub fn input(
         // Compare
         if (opts.compare) |cmp| {
             if (!std.mem.eql(u8, line, cmp)) {
-                try handleInvalid(printer, stdout, opts, &invalid_attempt);
+                try handleInvalid(printer, w, opts, &invalid_attempt);
                 continue;
             }
         }
 
-        try stdout.flush();
+        try w.flush();
 
         const result = try allocator.dupe(u8, line);
 
