@@ -331,7 +331,7 @@ pub fn create(self: *Release) !void {
     defer file.close();
 
     const stat = try file.stat();
-    const data = try self.ctx.allocator.alloc(u8, stat.size);
+    const data = try self.ctx.allocator.alloc(u8, @intCast(stat.size));
     defer self.ctx.allocator.free(data);
     _ = try file.readAll(data);
 

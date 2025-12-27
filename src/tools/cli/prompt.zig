@@ -67,19 +67,19 @@ pub fn input(
         if (opts.password) {
             switch (builtin.os.tag) {
                 .windows => setEchoW(true) catch {},
-                else => setEcho(true, reader.file.handle) catch {},
+                else => setEcho(reader.file.handle, true) catch {},
             }
         }
     }
     if (opts.password) {
         switch (builtin.os.tag) {
             .windows => try setEchoW(false),
-            else => try setEcho(false, reader.file.handle),
+            else => try setEcho(reader.file.handle, false),
         }
     } else {
         switch (builtin.os.tag) {
             .windows => try setEchoW(true),
-            else => try setEcho(true, reader.file.handle),
+            else => try setEcho(reader.file.handle, false),
         }
     }
 
