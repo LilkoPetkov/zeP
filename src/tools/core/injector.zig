@@ -281,6 +281,13 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
 
     display_module_blk: {
         try self.printer.append("Modules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
+        if (included_modules.len == 0) {
+            try self.printer.append(
+                " ! No Modules are importing packages. (not recommended)\n",
+                .{},
+                .{ .color = .red },
+            );
+        }
         for (included_modules) |mod| {
             try self.printer.append("  + {s}\n", .{mod}, .{});
         }

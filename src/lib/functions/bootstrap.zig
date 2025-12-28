@@ -18,21 +18,38 @@ pub fn bootstrap(
     zig_version: []const u8,
     deps: [][]const u8,
 ) !void {
-    const previous_verbosity = Locales.VERBOSITY_MODE;
-    Locales.VERBOSITY_MODE = 0;
+    try ctx.printer.append(
+        "-- GETTING ZIG --\n\n",
+        .{},
+        .{
+            .color = .blue,
+            .weight = .bold,
+        },
+    );
 
     var zig = try Artifact.init(ctx, .zig);
     defer zig.deinit();
 
     const default_target = Constants.Default.resolveDefaultTarget();
     try zig.install(zig_version, default_target);
-    Locales.VERBOSITY_MODE = previous_verbosity;
+
+    try ctx.printer.append("\n", .{}, .{});
 
     var initer = try Init.init(
         ctx,
         false,
     );
     try initer.commitInit();
+    try ctx.printer.append("\n", .{}, .{});
+
+    try ctx.printer.append(
+        "-- GETTING PACKAGES --\n\n",
+        .{},
+        .{
+            .color = .blue,
+            .weight = .bold,
+        },
+    );
 
     for (deps) |dep| {
         var d = std.mem.splitScalar(u8, dep, '@');
