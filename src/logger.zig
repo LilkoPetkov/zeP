@@ -11,14 +11,14 @@ pub fn init(
 ) !void {
     if (logger_instance != null) return;
 
-    var logger = try logly.Logger.init(alloc);
-
     var config = logly.Config.default();
     config.auto_sink = false;
     config.check_for_updates = false;
     config.console = false;
     config.debug_mode = false;
     config.global_console_display = false;
+
+    const logger = try logly.Logger.initWithConfig(alloc, config);
     logger.configure(config);
 
     _ = try logger.add(.{

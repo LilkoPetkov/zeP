@@ -78,10 +78,7 @@ fn uninstallPrevious(
     for (lock.value.packages) |lock_package| {
         var uninstaller = Uninstaller.init(self.ctx);
         defer uninstaller.deinit();
-        if (std.mem.eql(u8, lock_package.name, package.id)) {
-            try self.setPackage(package);
-            return error.AlreadyInstalled;
-        }
+        if (std.mem.eql(u8, lock_package.name, package.id)) return;
 
         if (std.mem.startsWith(u8, lock_package.name, package.package_name)) {
             try self.setPackage(package);
@@ -111,10 +108,8 @@ pub fn install(
     blk: {
         const v = package_version orelse break :blk;
         const package_id = try std.fmt.allocPrint(self.ctx.allocator, "{s}@{s}", .{ package_name, v });
-
-        if (try self.isPackageFetched(package_id)) {
-            if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
-        }
+        if (!try self.isPackageFetched(package_id)) break :blk;
+        if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
         break :blk;
     }
 
