@@ -47,10 +47,18 @@ fn setEchoW(enable: bool) !void {
     _ = kernel32.SetConsoleMode(stdout_handle, new_mode);
 }
 
-fn setEcho(fd: std.posix.fd_t, enable: bool) !void {
+fn setEchoL(enable: bool) !void {
+    const fd = std.fs.File.stdin().handle;
     var termios: std.posix.termios = try std.posix.tcgetattr(fd);
     termios.lflag.ECHO = enable;
     try std.posix.tcsetattr(fd, .NOW, termios);
+}
+
+fn setEcho(enable: bool) !void {
+    switch (builtin.os.tag) {
+        .windows => setEchoW(enable) catch {},
+        else => setEchoL(enable) catch {},
+    }
 }
 
 pub fn input(
@@ -63,25 +71,8 @@ pub fn input(
     var reader = std.fs.File.reader(std.fs.File.stdin(), &reader_buf);
     var r = &reader.interface;
 
-    defer {
-        if (opts.password) {
-            switch (builtin.os.tag) {
-                .windows => setEchoW(true) catch {},
-                else => setEcho(reader.file.handle, true) catch {},
-            }
-        }
-    }
-    if (opts.password) {
-        switch (builtin.os.tag) {
-            .windows => try setEchoW(false),
-            else => try setEcho(reader.file.handle, false),
-        }
-    } else {
-        switch (builtin.os.tag) {
-            .windows => try setEchoW(true),
-            else => try setEcho(reader.file.handle, true),
-        }
-    }
+    defer setEcho(true) catch {};
+    setEcho(!opts.password) catch {};
 
     try printer.append("{s}", .{prompt}, .{});
 

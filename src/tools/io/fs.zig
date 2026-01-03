@@ -5,14 +5,7 @@ const Logger = @import("logger");
 /// => Errors will return false
 pub fn existsFile(path: []const u8) bool {
     const cwd = std.fs.cwd();
-    var f = cwd.openFile(path, .{}) catch |err| switch (err) {
-        error.FileNotFound => {
-            return false;
-        },
-        else => {
-            return false;
-        },
-    };
+    var f = cwd.openFile(path, .{}) catch return false;
     defer f.close();
     return true;
 }
@@ -21,14 +14,7 @@ pub fn existsFile(path: []const u8) bool {
 /// => Errors will return false
 pub fn existsDir(path: []const u8) bool {
     const cwd = std.fs.cwd();
-    var d = cwd.openDir(path, .{}) catch |err| switch (err) {
-        error.FileNotFound => {
-            return false;
-        },
-        else => {
-            return false;
-        },
-    };
+    var d = cwd.openDir(path, .{}) catch return false;
     defer d.close();
     return true;
 }
