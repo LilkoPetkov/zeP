@@ -22,6 +22,8 @@ pub fn init(ctx: *Context) Project {
 }
 
 pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
+    try self.ctx.logger.info("Getting Projects", @src());
+
     var auth = try self.ctx.manifest.readManifest(
         Structs.Manifests.AuthManifest,
         self.ctx.paths.auth_manifest,
@@ -72,6 +74,8 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
     project: std.json.Parsed(Structs.Fetch.ProjectStruct),
     releases: std.json.Parsed([]Structs.Fetch.ReleaseStruct),
 } {
+    try self.ctx.logger.infof("Getting Project {s}", .{name}, @src());
+
     const url = try std.fmt.allocPrint(
         self.ctx.allocator,
         Constants.Default.zep_url ++ "/api/get/project?name={s}",
@@ -127,6 +131,8 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
 }
 
 pub fn delete(self: *Project) !void {
+    try self.ctx.logger.info("Deleting Project", @src());
+
     var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth.deinit();
 
@@ -154,8 +160,11 @@ pub fn delete(self: *Project) !void {
         10,
     );
 
-    if (index >= projects.len)
+    try self.ctx.logger.infof("Selected Project {d}", .{index}, @src());
+    if (index >= projects.len) {
+        try self.ctx.logger.info("Invalid Project Selection", @src());
         return error.InvalidSelection;
+    }
 
     const target = projects[index];
     const target_id = target.ID;
@@ -171,10 +180,11 @@ pub fn delete(self: *Project) !void {
     defer releases.deinit();
     if (releases.value.len != 0) {
         try self.ctx.printer.append(
-            "! Selected project has {d} release(s)\n\n",
+            "\nSelected project has {d} release(s)\n",
             .{releases.value.len},
             .{
                 .color = .red,
+                .weight = .bold,
             },
         );
         for (releases.value) |r| {
@@ -189,7 +199,7 @@ pub fn delete(self: *Project) !void {
             );
         }
         try self.ctx.printer.append(
-            "\nYou want to continue?\n\n",
+            "\nYou want to continue?\n",
             .{},
             .{},
         );
@@ -236,11 +246,12 @@ pub fn delete(self: *Project) !void {
         try self.ctx.printer.append("Failed.\n", .{}, .{ .color = .red });
         return;
     }
-
     try self.ctx.printer.append("Deleted.\n", .{}, .{});
 }
 
 pub fn list(self: *Project) !void {
+    try self.ctx.logger.info("Listing Project", @src());
+
     const projects = try self.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
     if (projects.len == 0) {
@@ -276,6 +287,8 @@ fn projectNameAvailable(project_name: []const u8) bool {
 }
 
 pub fn create(self: *Project) !void {
+    try self.ctx.logger.info("Creating Project", @src());
+
     try self.ctx.printer.append("--- CREATING PROJECT MODE ---\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
@@ -283,7 +296,9 @@ pub fn create(self: *Project) !void {
 
     var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth.deinit();
-    if (auth.value.token.len == 0) return error.NotAuthed;
+    if (auth.value.token.len == 0) {
+        return error.NotAuthed;
+    }
 
     const project_name = try Prompt.input(
         self.ctx.allocator,

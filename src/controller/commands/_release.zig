@@ -7,6 +7,7 @@ fn releaseCreate(ctx: *Context, release: *Release) !void {
     release.create() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -14,6 +15,7 @@ fn releaseCreate(ctx: *Context, release: *Release) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Create Release Failed", @src());
                 try ctx.printer.append(
                     "Fetching release create failed.\n",
                     .{},
@@ -21,6 +23,7 @@ fn releaseCreate(ctx: *Context, release: *Release) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Creating Release Failed", @src());
                 try ctx.printer.append(
                     "Creating release failed.\n",
                     .{},
@@ -36,6 +39,7 @@ fn releaseList(ctx: *Context, release: *Release) !void {
     release.list() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -43,6 +47,7 @@ fn releaseList(ctx: *Context, release: *Release) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Releases Failed", @src());
                 try ctx.printer.append(
                     "Fetching releases failed.\n",
                     .{},
@@ -50,8 +55,9 @@ fn releaseList(ctx: *Context, release: *Release) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Listing Releases Failed", @src());
                 try ctx.printer.append(
-                    "Listing release failed.\n",
+                    "Listing releases failed.\n",
                     .{},
                     .{ .color = .bright_red },
                 );
@@ -65,6 +71,7 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
     release.delete() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -72,6 +79,7 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Release Delete Failed", @src());
                 try ctx.printer.append(
                     "Fetching release delete failed.\n",
                     .{},
@@ -79,6 +87,7 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
                 );
             },
             error.NotFound => {
+                try ctx.logger.@"error"("Release Not Found", @src());
                 try ctx.printer.append(
                     "Release not found.\n",
                     .{},
@@ -86,6 +95,7 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Release Deletion Failed", @src());
                 try ctx.printer.append(
                     "Deleting release failed.\n",
                     .{},
@@ -98,7 +108,7 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
 }
 
 pub fn _releaseController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.ReleaseMissingSubcommand;
 
     var release = Release.init(ctx);
     const arg = ctx.args[2];

@@ -30,7 +30,7 @@ fn resolveVersion(
     const versions = parsed_package.value.versions;
     if (versions.len == 0) {
         printer.append("\nPackage has no version!\n", .{}, .{ .color = .red }) catch {};
-        return error.PackageVersion;
+        return error.NoPackageVersion;
     }
 
     try printer.append("Getting the package version...\n", .{}, .{});

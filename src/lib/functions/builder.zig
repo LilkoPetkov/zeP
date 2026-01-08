@@ -7,19 +7,11 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Context = @import("context");
 
-/// Handles running a build
-ctx: *Context,
-
-/// Initializes Builder
-pub fn init(ctx: *Context) !Builder {
-    return Builder{
-        .ctx = ctx,
-    };
-}
-
 /// Initializes a Child Processor, and builds zig project
-pub fn build(self: *Builder) !std.ArrayList([]u8) {
-    const read_manifest = try self.ctx.manifest.readManifest(
+pub fn build(ctx: *Context) !std.ArrayList([]u8) {
+    try ctx.logger.info("Building", @src());
+
+    const read_manifest = try ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
     );
@@ -37,32 +29,32 @@ pub fn build(self: *Builder) !std.ArrayList([]u8) {
         .{target},
     );
     const args = [_][]const u8{ "zig", "build", "-Doptimize=ReleaseSmall", execs, "-p", "zep-out/" };
-    try self.ctx.printer.append("\nExecuting: \n$ {s}!\n\n", .{try std.mem.join(self.ctx.allocator, " ", &args)}, .{ .color = .green });
+    try ctx.printer.append("\nExecuting: \n$ {s}!\n\n", .{try std.mem.join(ctx.allocator, " ", &args)}, .{ .color = .green });
 
-    var process = std.process.Child.init(&args, self.ctx.allocator);
+    var process = std.process.Child.init(&args, ctx.allocator);
     _ = try process.spawnAndWait();
-    try self.ctx.printer.append("\nFinished executing!\n", .{}, .{ .color = .green });
+    try ctx.printer.append("\nFinished executing!\n", .{}, .{ .color = .green });
 
-    const target_directory = try std.fs.path.join(self.ctx.allocator, &.{ "zep-out", "bin" });
-    defer self.ctx.allocator.free(target_directory);
+    const target_directory = try std.fs.path.join(ctx.allocator, &.{ "zep-out", "bin" });
+    defer ctx.allocator.free(target_directory);
 
     const dir = try Fs.openOrCreateDir(target_directory);
     var iter = dir.iterate();
 
-    var entries = try std.ArrayList([]const u8).initCapacity(self.ctx.allocator, 5);
-    defer entries.deinit(self.ctx.allocator);
+    var entries = try std.ArrayList([]const u8).initCapacity(ctx.allocator, 5);
+    defer entries.deinit(ctx.allocator);
     while (try iter.next()) |entry| {
-        try entries.append(self.ctx.allocator, entry.name);
+        try entries.append(ctx.allocator, entry.name);
     }
 
     if (entries.items.len == 0) {
         return error.NoFile;
     }
 
-    var target_files = try std.ArrayList([]u8).initCapacity(self.ctx.allocator, 5);
+    var target_files = try std.ArrayList([]u8).initCapacity(ctx.allocator, 5);
     for (entries.items) |entry| {
-        const target_file = try std.fs.path.join(self.ctx.allocator, &.{ target_directory, entry });
-        try target_files.append(self.ctx.allocator, target_file);
+        const target_file = try std.fs.path.join(ctx.allocator, &.{ target_directory, entry });
+        try target_files.append(ctx.allocator, target_file);
     }
     return target_files;
 }

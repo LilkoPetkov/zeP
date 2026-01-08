@@ -7,9 +7,11 @@ fn authLogin(ctx: *Context, auth: *Auth) !void {
     auth.login() catch |err| {
         switch (err) {
             error.InvalidPassword => {
+                try ctx.logger.@"error"("Invalid Password", @src());
                 try ctx.printer.append("Invalid password.\n", .{}, .{});
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Login Failed", @src());
                 try ctx.printer.append(
                     "Fetching login failed.\n",
                     .{},
@@ -17,6 +19,7 @@ fn authLogin(ctx: *Context, auth: *Auth) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Login Failed", @src());
                 try ctx.printer.append(
                     "Login failed.\n",
                     .{},
@@ -32,6 +35,7 @@ fn authRegister(ctx: *Context, auth: *Auth) !void {
     auth.register() catch |err| {
         switch (err) {
             error.AlreadyAuthed => {
+                try ctx.logger.@"error"("Already Authenticated", @src());
                 try ctx.printer.append(
                     "Already authenticated.\n",
                     .{},
@@ -39,15 +43,17 @@ fn authRegister(ctx: *Context, auth: *Auth) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Register Failed", @src());
                 try ctx.printer.append(
-                    "Fetching logout failed.\n",
+                    "Fetching Register failed.\n",
                     .{},
                     .{ .color = .bright_red },
                 );
             },
             else => {
+                try ctx.logger.@"error"("Registering Failed", @src());
                 try ctx.printer.append(
-                    "Logout failed.\n",
+                    "Registering failed.\n",
                     .{},
                     .{ .color = .bright_red },
                 );
@@ -61,6 +67,7 @@ fn authLogout(ctx: *Context, auth: *Auth) !void {
     auth.logout() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -68,6 +75,7 @@ fn authLogout(ctx: *Context, auth: *Auth) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetch Failed", @src());
                 try ctx.printer.append(
                     "Fetching logout failed.\n",
                     .{},
@@ -86,7 +94,7 @@ fn authLogout(ctx: *Context, auth: *Auth) !void {
 }
 
 pub fn _authController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.AuthMissingSubcommand;
 
     var auth = try Auth.init(ctx);
     const arg = ctx.args[2];

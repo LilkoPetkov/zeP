@@ -5,7 +5,7 @@ const New = @import("../../lib/functions/new.zig");
 const Context = @import("context");
 
 fn new(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingArguments;
+    if (ctx.args.len < 3) return error.NewMissingArguments;
     const name = ctx.args[2];
     try New.new(ctx, name);
     return;

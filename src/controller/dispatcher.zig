@@ -79,10 +79,101 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         .inject => InjectController._injectController(ctx),
         .manifest => ManifestController._manifestController(ctx),
         .builder => BuilderController._builderController(ctx),
-        .runner => RunnerController._newController(ctx),
+        .runner => RunnerController._runnerController(ctx),
         .new => NewController._newController(ctx),
         .init => InitController._initController(ctx),
         .bootstrap => BootstrapController._bootstrapController(ctx),
     };
-    try f;
+    f catch |err| {
+        try ctx.logger.errorf("Error. {any}", .{err}, @src());
+        switch (err) {
+            error.ZigMissingSubcommand => {
+                std.debug.print(
+                    "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n",
+                    .{},
+                );
+                std.debug.print(
+                    "  zep zig install [version] (target)\n  zep zig list\n  zep zig prune\n\n",
+                    .{},
+                );
+            },
+            error.ZepMissingSubcommand => {
+                std.debug.print(
+                    "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n",
+                    .{},
+                );
+                std.debug.print(
+                    "  zep zep install [version] (target)\n  zep zep list\n  zep zep prune\n\n",
+                    .{},
+                );
+            },
+            error.UninstallMissingArguments => {
+                std.debug.print(
+                    "--- PACKAGE COMMANDS ---\n  zep uninstall [target]\n\n",
+                    .{},
+                );
+            },
+            error.AuthMissingSubcommand => {
+                std.debug.print(
+                    "--- AUTH COMMANDS ---\n  zep auth login\n  zep auth register\n  zep auth logout\n  zep whoami\n\n",
+                    .{},
+                );
+            },
+            error.PreBuiltMissingSubcommand => {
+                std.debug.print(
+                    "--- PREBUILT COMMANDS ---\n  zep prebuilt [build|use] [name] (target)\n\n",
+                    .{},
+                );
+                std.debug.print(
+                    "  zep prebuilt delete [name]\n  zep prebuilt list\n\n",
+                    .{},
+                );
+            },
+            error.ReleaseMissingSubcommand => {
+                std.debug.print(
+                    "--- RELEASE COMMANDS ---\n  zep release list\n  zep release create\n  zep release delete\n\n",
+                    .{},
+                );
+            },
+            error.ProjectMissingSubcommand => {
+                std.debug.print(
+                    "--- PROJECT COMMANDS ---\n  zep project list\n  zep project create\n  zep project delete\n\n",
+                    .{},
+                );
+            },
+            error.CacheMissingSubcommand => {
+                std.debug.print(
+                    "--- CACHE COMMANDS ---\n  zep cache [list|clean|size] (package_id)\n\n",
+                    .{},
+                );
+            },
+            error.PackageMissingSubcommand => {
+                std.debug.print(
+                    "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
+                    .{},
+                );
+            },
+            error.PackageMissingArguments => {
+                std.debug.print(
+                    "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
+                    .{},
+                );
+            },
+            error.CmdMissingSubcommand => {
+                std.debug.print(
+                    "--- CMD COMMANDS ---\n  zep cmd run [cmd]\n  zep cmd add\n  zep cmd remove <cmd>\n  zep cmd list\n\n",
+                    .{},
+                );
+            },
+            error.NewMissingArguments => {
+                std.debug.print(
+                    "--- NEW COMMAND ---\n  zep new <name>\n\n",
+                    .{},
+                );
+            },
+            else => return err,
+        }
+    };
+
+    try ctx.logger.info("Done.", @src());
 }

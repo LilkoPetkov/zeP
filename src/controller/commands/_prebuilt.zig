@@ -47,7 +47,7 @@ fn prebuiltDelete(ctx: *Context, prebuilt: *PreBuilt) !void {
 }
 
 pub fn _prebuiltController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.PreBuiltMissingSubcommand;
 
     var prebuilt = try PreBuilt.init(ctx);
 

@@ -28,7 +28,7 @@ pub fn init(
     });
 
     try logger.bind("app", .{ .string = "zep" });
-    try logger.bind("version", .{ .string = "0.9.0" });
+    try logger.bind("version", .{ .string = Constants.Default.version });
 
     logger_instance = logger;
 }

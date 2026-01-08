@@ -24,6 +24,8 @@ pub fn init(ctx: *Context) !Cache {
 pub fn deinit(_: *Cache) void {}
 
 pub fn list(self: *Cache) !void {
+    try self.ctx.logger.info("Listing Cache", @src());
+
     const cached_path = self.ctx.paths.cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
@@ -52,6 +54,8 @@ pub fn list(self: *Cache) !void {
 }
 
 fn cleanSingle(self: *Cache, name: []const u8) !void {
+    try self.ctx.logger.infof("Cleaing Single {s}", .{name}, @src());
+
     const cached_path = self.ctx.paths.cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
@@ -113,6 +117,8 @@ fn cleanSingle(self: *Cache, name: []const u8) !void {
 }
 
 pub fn clean(self: *Cache, name: ?[]const u8) !void {
+    try self.ctx.logger.info("Cleaning Cache", @src());
+
     if (name) |n| {
         try self.cleanSingle(n);
         return;
@@ -179,6 +185,8 @@ pub fn clean(self: *Cache, name: ?[]const u8) !void {
 }
 
 fn getSize(self: *Cache) !u64 {
+    try self.ctx.logger.info("Getting Cache size", @src());
+
     const cached_path = self.ctx.paths.cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);

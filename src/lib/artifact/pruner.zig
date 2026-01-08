@@ -30,6 +30,8 @@ pub fn deinit(_: *ArtifactPruner) void {
 /// Prunes all Artifact versions
 /// With zero targets
 pub fn pruneVersions(self: *ArtifactPruner, artifact_type: Structs.Extras.ArtifactType) !void {
+    try self.ctx.logger.infof("Pruning {s}", .{if (artifact_type == .zig) "zig" else "zep"}, @src());
+
     const versions_directory = try std.fs.path.join(self.ctx.allocator, &.{
         if (artifact_type == .zig) self.ctx.paths.zig_root else self.ctx.paths.zep_root,
         "d",

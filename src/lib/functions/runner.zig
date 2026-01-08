@@ -22,9 +22,8 @@ pub fn init(ctx: *Context) Runner {
 
 /// Initializes a Child Processor, and executes specified file
 pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
-    var builder = try Builder.init(self.ctx);
     try self.ctx.printer.append("\nBuilding executeable...\n\n", .{}, .{ .color = .green });
-    var target_files = try builder.build();
+    var target_files = try Builder.build(self.ctx);
     defer target_files.deinit(self.ctx.allocator);
 
     var target_file = target_files.items[0];

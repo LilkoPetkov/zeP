@@ -7,7 +7,7 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn uninstall(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingArguments;
+    if (ctx.args.len < 3) return error.UninstallMissingArguments;
 
     const package = ctx.args[2]; // package name;
     var split = std.mem.splitScalar(u8, package, '@');

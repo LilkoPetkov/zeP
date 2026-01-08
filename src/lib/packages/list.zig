@@ -6,6 +6,8 @@ pub fn list(
     ctx: *Context,
     package_name: []const u8,
 ) !void {
+    try ctx.logger.info("Listing Package", @src());
+
     const parsed_package = try ctx.fetcher.fetchPackage(package_name);
     defer parsed_package.deinit();
 

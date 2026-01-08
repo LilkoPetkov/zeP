@@ -19,20 +19,10 @@ pub fn _controller(ctx: *Context) !void {
     Dispatcher.dispatcher(ctx, c) catch |err| {
         switch (err) {
             error.InvalidCommand => {
-                try ctx.printer.append("Invalid Command.\n", .{}, .{});
-                return;
-            },
-            error.MissingSubcommand => {
-                try ctx.printer.append("Invalid Subcommand.\n", .{}, .{});
-                return;
-            },
-            error.MissingArguments => {
-                try ctx.printer.append("Arguments Missing.\n", .{}, .{});
-                return;
+                try ctx.printer.append("Invalid Command. Run: \n $ zep help\n\n", .{}, .{});
             },
             else => {
                 try ctx.printer.append("Command failed.\n", .{}, .{});
-                return err;
             },
         }
     };

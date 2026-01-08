@@ -35,7 +35,10 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     try Logger.init(alloc, log_location);
     const logger = Logger.get();
 
-    var printer = try Printer.init(alloc);
+    try logger.info("Initializing zep...", @src());
+    var printer = Printer.init(alloc) catch {
+        return error.OutOfMemory;
+    };
     try printer.append("\n", .{}, .{});
 
     const json = Json.init(alloc, paths);
@@ -90,6 +93,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             std.mem.startsWith(u8, answer, "y") or
             std.mem.startsWith(u8, answer, "Y"))
         {
+            try logger.info("Running setup...", @src());
             try Setup.setup(
                 ctx.allocator,
                 &ctx.paths,
@@ -111,6 +115,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             std.mem.startsWith(u8, answer, "y") or
             std.mem.startsWith(u8, answer, "Y"))
         {
+            try logger.info("Installing latest zep version...", @src());
+
             var zep = try Artifact.init(
                 &ctx,
                 .zep,
@@ -132,6 +138,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         );
         defer lock.deinit();
         if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
+            try logger.info("Correcting Lock file...", @src());
+
             try printer.append("Lock file schema is NOT matching with zep version.\nAttempting to fix!\n", .{}, .{ .color = .red });
 
             try Fs.deleteFileIfExists(Constants.Extras.package_files.lock);

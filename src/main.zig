@@ -9,8 +9,14 @@ pub fn main() !void {
     defer arena.deinit();
 
     // start
-    var context = try Zep.start(arena.allocator());
+    var context = Zep.start(arena.allocator()) catch |err| {
+        std.debug.print("Starting zeP has failed.\nWith Error: {any}\n\n", .{err});
+        return;
+    };
     defer context.deinit();
 
-    try Controller._controller(&context);
+    Controller._controller(&context) catch |err| {
+        std.debug.print("Controller has failed.\nWith Error: {any}\n\n", .{err});
+        return;
+    };
 }

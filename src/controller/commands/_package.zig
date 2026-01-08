@@ -13,7 +13,7 @@ fn packageAdd(ctx: *Context) !void {
 }
 
 fn packageRemove(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.args.len < 4) return error.PackageMissingArguments;
     const package = ctx.args[3];
     var custom = Custom.init(ctx);
     try custom.removePackage(package);
@@ -21,7 +21,7 @@ fn packageRemove(ctx: *Context) !void {
 }
 
 fn packageList(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.args.len < 4) return error.PackageMissingArguments;
 
     const package = ctx.args[3];
     var split = std.mem.splitScalar(u8, package, '@');
@@ -40,7 +40,7 @@ fn packageList(ctx: *Context) !void {
 }
 
 fn packageInfo(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.args.len < 4) return error.PackageMissingArguments;
 
     const package_id = ctx.args[3];
     var split = std.mem.splitScalar(u8, package_id, '@');
@@ -65,7 +65,7 @@ fn packageInfo(ctx: *Context) !void {
 }
 
 pub fn _packageController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.PackageMissingSubcommand;
 
     const arg = ctx.args[2];
     if (std.mem.eql(u8, arg, "add"))

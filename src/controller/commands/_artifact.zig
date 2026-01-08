@@ -83,7 +83,12 @@ pub fn _artifactController(
     ctx: *Context,
     artifact_type: Structs.Extras.ArtifactType,
 ) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) {
+        switch (artifact_type) {
+            .zep => return error.ZepMissingSubcommand,
+            .zig => return error.ZigMissingSubcommand,
+        }
+    }
 
     var artifact = try Artifact.init(
         ctx,

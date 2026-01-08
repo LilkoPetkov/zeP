@@ -7,6 +7,7 @@ fn projectCreate(ctx: *Context, project: *Project) !void {
     project.create() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -14,6 +15,7 @@ fn projectCreate(ctx: *Context, project: *Project) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Create Project Failed", @src());
                 try ctx.printer.append(
                     "Fetching project create failed.\n",
                     .{},
@@ -21,6 +23,7 @@ fn projectCreate(ctx: *Context, project: *Project) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Creating Project Failed", @src());
                 try ctx.printer.append(
                     "Creating project failed.\n",
                     .{},
@@ -36,6 +39,7 @@ fn projectList(ctx: *Context, project: *Project) !void {
     project.list() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -43,6 +47,7 @@ fn projectList(ctx: *Context, project: *Project) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Projects Failed", @src());
                 try ctx.printer.append(
                     "Fetching projects failed.\n",
                     .{},
@@ -51,6 +56,7 @@ fn projectList(ctx: *Context, project: *Project) !void {
             },
 
             else => {
+                try ctx.logger.@"error"("Listing Projects Failed", @src());
                 try ctx.printer.append(
                     "Listing project failed.\n",
                     .{},
@@ -66,6 +72,7 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
     project.delete() catch |err| {
         switch (err) {
             error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -73,6 +80,7 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
                 );
             },
             error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Delete Failed", @src());
                 try ctx.printer.append(
                     "Fetching project delete failed.\n",
                     .{},
@@ -80,6 +88,7 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
                 );
             },
             error.NotFound => {
+                try ctx.logger.@"error"("Project Not Found", @src());
                 try ctx.printer.append(
                     "Project not found.\n",
                     .{},
@@ -87,6 +96,7 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
                 );
             },
             else => {
+                try ctx.logger.@"error"("Deleting Project Failed", @src());
                 try ctx.printer.append(
                     "Deleting project failed.\n",
                     .{},
@@ -99,7 +109,7 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
 }
 
 pub fn _projectController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.ProjectMissingSubcommand;
 
     var project = Project.init(ctx);
 

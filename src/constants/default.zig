@@ -6,7 +6,7 @@ pub const zep_url = "https://zep.run";
 pub const zep_download_index = zep_url ++ "/download.json";
 pub const kb = 1024;
 pub const mb = kb * kb;
-pub const version = "0.9.0";
+pub const version = "1.0.0";
 
 pub const default_targets = struct {
     pub const windows = "x86_64-windows";

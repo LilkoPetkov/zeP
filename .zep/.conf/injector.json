@@ -1,17 +1,17 @@
 {
 	"schema": 1,
 	"included_modules": [
-		"zep_executeable_mod_mod",
-		"loggersMod",
-		"argsMod"
+		"zep_executeable_module",
+		"loggers_mod",
+		"args_mod"
 	],
 	"excluded_modules": [
-		"localesMod",
-		"constantsMod",
-		"structsMod",
-		"iosMod",
-		"clisMod",
-		"coresMod",
-		"contextMod"
+		"locales_mod",
+		"constants_mod",
+		"structs_mod",
+		"ios_mod",
+		"clis_mod",
+		"cores_mod",
+		"context_mod"
 	]
 }

@@ -18,6 +18,8 @@ pub fn bootstrap(
     zig_version: []const u8,
     deps: [][]const u8,
 ) !void {
+    try ctx.logger.info("Bootstrapping", @src());
+
     try ctx.printer.append(
         "-- GETTING ZIG --\n\n",
         .{},

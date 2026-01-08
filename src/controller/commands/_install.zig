@@ -20,6 +20,8 @@ fn install(ctx: *Context) !void {
         const package_name = split.first();
         const package_version = split.next();
         installer.install(package_name, package_version) catch |err| {
+            try ctx.logger.errorf("Installing Failed error={any}", .{err}, @src());
+
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
@@ -28,7 +30,14 @@ fn install(ctx: *Context) !void {
                     try ctx.printer.append("\nPackage not Found!\n\n", .{}, .{ .color = .yellow });
                 },
                 error.HashMismatch => {
-                    try ctx.printer.append("  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
+                    try ctx.printer.append(
+                        "HASH MISMATCH!\nPLEASE REPORT!\n\n",
+                        .{},
+                        .{
+                            .color = .red,
+                            .weight = .bold,
+                        },
+                    );
                 },
                 else => {
                     try ctx.printer.append("\nInstalling {s} has failed... {any}\n\n", .{ package, err }, .{ .color = .red });
@@ -37,6 +46,8 @@ fn install(ctx: *Context) !void {
         };
     } else {
         installer.installAll() catch |err| {
+            try ctx.logger.errorf("Installing All Failed error={any}", .{err}, @src());
+
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });

@@ -106,9 +106,7 @@ pub fn switchVersion(
 
     // Update system PATH to point to new version
     try self.ctx.printer.append("Switching to installed version...\n", .{}, .{});
-    Link.updateLink(artifact_type, self.ctx) catch {
-        return error.LinkUpdateFailed;
-    };
+    try Link.updateLink(artifact_type, self.ctx);
 
     try self.ctx.printer.append("Switched to installed version successfully!\n", .{}, .{ .color = .green });
 }

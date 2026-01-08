@@ -11,6 +11,8 @@ const Init = @import("init.zig");
 
 const Context = @import("context");
 pub fn purge(ctx: *Context) !void {
+    try ctx.logger.info("Purging Packages", @src());
+
     try ctx.printer.append("Purging packages...\n", .{}, .{});
 
     const previous_verbosity = Locales.VERBOSITY_MODE;

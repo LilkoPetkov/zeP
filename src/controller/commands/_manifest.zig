@@ -16,7 +16,7 @@ fn manifestModify(_: *Context, pf: *PackageFiles) !void {
 }
 
 pub fn _manifestController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.ManifestMissingSubcommand;
 
     var package_files = try PackageFiles.init(ctx);
     const arg = ctx.args[2];

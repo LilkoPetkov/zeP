@@ -32,6 +32,8 @@ pub fn init(ctx: *Context) Release {
 }
 
 pub fn delete(self: *Release) !void {
+    try self.ctx.logger.info("Deleting Release", @src());
+
     var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth.deinit();
     if (auth.value.token.len == 0) return error.NotAuthed;
@@ -141,10 +143,13 @@ pub fn delete(self: *Release) !void {
 }
 
 pub fn list(self: *Release) !void {
+    try self.ctx.logger.info("Listing Release", @src());
+
     var initted_project = Projects.init(self.ctx);
     const projects = try initted_project.getProjects();
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
     if (projects.len == 0) {
+        try self.ctx.logger.info("No Project", @src());
         try self.ctx.printer.append("-- No projects --\n\n", .{}, .{});
         return;
     }
@@ -168,8 +173,12 @@ pub fn list(self: *Release) !void {
         10,
     );
 
-    if (project_index >= projects.len)
+    try self.ctx.logger.infof("Project Selected {d}", .{project_index}, @src());
+
+    if (project_index >= projects.len) {
+        try self.ctx.logger.info("Invalid Project Selected", @src());
         return error.InvalidSelection;
+    }
 
     const project_target = projects[project_index];
     const fetch = try initted_project.getProject(project_target.Name);
@@ -182,6 +191,7 @@ pub fn list(self: *Release) !void {
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
     if (releases.value.len == 0) {
+        try self.ctx.logger.info("No Releases for Project", @src());
         try self.ctx.printer.append("-- No releases --\n", .{}, .{});
     }
 
@@ -244,6 +254,8 @@ fn formFileHeader(
 }
 
 pub fn create(self: *Release) !void {
+    try self.ctx.logger.info("Creating Release", @src());
+
     try self.ctx.printer.append("--- CREATING RELEASE MODE ---\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
@@ -344,6 +356,7 @@ pub fn create(self: *Release) !void {
     const hash_hex =
         try std.fmt.allocPrint(self.ctx.allocator, "{x}", .{digest});
 
+    try self.ctx.logger.info("Building Form File for Release", @src());
     const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
     const body = try std.mem.concat(
         self.ctx.allocator,

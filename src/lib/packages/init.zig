@@ -26,6 +26,7 @@ pub fn init(
             .ctx = ctx,
         };
     }
+    try ctx.logger.info("Initializing", @src());
 
     var zig_version: []const u8 = "0.14.0";
     const child = std.process.Child.run(.{

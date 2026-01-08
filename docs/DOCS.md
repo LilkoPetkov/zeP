@@ -12,7 +12,7 @@ it is automated, simple, and clean.
 #### **Install a package**
 
 ```bash
-zep install <package-name>@<version> (--inj)
+zep install <package-name>@<version> -i # installs into local project (-i inject)
 ```
 
 - Looks in local registry
@@ -23,15 +23,7 @@ zep install <package-name>@<version> (--inj)
 #### **Uninstall a package**
 
 ```bash
-zep uninstall <package-name>  # deletes from local project
-```
-
-```bash
-zep global-uninstall <package-name>@<version>  # deletes globally
-```
-
-```bash
-zep fglobal-uninstall <package-name>@<version>  # deletes globally forcefully
+zep uninstall <package-name> -g -f  # deletes from local project (-g global) (-f force)
 ```
 
 - Uninstalls package from local project
@@ -49,7 +41,7 @@ zep inject
 #### **Info of a package**
 
 ```bash
-zep info <package-name>
+zep package info <package-name>
 ```
 
 - Returns information about package
@@ -57,7 +49,7 @@ zep info <package-name>
 #### **List package version**
 
 ```bash
-zep pkg list <package-name>
+zep package list <package-name>
 ```
 
 - Lists available versions of said package
@@ -66,7 +58,7 @@ zep pkg list <package-name>
 #### **Add a custom package**
 
 ```bash
-zep pkg add <package-name>
+zep package add <package-name>
 ```
 
 (if a package is not included in zep.run, you can add your own! [unverified])
@@ -76,7 +68,7 @@ zep pkg add <package-name>
 #### **Remove a custom package**
 
 ```bash
-zep pkg remove <package-name>
+zep package remove <package-name>
 ```
 
 - Removes a custom package
@@ -286,15 +278,15 @@ zep init
 #### **zep.lock file**
 
 ```bash
-zep lock
+zep manifest sync
 ```
 
-- Moves changed data from zep.json into zep.lock [root]
+- Syncs data from zep.json into zep.lock
 
 #### **zep.json file**
 
 ```bash
-zep json
+zep manifest modify
 ```
 
 - Allows for modification of data within zep.json using terminal
@@ -308,3 +300,69 @@ zep doctor (--fix)
 
 - Checks config files, detect issues
 - Fixes issues automatically if told to
+
+### **Authentication**
+
+```bash
+zep auth register
+```
+
+- Register via email, username and password
+
+```bash
+zep auth login
+```
+
+- Login into zep.run
+
+```bash
+zep auth logout
+```
+
+- Logouts and deletes local token
+
+```bash
+zep whoami
+```
+
+- Displays user data
+
+### **Project**
+
+```bash
+zep project create
+```
+
+- Creates Project
+
+```bash
+zep project list
+```
+
+- Lists available projects
+
+```bash
+zep project delete
+```
+
+- Deletes selected project (if valid)
+
+### **Release**
+
+```bash
+zep release create
+```
+
+- Creates New Release
+
+```bash
+zep release list
+```
+
+- Lists available releases (from selected project)
+
+```bash
+zep release delete
+```
+
+- Deletes selected release (if valid)

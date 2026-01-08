@@ -25,6 +25,8 @@ pub fn deinit(_: *ArtifactUninstaller) void {
 }
 
 pub fn uninstall(self: *ArtifactUninstaller, path: []const u8) !void {
+    try self.ctx.logger.infof("Uninstalling {s}", .{path}, @src());
+
     try self.ctx.printer.append("Deleting Artifact version at path: {s}\n", .{path}, .{});
 
     // Recursively delete folder

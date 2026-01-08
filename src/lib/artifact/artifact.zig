@@ -66,6 +66,8 @@ pub fn deinit(self: *Artifact) void {
 
 /// Fetch version metadata from Artifact JSON
 fn fetchVersion(self: *Artifact, target_version: []const u8) !std.json.Value {
+    try self.ctx.logger.infof("Fetching target version {s}", .{target_version}, @src());
+
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
@@ -100,6 +102,7 @@ fn fetchVersion(self: *Artifact, target_version: []const u8) !std.json.Value {
 
 /// Get structured version info
 pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u8) !VersionData {
+    try self.ctx.logger.infof("Getting target version version={s} target={s}", .{ target_version, target }, @src());
     try self.ctx.printer.append("Getting target version...\n", .{}, .{});
 
     const version_data = try self.fetchVersion(target_version);
@@ -144,11 +147,12 @@ pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u
 }
 
 pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
+    try self.ctx.logger.infof("Installing {s}", .{if (self.artifact_type == .zig) "zig" else "zep"}, @src());
+
     const version = try self.getVersion(target_version, target);
     if (version.path.len == 0) return error.VersionHasNoPath;
 
     try self.ctx.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
-
     if (self.artifact_type == .zep) {
         var outdated = false;
         const v = version.version;
@@ -195,6 +199,8 @@ pub fn uninstall(
     target_version: []const u8,
     target: []const u8,
 ) !void {
+    try self.ctx.logger.infof("Uninstalling {s}", .{if (self.artifact_type == .zig) "zig" else "zep"}, @src());
+
     const version = try self.getVersion(target_version, target);
     if (!Fs.existsDir(version.path)) {
         return error.VersionNotInstalled;
@@ -237,6 +243,8 @@ pub fn uninstall(
 }
 
 pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
+    try self.ctx.logger.infof("Switching {s} version", .{if (self.artifact_type == .zig) "zig" else "zep"}, @src());
+
     const version = try self.getVersion(target_version, target);
     if (!Fs.existsDir(version.path)) {
         return error.VersionNotInstalled;

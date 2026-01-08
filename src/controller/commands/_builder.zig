@@ -4,8 +4,9 @@ const Builder = @import("../../lib/functions/builder.zig");
 const Context = @import("context");
 
 fn builder(ctx: *Context) !void {
-    var b = try Builder.init(ctx);
-    _ = b.build() catch |err| {
+    _ = Builder.build(ctx) catch |err| {
+        try ctx.logger.errorf("Building Failed error={any}", .{err}, @src());
+
         switch (err) {
             error.FileNotFound => {
                 try ctx.printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = .red });

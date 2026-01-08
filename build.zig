@@ -29,53 +29,53 @@ fn addCFilesFromDir(
 pub fn build(builder: *std.Build) void {
     const target = builder.standardTargetOptions(.{});
     const optimize = builder.standardOptimizeOption(.{});
-    const zep_executeable_mod_mod = builder.createModule(.{
+    const zep_executeable_module = builder.createModule(.{
         .root_source_file = builder.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    __zepinj__.imp(builder, zep_executeable_mod_mod);
+    __zepinj__.imp(builder, zep_executeable_module);
 
-    const zep_executeable_mod = builder.addExecutable(.{
+    const zep_executeable = builder.addExecutable(.{
         .name = "zep",
-        .root_module = zep_executeable_mod_mod,
+        .root_module = zep_executeable_module,
     });
 
-    const localesMod = builder.createModule(.{ .root_source_file = builder.path("src/locales.zig") });
-    const constantsMod = builder.createModule(.{ .root_source_file = builder.path("src/constants/_index.zig") });
+    const locales_mod = builder.createModule(.{ .root_source_file = builder.path("src/locales.zig") });
+    const constants_mod = builder.createModule(.{ .root_source_file = builder.path("src/constants/_index.zig") });
 
-    const loggersMod = builder.createModule(.{ .root_source_file = builder.path("src/logger.zig") });
-    loggersMod.addImport("constants", constantsMod);
-    __zepinj__.imp(builder, loggersMod);
+    const loggers_mod = builder.createModule(.{ .root_source_file = builder.path("src/logger.zig") });
+    __zepinj__.imp(builder, loggers_mod);
+    loggers_mod.addImport("constants", constants_mod);
 
-    const structsMod = builder.createModule(.{ .root_source_file = builder.path("src/structs/_index.zig") });
-    structsMod.addImport("constants", constantsMod);
+    const structs_mod = builder.createModule(.{ .root_source_file = builder.path("src/structs/_index.zig") });
+    structs_mod.addImport("constants", constants_mod);
 
-    const iosMod = builder.createModule(.{ .root_source_file = builder.path("src/tools/io/_index.zig") });
-    const clisMod = builder.createModule(.{ .root_source_file = builder.path("src/tools/cli/_index.zig") });
-    clisMod.addImport("io", iosMod);
-    clisMod.addImport("constants", constantsMod);
-    clisMod.addImport("locales", localesMod);
+    const ios_mod = builder.createModule(.{ .root_source_file = builder.path("src/tools/io/_index.zig") });
+    const clis_mod = builder.createModule(.{ .root_source_file = builder.path("src/tools/cli/_index.zig") });
+    clis_mod.addImport("io", ios_mod);
+    clis_mod.addImport("constants", constants_mod);
+    clis_mod.addImport("locales", locales_mod);
 
-    const coresMod = builder.createModule(.{ .root_source_file = builder.path("src/tools/core/_index.zig") });
-    coresMod.addImport("io", iosMod);
-    coresMod.addImport("cli", clisMod);
-    coresMod.addImport("constants", constantsMod);
-    coresMod.addImport("locales", localesMod);
-    coresMod.addImport("structs", structsMod);
+    const cores_mod = builder.createModule(.{ .root_source_file = builder.path("src/tools/core/_index.zig") });
+    cores_mod.addImport("io", ios_mod);
+    cores_mod.addImport("cli", clis_mod);
+    cores_mod.addImport("constants", constants_mod);
+    cores_mod.addImport("locales", locales_mod);
+    cores_mod.addImport("structs", structs_mod);
 
-    coresMod.addIncludePath(.{
+    cores_mod.addIncludePath(.{
         .cwd_relative = "c/zstd/lib",
     });
 
-    const argsMod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
-    __zepinj__.imp(builder, argsMod);
+    const args_mod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
+    __zepinj__.imp(builder, args_mod);
 
-    const contextMod = builder.createModule(.{ .root_source_file = builder.path("src/context.zig") });
-    contextMod.addImport("constants", constantsMod);
-    contextMod.addImport("cli", clisMod);
-    contextMod.addImport("core", coresMod);
-    contextMod.addImport("logger", loggersMod);
+    const context_mod = builder.createModule(.{ .root_source_file = builder.path("src/context.zig") });
+    context_mod.addImport("constants", constants_mod);
+    context_mod.addImport("cli", clis_mod);
+    context_mod.addImport("core", cores_mod);
+    context_mod.addImport("logger", loggers_mod);
 
     const zstd = builder.addLibrary(.{
         .name = "zstd",
@@ -95,19 +95,19 @@ pub fn build(builder: *std.Build) void {
     addCFilesFromDir(builder, zstd, "c/zstd/lib/decompress");
 
     zstd.linkLibC();
-    coresMod.linkLibrary(zstd);
-    zep_executeable_mod.linkLibrary(zstd);
-    zep_executeable_mod.linkLibC();
+    cores_mod.linkLibrary(zstd);
+    zep_executeable.linkLibrary(zstd);
+    zep_executeable.linkLibC();
 
-    zep_executeable_mod.root_module.addImport("locales", localesMod);
-    zep_executeable_mod.root_module.addImport("constants", constantsMod);
-    zep_executeable_mod.root_module.addImport("structs", structsMod);
-    zep_executeable_mod.root_module.addImport("core", coresMod);
-    zep_executeable_mod.root_module.addImport("io", iosMod);
-    zep_executeable_mod.root_module.addImport("cli", clisMod);
-    zep_executeable_mod.root_module.addImport("logger", loggersMod);
-    zep_executeable_mod.root_module.addImport("context", contextMod);
-    zep_executeable_mod.root_module.addImport("args", argsMod);
+    zep_executeable.root_module.addImport("locales", locales_mod);
+    zep_executeable.root_module.addImport("constants", constants_mod);
+    zep_executeable.root_module.addImport("structs", structs_mod);
+    zep_executeable.root_module.addImport("core", cores_mod);
+    zep_executeable.root_module.addImport("io", ios_mod);
+    zep_executeable.root_module.addImport("cli", clis_mod);
+    zep_executeable.root_module.addImport("logger", loggers_mod);
+    zep_executeable.root_module.addImport("context", context_mod);
+    zep_executeable.root_module.addImport("args", args_mod);
 
-    builder.installArtifact(zep_executeable_mod);
+    builder.installArtifact(zep_executeable);
 }

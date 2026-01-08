@@ -27,6 +27,8 @@ pub fn init(ctx: *Context) !PackageFiles {
 }
 
 pub fn modify(self: *PackageFiles) !void {
+    try self.ctx.logger.info("Modifying Package Files", @src());
+
     var zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
@@ -133,6 +135,8 @@ pub fn modify(self: *PackageFiles) !void {
 }
 
 pub fn sync(self: *PackageFiles) !void {
+    try self.ctx.logger.info("Syncing Package Files", @src());
+
     var zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,

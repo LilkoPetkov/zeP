@@ -4,7 +4,7 @@ const Runner = @import("../../lib/functions/runner.zig");
 const Context = @import("context");
 const Args = @import("args");
 
-fn new(ctx: *Context) !void {
+fn runner(ctx: *Context) !void {
     const runner_args = try Args.parseRunner();
 
     var r = Runner.init(ctx);
@@ -12,6 +12,6 @@ fn new(ctx: *Context) !void {
     return;
 }
 
-pub fn _newController(ctx: *Context) !void {
-    try new(ctx);
+pub fn _runnerController(ctx: *Context) !void {
+    try runner(ctx);
 }

@@ -20,7 +20,7 @@ fn cacheList(_: *Context, cache: *Cache) !void {
 }
 
 pub fn _cacheController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.CacheMissingSubcommand;
 
     var cache = try Cache.init(ctx);
     defer cache.deinit();

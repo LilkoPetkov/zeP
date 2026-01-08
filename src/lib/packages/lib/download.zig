@@ -93,6 +93,8 @@ fn resolveCloudUrl(
 }
 
 fn extractZip(self: *Downloader, extract_path: []const u8, path: []const u8) !void {
+    try self.ctx.logger.info("Extracting Zip", @src());
+
     // create/open extract directory
     var extract_directory = try Fs.openOrCreateDir(TEMPORARY_DIRECTORY_PATH);
     defer extract_directory.close();
@@ -133,6 +135,8 @@ fn fetchPackage(
     url: []const u8,
     install_unverified_packages: bool,
 ) !void {
+    try self.ctx.logger.infof("Fetching Package {s}", .{url}, @src());
+
     // allocate paths and free them after use
     const path = try std.fs.path.join(
         self.ctx.allocator,
@@ -187,6 +191,7 @@ pub fn downloadPackage(
     url: []const u8,
     install_unverified_packages: bool,
 ) !void {
+    try self.ctx.logger.infof("Downloading Package {s}", .{package_id}, @src());
     try self.ctx.printer.append("Downloading Package...\n", .{}, .{});
 
     const exists = try self.doesPackageExist(package_id);

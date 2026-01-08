@@ -70,9 +70,14 @@ const User = struct {
 };
 
 fn getUserData(self: *Auth) !std.json.Parsed(User) {
+    try self.ctx.logger.info("Fetching User Data", @src());
+
     var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
     defer auth.deinit();
-    if (auth.value.token.len == 0) return error.NotAuthed;
+    if (auth.value.token.len == 0) {
+        try self.ctx.logger.info("Not Authenticated", @src());
+        return error.NotAuthed;
+    }
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
@@ -106,19 +111,9 @@ fn getUserData(self: *Auth) !std.json.Parsed(User) {
 }
 
 pub fn whoami(self: *Auth) !void {
-    const user = self.getUserData() catch |err| {
-        switch (err) {
-            error.NotAuthed => {
-                try self.ctx.printer.append(
-                    "Not authenticated.\n",
-                    .{},
-                    .{ .color = .bright_red },
-                );
-                return;
-            },
-            else => return err,
-        }
-    };
+    try self.ctx.logger.info("Authenticating (Whoami)", @src());
+
+    const user = try self.getUserData();
     defer user.deinit();
 
     try self.ctx.printer.append(" - {s}\n", .{user.value.Username}, .{ .color = .bright_blue });
@@ -128,6 +123,8 @@ pub fn whoami(self: *Auth) !void {
 }
 
 pub fn register(self: *Auth) !void {
+    try self.ctx.logger.info("Authenticating (Registering in)", @src());
+
     blk: {
         var is_error = false;
         _ = self.getUserData() catch {
@@ -277,6 +274,8 @@ pub fn register(self: *Auth) !void {
 }
 
 pub fn login(self: *Auth) !void {
+    try self.ctx.logger.info("Authenticating (Logging in)", @src());
+
     try self.ctx.printer.append("--- LOGIN MODE ---\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
@@ -334,6 +333,8 @@ pub fn login(self: *Auth) !void {
 }
 
 pub fn logout(self: *Auth) !void {
+    try self.ctx.logger.info("Logging out", @src());
+
     var is_error = false;
     _ = self.getUserData() catch {
         is_error = true;

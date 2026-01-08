@@ -10,9 +10,7 @@ const Context = @import("context");
 ctx: *Context,
 
 /// Initializes PreBuilt with compressor and ensures prebuilt folder exists
-pub fn init(
-    ctx: *Context,
-) !PreBuilt {
+pub fn init(ctx: *Context) !PreBuilt {
     if (!Fs.existsDir(ctx.paths.prebuilt)) {
         try std.fs.cwd().makeDir(ctx.paths.prebuilt);
     }
@@ -24,6 +22,8 @@ pub fn init(
 
 /// Extracts a pre-built package into the specified target path
 pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
+    try self.ctx.logger.infof("Using Pre Built {s}", .{pre_built_name}, @src());
+
     var buf: [256]u8 = undefined;
     const prebuilt_path = try std.fmt.bufPrint(
         &buf,
@@ -58,6 +58,8 @@ pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8)
 
 /// Compresses a folder into a pre-built package, overwriting if it exists
 pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
+    try self.ctx.logger.infof("New Pre Built {s}", .{pre_built_name}, @src());
+
     var buf: [256]u8 = undefined;
     const path = try std.fmt.bufPrint(
         &buf,
@@ -78,6 +80,8 @@ pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u
 
 /// Deletes a pre-built package if it exists
 pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
+    try self.ctx.logger.infof("Delete Pre Built {s}", .{pre_built_name}, @src());
+
     var buf: [256]u8 = undefined;
     const exts = &[_][]const u8{ ".tar.zstd", ".zep" };
 
@@ -96,6 +100,8 @@ pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
 
 /// List a pre-builts
 pub fn list(self: *PreBuilt) !void {
+    try self.ctx.logger.info("Listing Pre Builts", @src());
+
     const dir = try Fs.openDir(self.ctx.paths.prebuilt);
     var it = dir.iterate();
     var entries = false;

@@ -39,6 +39,8 @@ fn getVersionFromPath(_: *ArtifactLister, path: []const u8) []const u8 {
 /// Print all installed Artifact versions
 /// Marks the version currently in use
 pub fn listVersions(self: *ArtifactLister, artifact_type: Structs.Extras.ArtifactType) !void {
+    try self.ctx.logger.infof("Listing {s}", .{if (artifact_type == .zig) "zig" else "zep"}, @src());
+
     try self.ctx.printer.append("\nAvailable Artifact Versions:\n", .{}, .{});
 
     const versions_directory = try std.fs.path.join(self.ctx.allocator, &.{

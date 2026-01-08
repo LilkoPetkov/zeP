@@ -78,6 +78,8 @@ pub fn isPackageCached(
     self: *Cacher,
     package_id: []const u8,
 ) !bool {
+    try self.ctx.logger.info("Checking Cache", @src());
+
     try self.ctx.printer.append("\nChecking Cache...\n", .{}, .{});
     const path = try self.cacheFilePath(
         package_id,
@@ -89,6 +91,8 @@ pub fn getPackageFromCache(
     self: *Cacher,
     package_id: []const u8,
 ) !void {
+    try self.ctx.logger.info("Getting Cache", @src());
+
     try self.ctx.printer.append(" > CACHE HIT!\n", .{}, .{ .color = .green });
 
     const temporary_output_path = try self.tmpOutputPath(package_id);
@@ -109,6 +113,8 @@ pub fn getPackageFromCache(
 }
 
 pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
+    try self.ctx.logger.info("Setting Cache", @src());
+
     try self.ctx.printer.append("Package not cached...\n", .{}, .{});
 
     const target_folder = try std.fs.path.join(
@@ -130,6 +136,8 @@ pub fn deletePackageFromCache(
     self: *Cacher,
     package_id: []const u8,
 ) !void {
+    try self.ctx.logger.info("Deleting Cache", @src());
+
     var buf: [256]u8 = undefined;
     const path = try std.fmt.bufPrint(
         &buf,

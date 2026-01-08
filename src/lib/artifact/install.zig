@@ -37,6 +37,8 @@ fn fetchData(
     target: []const u8,
     artifact_type: Structs.Extras.ArtifactType,
 ) !void {
+    try self.ctx.logger.infof("Fetching {s}", .{tarball}, @src());
+
     var tarball_split_iter = std.mem.splitAny(u8, tarball, ".");
     var tarball_extension = tarball_split_iter.next();
     while (tarball_split_iter.next()) |e| {
@@ -289,6 +291,8 @@ pub fn install(
     target: []const u8,
     artifact_type: Structs.Extras.ArtifactType,
 ) !void {
+    try self.ctx.logger.infof("Installing {s}", .{target}, @src());
+
     try self.fetchData(name, tarball, version, target, artifact_type);
     try self.ctx.printer.append("Modifying Manifest...\n", .{}, .{ .verbosity = 2 });
 
@@ -320,9 +324,7 @@ pub fn install(
     try self.ctx.printer.append("Switching to installed version...\n", .{}, .{
         .verbosity = 2,
     });
-    Link.updateLink(artifact_type, self.ctx) catch {
-        try self.ctx.printer.append("Updating Link has failed!\n", .{}, .{ .color = .red });
-    };
+    try Link.updateLink(artifact_type, self.ctx);
     try self.ctx.printer.append("Switched to installed version!\n", .{}, .{
         .color = .green,
     });

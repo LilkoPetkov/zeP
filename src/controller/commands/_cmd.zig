@@ -28,7 +28,7 @@ fn cmdList(ctx: *Context, cmd: *Cmd) !void {
 }
 
 pub fn _cmdController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.MissingSubcommand;
+    if (ctx.args.len < 3) return error.CmdMissingSubcommand;
 
     var cmd = try Cmd.init(ctx);
 

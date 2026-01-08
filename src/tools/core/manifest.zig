@@ -59,7 +59,8 @@ pub fn readManifest(
     const data = try f.readToEndAlloc(self.allocator, 10 * Constants.Default.mb);
     const parsed = std.json.parseFromSlice(ManifestType, self.allocator, data, .{}) catch {
         try Fs.deleteFileIfExists(path);
-        return try self.readManifest(ManifestType, path);
+        const read_manifest = try self.readManifest(ManifestType, path);
+        return read_manifest;
     };
 
     return parsed;

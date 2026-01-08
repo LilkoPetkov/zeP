@@ -283,9 +283,12 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         try self.printer.append("Modules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
         if (included_modules.len == 0) {
             try self.printer.append(
-                " ! No Modules are importing packages. (not recommended)\n",
+                " No Modules are importing packages. (not recommended)\n",
                 .{},
-                .{ .color = .red },
+                .{
+                    .color = .red,
+                    .weight = .bold,
+                },
             );
         }
         for (included_modules) |mod| {
@@ -330,11 +333,9 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
 
     var new_included_modules = try std.ArrayList([]const u8).initCapacity(self.allocator, 10);
     defer new_included_modules.deinit(self.allocator);
-    try new_included_modules.appendSlice(self.allocator, included_modules);
 
     var new_excluded_modules = try std.ArrayList([]const u8).initCapacity(self.allocator, 10);
     defer new_excluded_modules.deinit(self.allocator);
-    try new_excluded_modules.appendSlice(self.allocator, excluded_modules);
 
     while (split_data.next()) |line| {
         if (contains(line, "__zepinj__")) continue;

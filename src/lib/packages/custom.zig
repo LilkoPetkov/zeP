@@ -118,13 +118,7 @@ pub fn requestPackage(self: *CustomPackage) !void {
     );
     defer self.ctx.allocator.free(author);
 
-    const v = self.promptVersionData() catch |err| {
-        switch (err) {
-            error.InvalidUrl => return,
-            else => return,
-        }
-        return;
-    };
+    const v = try self.promptVersionData();
 
     var versions = try std.ArrayList(Structs.Packages.PackageVersions).initCapacity(self.ctx.allocator, 10);
     try versions.append(self.ctx.allocator, v);

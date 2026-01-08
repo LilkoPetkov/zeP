@@ -10,6 +10,8 @@ pub fn new(
     ctx: *Context,
     name: []const u8,
 ) !void {
+    try ctx.logger.info("Running New", @src());
+
     var initer = try Init.init(
         ctx,
         true,

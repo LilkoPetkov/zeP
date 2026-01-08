@@ -29,6 +29,8 @@ pub fn init(
 }
 
 pub fn add(self: *Command) !void {
+    try self.ctx.logger.info("Adding Command", @src());
+
     var zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
@@ -121,6 +123,8 @@ pub fn add(self: *Command) !void {
 }
 
 pub fn list(self: *Command) !void {
+    try self.ctx.logger.info("Listing Commands", @src());
+
     var zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
@@ -134,6 +138,8 @@ pub fn list(self: *Command) !void {
 }
 
 pub fn remove(self: *Command, key: []const u8) !void {
+    try self.ctx.logger.infof("Removing Command {s}", .{key}, @src());
+
     var zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
@@ -172,6 +178,8 @@ pub fn remove(self: *Command, key: []const u8) !void {
 }
 
 pub fn run(self: *Command, key: []const u8) !void {
+    try self.ctx.logger.infof("Running Command {s}", .{key}, @src());
+
     const zep_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,

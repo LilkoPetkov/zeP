@@ -25,6 +25,8 @@ pub fn uninstall(
     self: *Uninstaller,
     package_name: []const u8,
 ) !void {
+    try self.ctx.logger.infof("Uninstalling Package {s}", .{package_name}, @src());
+
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
@@ -106,6 +108,8 @@ pub fn removePackageFromJson(
     self: *Uninstaller,
     package_id: []const u8,
 ) !void {
+    try self.ctx.logger.info("Removing Package from .json", @src());
+
     var package_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,

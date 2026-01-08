@@ -9,6 +9,8 @@ pub fn doctor(
     ctx: *Context,
     fix_issues: bool,
 ) !void {
+    try ctx.logger.info("Running Doctor", @src());
+
     var is_there_issues = false;
 
     // First verify that we are in zep project

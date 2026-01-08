@@ -34,7 +34,7 @@ pub fn help(ctx: *Context) void {
         .{},
     );
     std.debug.print(
-        "--- PACKAGE COMMANDS ---\n  zep install (target)@(version)\n  zep uninstall [target]\n  zep info [target]@[version]\n",
+        "--- PACKAGE COMMANDS ---\n  zep install (target)@(version)\n  zep uninstall [target]\n\n",
         .{},
     );
     std.debug.print(

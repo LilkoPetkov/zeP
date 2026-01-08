@@ -70,6 +70,8 @@ fn uninstallPrevious(
     self: *Installer,
     package: Package,
 ) !void {
+    try self.ctx.logger.info("Uninstalling Previous", @src());
+
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
@@ -105,6 +107,7 @@ pub fn install(
     package_name: []const u8,
     package_version: ?[]const u8,
 ) !void {
+    try self.ctx.logger.info("Installing Package", @src());
     blk: {
         const v = package_version orelse break :blk;
         const package_id = try std.fmt.allocPrint(self.ctx.allocator, "{s}@{s}", .{ package_name, v });
@@ -176,6 +179,8 @@ fn setPackage(
     self: *Installer,
     package: Package,
 ) !void {
+    try self.ctx.logger.info("Setting Package", @src());
+
     try self.addPackageToJson(package);
 
     var injector = Injector.init(
@@ -213,7 +218,6 @@ fn setPackage(
         absolute_symbolic_link_path,
     ) catch {
         return error.AddingToManifestFailed;
-        // try self.ctx.printer.append("Adding to manifest failed!\n", .{}, .{ .color = .red });
     };
 }
 
@@ -244,6 +248,8 @@ fn addPackageToJson(
 }
 
 pub fn installAll(self: *Installer) anyerror!void {
+    try self.ctx.logger.info("Installing All", @src());
+
     var package_json = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageJsonStruct,
         Constants.Extras.package_files.manifest,
