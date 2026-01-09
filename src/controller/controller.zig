@@ -22,7 +22,7 @@ pub fn _controller(ctx: *Context) !void {
                 try ctx.printer.append("Invalid Command. Run: \n $ zep help\n\n", .{}, .{});
             },
             else => {
-                try ctx.printer.append("Command failed.\n", .{}, .{});
+                try ctx.printer.append("Command failed. Error={any}\n", .{err}, .{});
             },
         }
     };

@@ -82,7 +82,6 @@ pub fn createZigProject(
     }
 
     const zig_build =
-        \\const __zepinj__ = @import(".zep/injector.zig");
         \\const std = @import("std");
         \\
         \\pub fn build(b: *std.Build) void {
@@ -93,7 +92,6 @@ pub fn createZigProject(
         \\        .target = target,
         \\        .optimize = optimize,
         \\    });
-        \\    __zepinj__.imp(b, exe_mod);
         \\
         \\    const exe = b.addExecutable(.{
         \\        .name = "{name}",

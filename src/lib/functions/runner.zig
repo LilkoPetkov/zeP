@@ -22,7 +22,7 @@ pub fn init(ctx: *Context) Runner {
 
 /// Initializes a Child Processor, and executes specified file
 pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
-    try self.ctx.printer.append("\nBuilding executeable...\n\n", .{}, .{ .color = .green });
+    try self.ctx.printer.append("Building executeable...\n\n", .{}, .{ .color = .green });
     var target_files = try Builder.build(self.ctx);
     defer target_files.deinit(self.ctx.allocator);
 
@@ -58,7 +58,7 @@ pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
 
     const cmd = try std.mem.join(self.ctx.allocator, " ", exec_args.items);
     defer self.ctx.allocator.free(cmd);
-    try self.ctx.printer.append("\nRunning...\n $ {s}\n\n\n", .{cmd}, .{ .color = .green });
+    try self.ctx.printer.append("Running...\n $ {s}\n\n ------- \n\n", .{cmd}, .{ .color = .green });
     var process = std.process.Child.init(exec_args.items, self.ctx.allocator);
     _ = process.spawnAndWait() catch {};
 }

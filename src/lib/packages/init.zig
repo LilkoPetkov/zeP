@@ -106,6 +106,9 @@ fn createFolders(_: *Init) !void {
 }
 
 fn createFiles(self: *Init) !void {
+    _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector);
+    _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector_manifest);
+
     var pkg = Structs.ZepFiles.PackageJsonStruct{
         .build = Structs.ZepFiles.BuildPackageJsonStruct{},
     };
