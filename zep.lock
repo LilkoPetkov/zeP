@@ -17,7 +17,7 @@
       }
     ],
     "description": "A new zig Package manager, and version manager for zig.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "GPLv3",
     "packages": [
       "clap@0.11.0",

@@ -1,6 +1,6 @@
 .{
     .name = .zeP,
-    .version = "1.0.0",
+    .version = "1.0.1",
     .fingerprint = 0xd5c6fa828394cf75,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{},
