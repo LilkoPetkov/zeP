@@ -1,0 +1,8 @@
+1.0.0 (Jan 9th, 2026)
+- Errors imporved
+- Logging added
+- Docs updated
+
+1.0.1 (Jan 10th, 2026)
+- Invalid Command messsages improved
+- Fixed init bug
