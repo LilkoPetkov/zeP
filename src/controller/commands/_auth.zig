@@ -94,16 +94,17 @@ fn authLogout(ctx: *Context, auth: *Auth) !void {
 }
 
 pub fn _authController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.AuthMissingSubcommand;
+    if (ctx.args.len < 3) return error.AuthInvalidSubcommand;
 
     var auth = try Auth.init(ctx);
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "login"))
+    if (std.mem.eql(u8, arg, "login")) {
         try authLogin(ctx, &auth);
-
-    if (std.mem.eql(u8, arg, "register"))
+    } else if (std.mem.eql(u8, arg, "register")) {
         try authRegister(ctx, &auth);
-
-    if (std.mem.eql(u8, arg, "logout"))
+    } else if (std.mem.eql(u8, arg, "logout")) {
         try authLogout(ctx, &auth);
+    } else {
+        return error.AuthInvalidCommand;
+    }
 }

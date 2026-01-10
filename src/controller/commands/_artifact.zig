@@ -85,8 +85,8 @@ pub fn _artifactController(
 ) !void {
     if (ctx.args.len < 3) {
         switch (artifact_type) {
-            .zep => return error.ZepMissingSubcommand,
-            .zig => return error.ZigMissingSubcommand,
+            .zep => return error.ZepInvalidSubcommand,
+            .zig => return error.ZigInvalidSubcommand,
         }
     }
 
@@ -98,19 +98,22 @@ pub fn _artifactController(
 
     const arg = ctx.args[2];
 
-    if (std.mem.eql(u8, arg, "install"))
+    if (std.mem.eql(u8, arg, "install")) {
         try artifactInstall(ctx, &artifact);
-
-    if (std.mem.eql(u8, arg, "uninstall"))
+    } else if (std.mem.eql(u8, arg, "uninstall")) {
         try artifactUninstall(ctx, &artifact);
-
-    if (std.mem.eql(u8, arg, "switch"))
+    } else if (std.mem.eql(u8, arg, "switch")) {
         try artifactSwitch(ctx, &artifact);
-
-    if (std.mem.eql(u8, arg, "prune"))
+    } else if (std.mem.eql(u8, arg, "prune")) {
         try artifactPrune(ctx, &artifact);
-
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try artifactList(ctx, &artifact);
+    } else {
+        switch (artifact_type) {
+            .zep => return error.ZepInvalidSubcommand,
+            .zig => return error.ZigInvalidSubcommand,
+        }
+    }
 }

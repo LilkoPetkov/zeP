@@ -65,19 +65,20 @@ fn packageInfo(ctx: *Context) !void {
 }
 
 pub fn _packageController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.PackageMissingSubcommand;
+    if (ctx.args.len < 3) return error.PackageInvalidSubcommand;
 
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "add"))
+    if (std.mem.eql(u8, arg, "add")) {
         try packageAdd(ctx);
-
-    if (std.mem.eql(u8, arg, "remove"))
+    } else if (std.mem.eql(u8, arg, "remove")) {
         try packageRemove(ctx);
-
-    if (std.mem.eql(u8, arg, "info"))
+    } else if (std.mem.eql(u8, arg, "info")) {
         try packageInfo(ctx);
-
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try packageList(ctx);
+    } else {
+        return error.PackageInvalidSubcommand;
+    }
 }

@@ -86,24 +86,22 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
     };
     f catch |err| {
         try ctx.logger.errorf("Error. {any}", .{err}, @src());
+        const cmd = try std.mem.join(ctx.allocator, " ", ctx.args);
+        defer ctx.allocator.free(cmd);
+        std.debug.print(
+            "Invalid Command\n  $ {s}\n\n",
+            .{cmd},
+        );
         switch (err) {
-            error.ZigMissingSubcommand => {
+            error.ZigInvalidSubcommand => {
                 std.debug.print(
-                    "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n",
-                    .{},
-                );
-                std.debug.print(
-                    "  zep zig install [version] (target)\n  zep zig list\n  zep zig prune\n\n",
+                    "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n  zep zig install [version] (target)\n  zep zig list\n  zep zig prune\n\n",
                     .{},
                 );
             },
-            error.ZepMissingSubcommand => {
+            error.ZepInvalidSubcommand => {
                 std.debug.print(
-                    "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n",
-                    .{},
-                );
-                std.debug.print(
-                    "  zep zep install [version] (target)\n  zep zep list\n  zep zep prune\n\n",
+                    "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n  zep zep install [version] (target)\n  zep zep list\n  zep zep prune\n\n",
                     .{},
                 );
             },
@@ -113,41 +111,37 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
                     .{},
                 );
             },
-            error.AuthMissingSubcommand => {
+            error.AuthInvalidSubcommand => {
                 std.debug.print(
                     "--- AUTH COMMANDS ---\n  zep auth login\n  zep auth register\n  zep auth logout\n  zep whoami\n\n",
                     .{},
                 );
             },
-            error.PreBuiltMissingSubcommand => {
+            error.PreBuiltInvalidSubcommand => {
                 std.debug.print(
-                    "--- PREBUILT COMMANDS ---\n  zep prebuilt [build|use] [name] (target)\n\n",
-                    .{},
-                );
-                std.debug.print(
-                    "  zep prebuilt delete [name]\n  zep prebuilt list\n\n",
+                    "--- PREBUILT COMMANDS ---\n  zep prebuilt [build|use] [name] (target)\n  zep prebuilt delete [name]\n  zep prebuilt list\n\n",
                     .{},
                 );
             },
-            error.ReleaseMissingSubcommand => {
+            error.ReleaseInvalidSubcommand => {
                 std.debug.print(
                     "--- RELEASE COMMANDS ---\n  zep release list\n  zep release create\n  zep release delete\n\n",
                     .{},
                 );
             },
-            error.ProjectMissingSubcommand => {
+            error.ProjectInvalidSubcommand => {
                 std.debug.print(
                     "--- PROJECT COMMANDS ---\n  zep project list\n  zep project create\n  zep project delete\n\n",
                     .{},
                 );
             },
-            error.CacheMissingSubcommand => {
+            error.CacheInvalidSubcommand => {
                 std.debug.print(
                     "--- CACHE COMMANDS ---\n  zep cache [list|clean|size] (package_id)\n\n",
                     .{},
                 );
             },
-            error.PackageMissingSubcommand => {
+            error.PackageInvalidSubcommand => {
                 std.debug.print(
                     "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
                     .{},
@@ -159,7 +153,7 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
                     .{},
                 );
             },
-            error.CmdMissingSubcommand => {
+            error.CmdInvalidSubcommand => {
                 std.debug.print(
                     "--- CMD COMMANDS ---\n  zep cmd run [cmd]\n  zep cmd add\n  zep cmd remove <cmd>\n  zep cmd list\n\n",
                     .{},

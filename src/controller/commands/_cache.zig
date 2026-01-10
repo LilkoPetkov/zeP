@@ -20,17 +20,21 @@ fn cacheList(_: *Context, cache: *Cache) !void {
 }
 
 pub fn _cacheController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.CacheMissingSubcommand;
+    if (ctx.args.len < 3) return error.CacheInvalidSubcommand;
 
     var cache = try Cache.init(ctx);
     defer cache.deinit();
 
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "size"))
+    if (std.mem.eql(u8, arg, "size")) {
         try cacheSize(ctx, &cache);
-    if (std.mem.eql(u8, arg, "clean"))
+    } else if (std.mem.eql(u8, arg, "clean")) {
         try cacheClean(ctx, &cache);
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try cacheList(ctx, &cache);
+    } else {
+        return error.CacheInvalidSubcommand;
+    }
 }

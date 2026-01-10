@@ -16,14 +16,16 @@ fn manifestModify(_: *Context, pf: *PackageFiles) !void {
 }
 
 pub fn _manifestController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.ManifestMissingSubcommand;
+    if (ctx.args.len < 3) return error.ManifestInvalidSubcommand;
 
     var package_files = try PackageFiles.init(ctx);
     const arg = ctx.args[2];
 
-    if (std.mem.eql(u8, arg, "sync"))
+    if (std.mem.eql(u8, arg, "sync")) {
         try manifestSync(ctx, &package_files);
-
-    if (std.mem.eql(u8, arg, "modify"))
+    } else if (std.mem.eql(u8, arg, "modify")) {
         try manifestModify(ctx, &package_files);
+    } else {
+        return error.ManifestInvalidSubcommand;
+    }
 }

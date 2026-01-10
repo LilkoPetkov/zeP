@@ -109,18 +109,20 @@ fn projectDelete(ctx: *Context, project: *Project) !void {
 }
 
 pub fn _projectController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.ProjectMissingSubcommand;
+    if (ctx.args.len < 3) return error.ProjectInvalidSubcommand;
 
     var project = Project.init(ctx);
 
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "create"))
+    if (std.mem.eql(u8, arg, "create")) {
         try projectCreate(ctx, &project);
-
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try projectList(ctx, &project);
-
-    if (std.mem.eql(u8, arg, "delete"))
+    } else if (std.mem.eql(u8, arg, "delete")) {
         try projectDelete(ctx, &project);
+    } else {
+        return error.ProjectrInvalidSubcommand;
+    }
 }

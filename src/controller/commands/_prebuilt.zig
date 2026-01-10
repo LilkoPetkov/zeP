@@ -47,21 +47,22 @@ fn prebuiltDelete(ctx: *Context, prebuilt: *PreBuilt) !void {
 }
 
 pub fn _prebuiltController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.PreBuiltMissingSubcommand;
+    if (ctx.args.len < 3) return error.PreBuiltInvalidSubcommand;
 
     var prebuilt = try PreBuilt.init(ctx);
 
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "build"))
+    if (std.mem.eql(u8, arg, "build")) {
         try prebuiltBuild(ctx, &prebuilt);
-
-    if (std.mem.eql(u8, arg, "delete"))
+    } else if (std.mem.eql(u8, arg, "delete")) {
         try prebuiltDelete(ctx, &prebuilt);
-
-    if (std.mem.eql(u8, arg, "use"))
+    } else if (std.mem.eql(u8, arg, "use")) {
         try prebuiltUse(ctx, &prebuilt);
-
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try prebuiltList(ctx, &prebuilt);
+    } else {
+        return error.PreBuiltInvalidSubcommand;
+    }
 }

@@ -28,18 +28,22 @@ fn cmdList(ctx: *Context, cmd: *Cmd) !void {
 }
 
 pub fn _cmdController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.CmdMissingSubcommand;
+    if (ctx.args.len < 3) return error.CmdInvalidSubcommand;
 
     var cmd = try Cmd.init(ctx);
 
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "run"))
+    if (std.mem.eql(u8, arg, "run")) {
         try cmdRun(ctx, &cmd);
-    if (std.mem.eql(u8, arg, "add"))
+    } else if (std.mem.eql(u8, arg, "add")) {
         try cmdAdd(ctx, &cmd);
-    if (std.mem.eql(u8, arg, "remove"))
+    } else if (std.mem.eql(u8, arg, "remove")) {
         try cmdRemove(ctx, &cmd);
-    if (std.mem.eql(u8, arg, "list") or
+    } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
+    {
         try cmdList(ctx, &cmd);
+    } else {
+        return error.CmdInvalidSubcommand;
+    }
 }
