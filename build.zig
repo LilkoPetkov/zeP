@@ -65,7 +65,7 @@ pub fn build(builder: *std.Build) void {
     cores_mod.addImport("structs", structs_mod);
 
     cores_mod.addIncludePath(.{
-        .cwd_relative = "c/zstd/lib",
+        .cwd_relative = "vendor/zstd/lib",
     });
 
     const args_mod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
@@ -87,27 +87,65 @@ pub fn build(builder: *std.Build) void {
     });
 
     zstd.addIncludePath(.{
-        .cwd_relative = "c/zstd/lib",
+        .cwd_relative = "vendor/zstd/lib",
     });
 
-    addCFilesFromDir(builder, zstd, "c/zstd/lib/common");
-    addCFilesFromDir(builder, zstd, "c/zstd/lib/compress");
-    addCFilesFromDir(builder, zstd, "c/zstd/lib/decompress");
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/common");
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/compress");
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/decompress");
 
     zstd.linkLibC();
     cores_mod.linkLibrary(zstd);
     zep_executeable.linkLibrary(zstd);
     zep_executeable.linkLibC();
 
-    zep_executeable.root_module.addImport("locales", locales_mod);
-    zep_executeable.root_module.addImport("constants", constants_mod);
-    zep_executeable.root_module.addImport("structs", structs_mod);
-    zep_executeable.root_module.addImport("core", cores_mod);
-    zep_executeable.root_module.addImport("io", ios_mod);
-    zep_executeable.root_module.addImport("cli", clis_mod);
-    zep_executeable.root_module.addImport("logger", loggers_mod);
-    zep_executeable.root_module.addImport("context", context_mod);
-    zep_executeable.root_module.addImport("args", args_mod);
+    zep_executeable_module.addImport("locales", locales_mod);
+    zep_executeable_module.addImport("constants", constants_mod);
+    zep_executeable_module.addImport("structs", structs_mod);
+    zep_executeable_module.addImport("core", cores_mod);
+    zep_executeable_module.addImport("io", ios_mod);
+    zep_executeable_module.addImport("cli", clis_mod);
+    zep_executeable_module.addImport("logger", loggers_mod);
+    zep_executeable_module.addImport("context", context_mod);
+    zep_executeable_module.addImport("args", args_mod);
+
+    const testing_modules = [5]Modules{
+        .{ .name = "constants", .module = constants_mod },
+        .{ .name = "structs", .module = structs_mod },
+        .{ .name = "cli", .module = clis_mod },
+        .{ .name = "core", .module = cores_mod },
+        .{ .name = "io", .module = ios_mod },
+    };
+    runTests(builder, target, &testing_modules);
 
     builder.installArtifact(zep_executeable);
+}
+
+const Modules = struct {
+    name: []const u8,
+    module: *std.Build.Module,
+};
+
+fn runTests(
+    builder: *std.Build,
+    target: std.Build.ResolvedTarget,
+    modules: []const Modules,
+) void {
+    const zep_test_module = builder.createModule(.{
+        .root_source_file = builder.path("tests/tests.zig"),
+        .target = target,
+    });
+    for (modules) |m| {
+        zep_test_module.addImport(m.name, m.module);
+    }
+
+    const zep_test = builder.addTest(.{
+        .name = "test",
+        .root_module = zep_test_module,
+    });
+
+    const run_tests = builder.addRunArtifact(zep_test);
+
+    const test_step = builder.step("test", "Run tests");
+    test_step.dependOn(&run_tests.step);
 }
