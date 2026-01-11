@@ -1,5 +1,6 @@
 const std = @import("std");
 const clap = @import("clap");
+const Constants = @import("constants");
 
 const DoctorArgs = struct {
     fix: bool,
@@ -116,7 +117,7 @@ pub fn parseBootstrap() !BootstrapArgs {
     };
     defer res.deinit();
 
-    const zig: []const u8 = res.args.zig orelse "0.14.0";
+    const zig: []const u8 = res.args.zig orelse Constants.Default.zig_version;
     const raw_deps: []const u8 = res.args.deps orelse "";
 
     var deps = try std.ArrayList([]const u8).initCapacity(allocator, 20);
