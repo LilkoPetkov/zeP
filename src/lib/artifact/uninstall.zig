@@ -24,6 +24,12 @@ pub fn deinit(_: *ArtifactUninstaller) void {
     // currently no deinit required
 }
 
+/// Uninstall selected path
+/// of any artifact. This is
+/// a wrapper for logging
+/// and printing the uninstallation
+/// progress, it is only deleting
+/// the path tree specified.
 pub fn uninstall(self: *ArtifactUninstaller, path: []const u8) !void {
     try self.ctx.logger.infof("Uninstalling {s}", .{path}, @src());
 

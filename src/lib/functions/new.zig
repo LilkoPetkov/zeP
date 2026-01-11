@@ -17,7 +17,7 @@ pub fn new(
         true,
     );
 
-    var zig_version: []const u8 = "0.14.0";
+    var zig_version: []const u8 = Constants.Default.zig_version;
     blk: {
         const child = std.process.Child.run(.{
             .allocator = ctx.allocator,
@@ -25,7 +25,14 @@ pub fn new(
         }) catch |err| {
             switch (err) {
                 else => {
-                    try ctx.printer.append("Zig is not installed!\nDefaulting to 0.14.0!\n\n", .{}, .{ .color = .red });
+                    try ctx.logger.info("Zig is not instealled", @src());
+                    try ctx.printer.append(
+                        "Zig is not installed!\nDefaulting to {s}!\n\n",
+                        .{
+                            Constants.Default.zig_version,
+                        },
+                        .{ .color = .red },
+                    );
                 },
             }
             break :blk;

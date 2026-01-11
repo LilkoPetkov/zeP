@@ -21,7 +21,7 @@ pub fn init(ctx: *Context) Project {
     };
 }
 
-pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
+pub fn getProjects(self: *Project) !std.json.Parsed([]Structs.Fetch.ProjectStruct) {
     try self.ctx.logger.info("Getting Projects", @src());
 
     var auth = try self.ctx.manifest.readManifest(
@@ -47,7 +47,6 @@ pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
             },
         },
     ) catch return error.FetchFailed;
-
     defer res.deinit();
 
     const encoded = res.value.object
@@ -56,24 +55,21 @@ pub fn getProjects(self: *Project) ![]Structs.Fetch.ProjectStruct {
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(encoded.string),
     );
+    defer self.ctx.allocator.free(decoded);
 
     try std.base64.standard.Decoder.decode(decoded, encoded.string);
     const parsed: std.json.Parsed([]Structs.Fetch.ProjectStruct) = try std.json.parseFromSlice(
         []Structs.Fetch.ProjectStruct,
         self.ctx.allocator,
         decoded,
-        .{},
+        .{
+            .allocate = .alloc_always,
+        },
     );
-    defer parsed.deinit();
-    const parsed_projects = parsed.value;
-    const parsed_projects_duped = try self.ctx.allocator.dupe(Structs.Fetch.ProjectStruct, parsed_projects);
-    return parsed_projects_duped;
+    return parsed;
 }
 
-pub fn getProject(self: *Project, name: []const u8) !?struct {
-    project: std.json.Parsed(Structs.Fetch.ProjectStruct),
-    releases: std.json.Parsed([]Structs.Fetch.ReleaseStruct),
-} {
+pub fn getReleasesFromProject(self: *Project, name: []const u8) !std.json.Parsed([]Structs.Fetch.ReleaseStruct) {
     try self.ctx.logger.infof("Getting Project {s}", .{name}, @src());
 
     const url = try std.fmt.allocPrint(
@@ -85,6 +81,7 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
+    try self.ctx.logger.infof("Fetching project url={s}", .{url}, @src());
     const get_project_response = self.ctx.fetcher.fetch(
         url,
         &client,
@@ -96,38 +93,25 @@ pub fn getProject(self: *Project, name: []const u8) !?struct {
     defer get_project_response.deinit();
     const get_project_object = get_project_response.value.object;
     const is_get_project_successful = get_project_object.get("success") orelse return error.FetchFailed;
-    if (!is_get_project_successful.bool) return null;
-
-    const project = get_project_object.get("project") orelse return error.FetchFailed;
-    const project_decoded = try self.ctx.allocator.alloc(
-        u8,
-        try std.base64.standard.Decoder.calcSizeForSlice(project.string),
-    );
-    try std.base64.standard.Decoder.decode(project_decoded, project.string);
-    const project_parsed: std.json.Parsed(Structs.Fetch.ProjectStruct) = try std.json.parseFromSlice(
-        Structs.Fetch.ProjectStruct,
-        self.ctx.allocator,
-        project_decoded,
-        .{},
-    );
+    if (!is_get_project_successful.bool) return error.FetchFailed;
 
     const releases = get_project_object.get("releases") orelse return error.FetchFailed;
     const release_decoded = try self.ctx.allocator.alloc(
         u8,
         try std.base64.standard.Decoder.calcSizeForSlice(releases.string),
     );
+    defer self.ctx.allocator.free(release_decoded);
     try std.base64.standard.Decoder.decode(release_decoded, releases.string);
     const release_parsed: std.json.Parsed([]Structs.Fetch.ReleaseStruct) = try std.json.parseFromSlice(
         []Structs.Fetch.ReleaseStruct,
         self.ctx.allocator,
         release_decoded,
-        .{},
+        .{
+            .allocate = .alloc_always,
+        },
     );
 
-    return .{
-        .project = project_parsed,
-        .releases = release_parsed,
-    };
+    return release_parsed;
 }
 
 pub fn delete(self: *Project) !void {
@@ -137,12 +121,14 @@ pub fn delete(self: *Project) !void {
     defer auth.deinit();
 
     const projects = try self.getProjects();
+    defer projects.deinit();
+
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.len == 0) {
+    if (projects.value.len == 0) {
         try self.ctx.printer.append("-- No projects --\n", .{}, .{});
         return;
     }
-    for (projects, 0..) |p, i| {
+    for (projects.value, 0..) |p, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, p.Name }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});
@@ -161,22 +147,18 @@ pub fn delete(self: *Project) !void {
     );
 
     try self.ctx.logger.infof("Selected Project {d}", .{index}, @src());
-    if (index >= projects.len) {
+    if (index >= projects.value.len) {
         try self.ctx.logger.info("Invalid Project Selection", @src());
         return error.InvalidSelection;
     }
 
-    const target = projects[index];
+    const target = projects.value[index];
     const target_id = target.ID;
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const fetched_project = try self.getProject(target.Name) orelse return error.NotFound;
-    const project = fetched_project.project;
-    defer project.deinit();
-
-    const releases = fetched_project.releases;
+    const releases = try self.getReleasesFromProject(target.Name);
     defer releases.deinit();
     if (releases.value.len != 0) {
         try self.ctx.printer.append(
@@ -191,7 +173,7 @@ pub fn delete(self: *Project) !void {
             try self.ctx.printer.append(
                 "  > {s} {s}\n    ({s})\n",
                 .{
-                    project.value.Name,
+                    target.Name,
                     r.Release,
                     r.Hash,
                 },
@@ -253,11 +235,13 @@ pub fn list(self: *Project) !void {
     try self.ctx.logger.info("Listing Project", @src());
 
     const projects = try self.getProjects();
+    defer projects.deinit();
+
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.len == 0) {
+    if (projects.value.len == 0) {
         try self.ctx.printer.append("-- No projects --\n", .{}, .{});
     }
-    for (projects) |r| {
+    for (projects.value) |r| {
         try self.ctx.printer.append(" - {s}\n  > {s}\n", .{ r.Name, r.ID }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});

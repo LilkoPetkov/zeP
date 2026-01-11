@@ -13,7 +13,7 @@ const Json = @import("core").Json;
 const Context = @import("context");
 
 ctx: *Context,
-zig_version: []const u8 = "0.14.0",
+zig_version: []const u8 = Constants.Default.zig_version,
 name: []const u8 = "",
 description: []const u8 = "",
 license: []const u8 = "",
@@ -29,7 +29,7 @@ pub fn init(
     }
     try ctx.logger.info("Initializing", @src());
 
-    var zig_version: []const u8 = "0.14.0";
+    var zig_version: []const u8 = Constants.Default.zig_version;
     const child = std.process.Child.run(.{
         .allocator = ctx.allocator,
         .argv = &[_][]const u8{ "zig", "version" },
@@ -118,11 +118,19 @@ fn createFiles(self: *Init) !void {
     const lock = Structs.ZepFiles.PackageLockStruct{ .root = pkg };
 
     if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
+        try Json.writePretty(
+            self.ctx.allocator,
+            Constants.Extras.package_files.manifest,
+            pkg,
+        );
     }
 
     if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
-        try Json.writePretty(Constants.Extras.package_files.lock, lock);
+        try Json.writePretty(
+            self.ctx.allocator,
+            Constants.Extras.package_files.lock,
+            lock,
+        );
     }
 
     const gitignore = ".gitignore";

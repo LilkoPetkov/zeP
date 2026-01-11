@@ -17,9 +17,7 @@ const Context = @import("context");
 /// Installer for Artifact versions
 ctx: *Context,
 
-pub fn init(
-    ctx: *Context,
-) ArtifactInstaller {
+pub fn init(ctx: *Context) ArtifactInstaller {
     return ArtifactInstaller{
         .ctx = ctx,
     };
@@ -78,6 +76,7 @@ fn fetchData(
     var compressed_file = try Fs.openOrCreateFile(target_path);
     defer compressed_file.close();
 
+    try self.ctx.logger.infof("Extracting compressed data from {s}...", .{tarball}, @src());
     try self.ctx.printer.append("Extracting data...\n", .{}, .{});
 
     const decompressed_directory = try std.fs.path.join(
@@ -104,6 +103,7 @@ fn fetchData(
 
     var compressed_file_buf: [Constants.Default.kb * 32]u8 = undefined;
     var reader = compressed_file.reader(&compressed_file_buf);
+    try self.ctx.logger.info("Decompressing...", @src());
     if (builtin.os.tag == .windows) {
         try self.decompressWindows(
             &reader,
@@ -122,27 +122,26 @@ fn fetchData(
     }
 }
 
-fn downloadFile(self: *ArtifactInstaller, raw_uri: []const u8, out_path: []const u8) !void {
-    try self.ctx.printer.append("Parsing URI...\n", .{}, .{});
-    const uri = try std.Uri.parse(raw_uri);
-
+fn downloadFile(self: *ArtifactInstaller, url: []const u8, out_path: []const u8) !void {
+    try self.ctx.logger.infof("Downloading URL {s}.", .{url}, @src());
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
     var body = std.Io.Writer.Allocating.init(self.ctx.allocator);
-    try self.ctx.printer.append("Fetching... [{s}]\n", .{raw_uri}, .{});
+    try self.ctx.printer.append("Fetching... [{s}]\n", .{url}, .{});
     const fetched = try client.fetch(std.http.Client.FetchOptions{
         .location = .{
-            .uri = uri,
+            .url = url,
         },
         .method = .GET,
         .response_writer = &body.writer,
     });
 
     if (fetched.status == .not_found) {
-        return error.NotFound;
+        return error.UrlNotFound;
     }
 
+    try self.ctx.logger.info("Writing body into data...", @src());
     try self.ctx.printer.append("Getting Body...\n", .{}, .{ .verbosity = 2 });
     const data = body.written();
 
@@ -203,10 +202,6 @@ fn decompressPosix(
     defer dir.close();
 
     // ! THIS NEEDS TO BE CHANGED
-    // The reason for this hacky design is because
-    // of the horrible design choices and missing functions
-    // of Zig.
-    //
     // In later zig versions this will hopefully get fixed,
     // however currently this design works, even though
     // it is a really bad eye-sore.

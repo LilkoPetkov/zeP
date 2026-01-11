@@ -33,14 +33,18 @@ pub fn bootstrap(
     defer zig.deinit();
 
     const default_target = Constants.Default.resolveDefaultTarget();
+    try ctx.logger.infof("Installing zig version={s}...", .{zig_version}, @src());
     try zig.install(zig_version, default_target);
 
     try ctx.printer.append("\n", .{}, .{});
 
+    try ctx.logger.info("Initting...", @src());
     var initer = try Init.init(
         ctx,
         false,
     );
+
+    try ctx.logger.info("Committing Init...", @src());
     try initer.commitInit();
     try ctx.printer.append("\n", .{}, .{});
 
@@ -53,6 +57,7 @@ pub fn bootstrap(
         },
     );
 
+    try ctx.logger.info("Installing packages...", @src());
     for (deps) |dep| {
         var d = std.mem.splitScalar(u8, dep, '@');
         const package_name = d.first();

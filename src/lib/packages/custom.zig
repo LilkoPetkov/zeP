@@ -42,14 +42,14 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
     const version = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
-        "> Version [0.1.0]: ",
+        "> Version: ",
         .{},
     );
 
     const zig_version = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
-        "> Zig Version [0.14.0]: ",
+        "> Zig Version: ",
         .{},
     );
 
@@ -62,11 +62,11 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
         return error.InvalidUrl;
     };
     return .{
-        .version = getOrDefault(version, "0.1.0"),
+        .version = getOrDefault(version, "0.0.1"),
         .url = url,
         .sha256sum = hash,
         .root_file = root_file,
-        .zig_version = getOrDefault(zig_version, "0.14.0"),
+        .zig_version = getOrDefault(zig_version, Constants.Default.zig_version),
     };
 }
 

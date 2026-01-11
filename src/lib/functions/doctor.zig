@@ -56,7 +56,7 @@ pub fn doctor(
     for (lock_packages) |pkg| {
         if (!std.mem.containsAtLeast(u8, pkg.zig_version, 1, manifest_zig_version)) {
             try ctx.printer.append(
-                "{s} zigs version mismatches\n > Package Zig {s}\n > Project Zig {s}\n",
+                "{s} zig versions mismatch\n > Package Zig {s}\n > Project Zig {s}\n",
                 .{ pkg.name, pkg.zig_version, manifest_zig_version },
                 .{ .color = .red },
             );
@@ -65,7 +65,7 @@ pub fn doctor(
     }
 
     if (!mismatch_zig_version) {
-        try ctx.printer.append("No issues with zig versions mismatch [packages]!\n", .{}, .{ .color = .green });
+        try ctx.printer.append("No issues with zig versions [packages]!\n", .{}, .{ .color = .green });
     }
 
     const lock_root_json = try std.json.Stringify.valueAlloc(ctx.allocator, lock.value.root, .{});

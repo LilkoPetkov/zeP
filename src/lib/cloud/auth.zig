@@ -181,6 +181,7 @@ pub fn register(self: *Auth) !void {
         const obj = check.value.object;
         const success = obj.get("success") orelse return error.FetchFailed;
         if (success.bool) {
+            try self.ctx.logger.info("Email already in use", @src());
             try self.ctx.printer.append("\nEmail already in use! Login via\n $ zep auth login\n\n", .{}, .{});
             return;
         }
@@ -229,7 +230,15 @@ pub fn register(self: *Auth) !void {
     const register_object = register_response.value.object;
     const is_register_successful = register_object.get("success") orelse return;
     if (!is_register_successful.bool) {
-        try self.ctx.printer.append("Register failed.\n", .{}, .{});
+        try self.ctx.logger.info("Registering failed", @src());
+        try self.ctx.printer.append(
+            "Register failed.\n",
+            .{},
+            .{
+                .color = .red,
+                .weight = .bold,
+            },
+        );
         return;
     }
 
@@ -260,7 +269,15 @@ pub fn register(self: *Auth) !void {
     const verify_object = verify_response.value.object;
     const is_verify_successful = verify_object.get("success") orelse return;
     if (!is_verify_successful.bool) {
-        try self.ctx.printer.append("Invalid code.\n", .{}, .{});
+        try self.ctx.logger.info("Invalid code entered.", @src());
+        try self.ctx.printer.append(
+            "Invalid code.\n",
+            .{},
+            .{
+                .color = .red,
+                .weight = .bold,
+            },
+        );
         return;
     }
     try self.ctx.printer.append("Verified.\n", .{}, .{});
@@ -270,6 +287,7 @@ pub fn register(self: *Auth) !void {
     defer auth_manifest.deinit();
     auth_manifest.value.token = jwt_token.string;
     try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+    try self.ctx.logger.info("User authenticated...", @src());
     try self.ctx.printer.append("Logged in.\n", .{}, .{});
 }
 
@@ -321,7 +339,10 @@ pub fn login(self: *Auth) !void {
     defer login_response.deinit();
     const login_object = login_response.value.object;
     const is_login_successful = login_object.get("success") orelse return;
-    if (!is_login_successful.bool) return error.InvalidPassword;
+    if (!is_login_successful.bool) {
+        try self.ctx.logger.info("Invalid password entered.", @src());
+        return error.InvalidPassword;
+    }
 
     const token = login_object.get("jwt") orelse return error.FetchFailed;
     var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
@@ -330,6 +351,7 @@ pub fn login(self: *Auth) !void {
     try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
 
     try self.ctx.printer.append("Logged in.\n", .{}, .{});
+    try self.ctx.logger.info("User authenticated...", @src());
 }
 
 pub fn logout(self: *Auth) !void {
@@ -366,8 +388,10 @@ pub fn logout(self: *Auth) !void {
     const logout_object = logout_response.value.object;
     const logout_success = logout_object.get("success") orelse return error.FetchFailed;
     if (!logout_success.bool) {
+        try self.ctx.logger.info("Logout failed.", @src());
         return error.FetchFailed;
     }
 
     try self.ctx.printer.append("Logged out.\n", .{}, .{});
+    try self.ctx.logger.info("User Logged out...", @src());
 }

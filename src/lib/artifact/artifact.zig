@@ -71,33 +71,32 @@ fn fetchVersion(self: *Artifact, target_version: []const u8) !std.json.Value {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const uri = try std.Uri.parse(
-        if (self.artifact_type == .zig)
-            Constants.Default.zig_download_index
-        else
-            Constants.Default.zep_download_index,
-    );
-
+    const url = switch (self.artifact_type) {
+        .zig => Constants.Default.zig_download_index,
+        .zep => Constants.Default.zep_download_index,
+    };
     var body = std.Io.Writer.Allocating.init(self.ctx.allocator);
     const fetched = try client.fetch(std.http.Client.FetchOptions{
         .location = .{
-            .uri = uri,
+            .url = url,
         },
         .method = .GET,
         .response_writer = &body.writer,
     });
+    try self.ctx.logger.infof("Fetching {s}...", .{url}, @src());
 
     if (fetched.status == .not_found) {
-        return error.NotFound;
+        return error.UrlNotFound;
     }
     const data = body.written();
     const parsed = try std.json.parseFromSlice(std.json.Value, self.ctx.allocator, data, .{});
     const obj = parsed.value.object;
 
     if (std.mem.eql(u8, target_version, "latest") or target_version.len == 0) {
-        return obj.get("master") orelse return error.VersionNotFound;
+        return obj.get("master") orelse error.VersionNotFound;
     }
-    return obj.get(target_version) orelse return error.VersionNotFound;
+
+    return obj.get(target_version) orelse error.VersionNotFound;
 }
 
 /// Get structured version info
@@ -147,7 +146,11 @@ pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u
 }
 
 pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) anyerror!void {
-    try self.ctx.logger.infof("Installing {s}", .{if (self.artifact_type == .zig) "zig" else "zep"}, @src());
+    try self.ctx.logger.infof("Installing {s}, version={s}, target={s}", .{
+        if (self.artifact_type == .zig) "zig" else "zep",
+        target_version,
+        target,
+    }, @src());
 
     const version = try self.getVersion(target_version, target);
     if (version.path.len == 0) return error.VersionHasNoPath;
@@ -199,7 +202,11 @@ pub fn uninstall(
     target_version: []const u8,
     target: []const u8,
 ) !void {
-    try self.ctx.logger.infof("Uninstalling {s}", .{if (self.artifact_type == .zig) "zig" else "zep"}, @src());
+    try self.ctx.logger.infof("Uninstalling {s}, version={s}, target={s}", .{
+        if (self.artifact_type == .zig) "zig" else "zep",
+        target_version,
+        target,
+    }, @src());
 
     const version = try self.getVersion(target_version, target);
     if (!Fs.existsDir(version.path)) {
@@ -229,8 +236,10 @@ pub fn uninstall(
     defer manifest.deinit();
 
     if (std.mem.containsAtLeast(u8, manifest.value.name, 1, version.version)) {
-        const latest = try self.switcher.getLatestVersion(self.artifact_type, version.version);
+        try self.ctx.logger.info("Target version is selected | Attempting switch", @src());
+        const latest = try self.switcher.getLatestVersionExcept(self.artifact_type, version.version);
         try self.switchVersion(latest.version_name, latest.target_name);
+        try self.ctx.logger.info("Switch completed.", @src());
     }
 
     if (version_dir_includes_folders) {

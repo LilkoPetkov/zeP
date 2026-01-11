@@ -40,13 +40,15 @@ pub fn delete(self: *Release) !void {
 
     var initted_project = Projects.init(self.ctx);
     const projects = try initted_project.getProjects();
+    defer projects.deinit();
+
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.len == 0) {
+    if (projects.value.len == 0) {
         try self.ctx.printer.append("-- No projects --\n", .{}, .{});
         return;
     }
 
-    for (projects, 0..) |r, i| {
+    for (projects.value, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});
@@ -65,19 +67,14 @@ pub fn delete(self: *Release) !void {
         10,
     );
 
-    if (project_index >= projects.len)
+    if (project_index >= projects.value.len)
         return error.InvalidSelection;
 
-    const project_target = projects[project_index];
+    const project_target = projects.value[project_index];
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const fetched = try initted_project.getProject(project_target.Name);
-    const fetched_project = fetched orelse return error.NotFound;
-    const project = fetched_project.project;
-    defer project.deinit();
-
-    const releases = fetched_project.releases;
+    const releases = try initted_project.getReleasesFromProject(project_target.Name);
     defer releases.deinit();
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
@@ -147,14 +144,16 @@ pub fn list(self: *Release) !void {
 
     var initted_project = Projects.init(self.ctx);
     const projects = try initted_project.getProjects();
+    defer projects.deinit();
+
     try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.len == 0) {
+    if (projects.value.len == 0) {
         try self.ctx.logger.info("No Project", @src());
         try self.ctx.printer.append("-- No projects --\n\n", .{}, .{});
         return;
     }
 
-    for (projects, 0..) |r, i| {
+    for (projects.value, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});
@@ -175,18 +174,13 @@ pub fn list(self: *Release) !void {
 
     try self.ctx.logger.infof("Project Selected {d}", .{project_index}, @src());
 
-    if (project_index >= projects.len) {
+    if (project_index >= projects.value.len) {
         try self.ctx.logger.info("Invalid Project Selected", @src());
         return error.InvalidSelection;
     }
 
-    const project_target = projects[project_index];
-    const fetch = try initted_project.getProject(project_target.Name);
-    const fetched_project = fetch orelse return error.NotFound;
-    const project = fetched_project.project;
-    defer project.deinit();
-
-    const releases = fetched_project.releases;
+    const project_target = projects.value[project_index];
+    const releases = try initted_project.getReleasesFromProject(project_target.Name);
     defer releases.deinit();
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
@@ -271,9 +265,9 @@ pub fn create(self: *Release) !void {
     var initted_project = Projects.init(self.ctx);
 
     const projects = try initted_project.getProjects();
-    defer self.ctx.allocator.free(projects);
+    defer projects.deinit();
 
-    if (projects.len == 0) {
+    if (projects.value.len == 0) {
         try self.ctx.printer.append(
             "No project available!\nCreate project first!\n\n",
             .{},
@@ -288,7 +282,7 @@ pub fn create(self: *Release) !void {
         .{ .color = .blue, .weight = .bold },
     );
 
-    for (projects, 0..) |r, i| {
+    for (0.., projects.value) |i, r| {
         try self.ctx.printer.append(
             " - [{d}] {s}\n",
             .{ i, r.Name },
@@ -310,10 +304,10 @@ pub fn create(self: *Release) !void {
         10,
     );
 
-    if (index >= projects.len)
+    if (index >= projects.value.len)
         return error.InvalidSelection;
 
-    const target = projects[index];
+    const target = projects.value[index];
 
     const p_release = try Prompt.input(
         self.ctx.allocator,
@@ -381,9 +375,7 @@ pub fn create(self: *Release) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const uri =
-        try std.Uri.parse(Constants.Default.zep_url ++ "/api/post/release");
-
+    const uri = try std.Uri.parse(Constants.Default.zep_url ++ "/api/post/release");
     var req = try client.request(.POST, uri, .{});
     defer req.deinit();
 

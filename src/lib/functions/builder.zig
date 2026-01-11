@@ -28,11 +28,13 @@ pub fn build(ctx: *Context) !std.ArrayList([]u8) {
         "-Dtarget={s}",
         .{target},
     );
+    try ctx.logger.info("Running Build...", @src());
     const args = [_][]const u8{ "zig", "build", "-Doptimize=ReleaseSmall", execs, "-p", "zep-out/" };
     try ctx.printer.append("Executing: \n$ {s}!\n\n", .{try std.mem.join(ctx.allocator, " ", &args)}, .{ .color = .green });
 
     var process = std.process.Child.init(&args, ctx.allocator);
     _ = try process.spawnAndWait();
+    try ctx.logger.info("Build done...", @src());
     try ctx.printer.append("Finished executing!\n\n", .{}, .{ .color = .green });
 
     const target_directory = try std.fs.path.join(ctx.allocator, &.{ "zep-out", "bin" });

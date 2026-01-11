@@ -185,8 +185,6 @@ pub fn clean(self: *Cache, name: ?[]const u8) !void {
 }
 
 fn getSize(self: *Cache) !u64 {
-    try self.ctx.logger.info("Getting Cache size", @src());
-
     const cached_path = self.ctx.paths.cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
@@ -210,6 +208,8 @@ fn getSize(self: *Cache) !u64 {
 }
 
 pub fn size(self: *Cache) !void {
+    try self.ctx.logger.info("Getting Cache Size", @src());
+
     try self.ctx.printer.append("\nGetting cache size...\n", .{}, .{});
     const cache_size = try self.getSize();
     try self.ctx.printer.append("Size:\n{d} Bytes\n{d} KB\n{d} MB\n\n", .{ cache_size, cache_size / 1024, cache_size / 1024 / 1024 }, .{});

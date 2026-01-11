@@ -18,7 +18,7 @@ ctx: *Context,
 pub fn init(ctx: *Context) !PackageFiles {
     if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
         try ctx.printer.append("\nNo zep.json file!\n", .{}, .{ .color = .red });
-        return error.ManifestMissing;
+        return error.ManifestNotFound;
     }
 
     return PackageFiles{

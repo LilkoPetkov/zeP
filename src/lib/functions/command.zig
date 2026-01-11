@@ -15,9 +15,7 @@ const Context = @import("context");
 
 ctx: *Context,
 
-pub fn init(
-    ctx: *Context,
-) !Command {
+pub fn init(ctx: *Context) !Command {
     if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
         try ctx.printer.append("\nNo zep.json file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
@@ -77,6 +75,7 @@ pub fn add(self: *Command) !void {
                 });
                 return;
             }
+            try self.ctx.logger.info("Overwriting old command...", @src());
             try self.ctx.printer.append("Overwriting...\n\n", .{}, .{
                 .color = .white,
                 .weight = .bold,

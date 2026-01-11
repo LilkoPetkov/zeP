@@ -40,7 +40,6 @@ fn downloadAndExtract(
     archive_type: ArchiveType,
     out_path: []const u8,
 ) !void {
-    const uri = try std.Uri.parse(url);
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
@@ -55,7 +54,7 @@ fn downloadAndExtract(
     var writer_buf: [Constants.Default.kb]u8 = undefined;
     var writer = file.writer(&writer_buf);
     const fetched = try client.fetch(.{
-        .location = .{ .uri = uri },
+        .location = .{ .url = url },
         .method = .GET,
         .response_writer = &writer.interface,
     });
@@ -77,14 +76,10 @@ fn resolveCloudUrl(
     name: []const u8,
     version: []const u8,
 ) ?[]const u8 {
-    const f = project.getProject(name) catch return null;
-    if (f == null) return null;
-    const fetched = f orelse return null;
+    const releases = project.getReleasesFromProject(name) catch return null;
+    defer releases.deinit();
 
-    defer fetched.project.deinit();
-    defer fetched.releases.deinit();
-
-    for (fetched.releases.value) |r| {
+    for (releases.value) |r| {
         if (std.mem.eql(u8, r.Release, version)) {
             return r.Url;
         }

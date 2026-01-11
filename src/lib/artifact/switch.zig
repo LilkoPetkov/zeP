@@ -21,9 +21,7 @@ const LatestArtifact = struct {
 /// Handles switching between installed Artifact versions
 ctx: *Context,
 
-pub fn init(
-    ctx: *Context,
-) ArtifactSwitcher {
+pub fn init(ctx: *Context) ArtifactSwitcher {
     return ArtifactSwitcher{
         .ctx = ctx,
     };
@@ -59,9 +57,7 @@ pub fn switchVersion(
         Structs.Manifests.ArtifactManifest,
         if (artifact_type == .zig) self.ctx.paths.zig_manifest else self.ctx.paths.zep_manifest,
         Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
-    ) catch {
-        return error.ManifestUpdateFailed;
-    };
+    ) catch return error.ManifestUpdateFailed;
 
     // Update zep.json and zep.lock
     blk: {
@@ -111,9 +107,9 @@ pub fn switchVersion(
     try self.ctx.printer.append("Switched to installed version successfully!\n", .{}, .{ .color = .green });
 }
 
-/// Switch active Artifact version
-/// Updates manifest and system PATH
-pub fn getLatestVersion(self: *ArtifactSwitcher, artifact_type: Structs.Extras.ArtifactType, skip_version: []const u8) !LatestArtifact {
+/// Find Latest artifact version
+/// except skip_version
+pub fn getLatestVersionExcept(self: *ArtifactSwitcher, artifact_type: Structs.Extras.ArtifactType, skip_version: []const u8) !LatestArtifact {
     // Update manifest with new version
     const artifact_root_path = try std.fs.path.join(self.ctx.allocator, &.{
         if (artifact_type == .zig)

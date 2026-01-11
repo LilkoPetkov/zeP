@@ -69,18 +69,20 @@ pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u
 
     if (Fs.existsFile(path)) {
         try self.ctx.printer.append("Pre-Built already exists! Overwriting it now...\n\n", .{}, .{});
+        try self.ctx.logger.info("Overwriting old pre-built...", @src());
         try Fs.deleteFileIfExists(path);
     }
 
     try self.ctx.printer.append("Compressing now...\n", .{}, .{});
 
+    try self.ctx.logger.info("Compressing Pre-Built...", @src());
     try self.ctx.compressor.compress(target_path, path);
     try self.ctx.printer.append("Compressed!\n\n", .{}, .{ .color = .green });
 }
 
 /// Deletes a pre-built package if it exists
 pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
-    try self.ctx.logger.infof("Delete Pre Built {s}", .{pre_built_name}, @src());
+    try self.ctx.logger.infof("Deleting Pre-Built {s}", .{pre_built_name}, @src());
 
     var buf: [256]u8 = undefined;
     const exts = &[_][]const u8{ ".tar.zstd", ".zep" };
@@ -95,6 +97,7 @@ pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
         }
     }
 
+    try self.ctx.logger.infof("No Pre-Built named {s} was found...", .{pre_built_name}, @src());
     try self.ctx.printer.append("Pre-Built not found!\n", .{}, .{ .color = .red });
 }
 
