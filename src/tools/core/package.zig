@@ -46,7 +46,7 @@ fn resolveVersion(
 
     const version = check_selected orelse return error.NotFound;
 
-    try printer.append("Package version found!\n\n", .{}, .{ .color = .green });
+    try printer.append("Package version found!\n", .{}, .{ .color = .green });
     return version;
 }
 

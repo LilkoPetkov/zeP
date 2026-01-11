@@ -1,8 +1,19 @@
 1.0.0 (Jan 9th, 2026)
-- Errors imporved
-- Logging added
-- Docs updated
+Errors imporved
+Logging added
+Docs updated
 
 1.0.1 (Jan 10th, 2026)
-- Invalid Command messsages improved
-- Fixed init bug
+Invalid Command messsages improved
+Fixed init bug
+Removed important files/folders from the filters [/src/constants/extras.zig]
+
+1.0.2 (Jan 11th, 2026)
+Testing added [/tests]
+CI pipeline added
+Logging has been added to more sections
+ZSTD compression/decompression works without alloc
+Memory Leaks fixed
+Removed hard-coded filters within archive() [/src/tools/core/compression.zig]
+Updated .gitignore [/.gitignore]
+Removed ZSTD submodule, instead cloned [/vendor]

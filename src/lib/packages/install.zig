@@ -273,7 +273,7 @@ pub fn installAll(self: *Installer) anyerror!void {
                 },
             }
         };
-        try self.ctx.printer.append(" >> done!\n", .{}, .{ .verbosity = 0, .color = .green });
+        try self.ctx.printer.append(" >> done!\n\n", .{}, .{ .verbosity = 0, .color = .green });
     }
-    try self.ctx.printer.append("\nInstalled all!\n", .{}, .{ .verbosity = 0, .color = .green });
+    try self.ctx.printer.append("Installed all!\n", .{}, .{ .verbosity = 0, .color = .green });
 }
