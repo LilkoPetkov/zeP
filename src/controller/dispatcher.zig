@@ -21,7 +21,10 @@ const Commands = enum {
     version,
     whoami,
     runner,
+    run, // (hidden) alternative
+
     builder,
+    build, // (hidden) alternative
     bootstrap,
     init,
     new,
@@ -79,7 +82,11 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         .inject => InjectController._injectController(ctx),
         .manifest => ManifestController._manifestController(ctx),
         .builder => BuilderController._builderController(ctx),
+        .build => BuilderController._builderController(ctx), // (hidden) alternative
+
         .runner => RunnerController._runnerController(ctx),
+        .run => RunnerController._runnerController(ctx), // (hidden) alternative
+
         .new => NewController._newController(ctx),
         .init => InitController._initController(ctx),
         .bootstrap => BootstrapController._bootstrapController(ctx),
