@@ -41,9 +41,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     };
     try printer.append("\n", .{}, .{});
 
-    const json = Json.init(alloc, paths);
-    var manifest = Manifest.init(alloc, json, paths);
-    const fetcher = Fetch.init(alloc, json, paths);
+    var manifest = Manifest.init(alloc, paths);
+    const fetcher = Fetch.init(alloc, paths);
 
     const compressor = Compressor.init(
         alloc,
@@ -62,7 +61,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     var ctx = Context{
         .allocator = alloc,
         .fetcher = fetcher,
-        .json = json,
         .logger = logger,
         .manifest = manifest,
         .paths = paths,
