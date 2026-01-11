@@ -85,7 +85,7 @@ pub fn compress(
     compress_path: []const u8,
 ) !void {
     if (!Fs.existsDir(target_folder)) {
-        return error.FileNotFound;
+        return error.TargetNotFound;
     }
 
     if (!Fs.existsDir(self.paths.cached)) {
@@ -93,10 +93,10 @@ pub fn compress(
     }
 
     var buf: [256]u8 = undefined;
-    const a = try std.fmt.bufPrint(&buf, "{d}.tar.zstd", .{std.time.nanoTimestamp()});
+    const a = try std.fmt.bufPrint(&buf, "{d}.tar", .{std.time.nanoTimestamp()});
     const archive_path = try std.fs.path.join(
         self.allocator,
-        &.{ self.paths.prebuilt, a },
+        &.{ self.paths.cached, a },
     );
     defer {
         Fs.deleteFileIfExists(archive_path) catch {
@@ -110,7 +110,7 @@ pub fn compress(
     }
 
     blk: {
-        var archive_file = try std.fs.cwd().createFile(archive_path, .{ .truncate = true });
+        var archive_file = try Fs.openOrCreateFile(archive_path, .{ .truncate = true });
         defer archive_file.close();
         var b: [Constants.Default.kb * 32]u8 = undefined;
         var writer = archive_file.writer(&b);
