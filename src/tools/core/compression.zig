@@ -10,6 +10,13 @@ const Printer = @import("cli").Printer;
 
 const zstd = @import("zstd.zig");
 
+fn isInArray(haystack: []const []const u8, needle: []const u8) bool {
+    for (haystack) |item| {
+        if (std.mem.eql(u8, item, needle)) return true;
+    }
+    return false;
+}
+
 /// Handles compression using zstd, and
 /// recursion.
 allocator: std.mem.Allocator,
@@ -35,20 +42,21 @@ fn archive(self: *Compressor, tar_writer: *std.tar.Writer, fs_path: []const u8, 
     defer open_target.close();
 
     var iter = open_target.iterate();
-    while (try iter.next()) |input_file_path| {
-        if (std.mem.eql(u8, input_file_path.name, ".git")) continue;
-        if (std.mem.eql(u8, input_file_path.name, ".github")) continue;
-        if (std.mem.eql(u8, input_file_path.name, "zig-out")) continue;
-        if (std.mem.eql(u8, input_file_path.name, ".zig-cache")) continue;
-        if (std.mem.eql(u8, input_file_path.name, "c")) continue;
-        if (std.mem.eql(u8, input_file_path.name, "zstd")) continue;
-        if (std.mem.eql(u8, input_file_path.name, "zep.run")) continue;
-        if (std.mem.eql(u8, input_file_path.name, ".zep")) continue;
+    while (try iter.next()) |input_file_entry| {
+        if (input_file_entry.kind == .sym_link) continue;
+        const is_filtered = isInArray(
+            switch (input_file_entry.kind) {
+                .directory => &Constants.Extras.filtering.folders,
+                else => &Constants.Extras.filtering.files,
+            },
+            input_file_entry.name,
+        );
+        if (is_filtered) continue;
 
-        const tar_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ real_path, input_file_path.name });
-        const input_fs_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ fs_path, input_file_path.name });
+        const tar_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ real_path, input_file_entry.name });
+        const input_fs_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ fs_path, input_file_entry.name });
 
-        if (input_file_path.kind == .directory) {
+        if (input_file_entry.kind == .directory) {
             try tar_writer.writeDir(tar_path, .{});
             try self.archive(tar_writer, input_fs_path, tar_path);
             continue;
@@ -124,7 +132,10 @@ pub fn compress(
     defer self.allocator.free(data);
     _ = try archive_file.readAll(data);
 
-    const compressed = try zstd.compress(self.allocator, data, 3);
+    const bound = zstd.getBound(data);
+    var compressed = try self.allocator.alloc(u8, bound);
+    defer self.allocator.free(compressed);
+    const written = try zstd.compress(data, &compressed, bound, 3);
 
     const len = data.len;
     const len_str = try std.fmt.allocPrint(self.allocator, "{d}", .{len});
@@ -135,8 +146,7 @@ pub fn compress(
     }
 
     _ = try compress_file.writeAll(len_str);
-    _ = try compress_file.writeAll(compressed);
-
+    _ = try compress_file.writeAll(compressed[0..written]);
     return;
 }
 
@@ -172,9 +182,11 @@ pub fn decompress(self: *Compressor, zstd_path: []const u8, extract_path: []cons
 
     const compressed_data = data[64..];
 
-    const decompressed = try zstd.decompress(
-        self.allocator,
+    var decompressed = try self.allocator.alloc(u8, @intCast(uncompressed_len));
+    defer self.allocator.free(decompressed);
+    try zstd.decompress(
         compressed_data,
+        &decompressed,
         @intCast(uncompressed_len),
     );
     defer self.allocator.free(decompressed);

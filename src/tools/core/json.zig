@@ -9,23 +9,8 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Manifest = @import("manifest.zig");
 
-/// Simple Json parsing and
-/// writing into files.
-allocator: std.mem.Allocator,
-paths: Constants.Paths.Paths,
-
-pub fn init(
-    allocator: std.mem.Allocator,
-    paths: Constants.Paths.Paths,
-) Json {
-    return Json{
-        .allocator = allocator,
-        .paths = paths,
-    };
-}
-
 pub fn parseJsonFromFile(
-    self: *Json,
+    allocator: std.mem.Allocator,
     comptime T: type,
     path: []const u8,
     max: usize,
@@ -37,18 +22,25 @@ pub fn parseJsonFromFile(
     var file = try Fs.openFile(path);
     defer file.close();
 
-    const data = try file.readToEndAlloc(self.allocator, max);
-    const parsed = try std.json.parseFromSlice(T, self.allocator, data, .{});
+    const data = try file.readToEndAlloc(allocator, max);
+    defer allocator.free(data);
+
+    const parsed = try std.json.parseFromSlice(
+        T,
+        allocator,
+        data,
+        .{ .allocate = .alloc_always },
+    );
     return parsed;
 }
 
 pub fn writePretty(
-    self: *Json,
+    allocator: std.mem.Allocator,
     path: []const u8,
     data: anytype,
 ) !void {
     const str = try std.json.Stringify.valueAlloc(
-        self.allocator,
+        allocator,
         data,
         .{ .whitespace = .indent_2 },
     );

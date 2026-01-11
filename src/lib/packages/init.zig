@@ -8,6 +8,7 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Prompt = @import("cli").Prompt;
 const ZigInit = @import("core").ZigInit;
+const Json = @import("core").Json;
 
 const Context = @import("context");
 
@@ -117,11 +118,11 @@ fn createFiles(self: *Init) !void {
     const lock = Structs.ZepFiles.PackageLockStruct{ .root = pkg };
 
     if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        try self.ctx.json.writePretty(Constants.Extras.package_files.manifest, pkg);
+        try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
     }
 
     if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
-        try self.ctx.json.writePretty(Constants.Extras.package_files.lock, lock);
+        try Json.writePretty(Constants.Extras.package_files.lock, lock);
     }
 
     const gitignore = ".gitignore";

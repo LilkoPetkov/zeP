@@ -53,7 +53,7 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
         .{},
     );
 
-    const hash = Hash.hashData(self.ctx.allocator, url) catch |err| {
+    const hash = Hash.hashDataByUrl(self.ctx.allocator, url) catch |err| {
         switch (err) {
             else => {
                 try self.ctx.printer.append("\nINVALID URL!\nABORTING!\n", .{}, .{ .color = .red });

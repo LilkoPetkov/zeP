@@ -83,7 +83,7 @@ pub fn init(
         version.version,
     });
 
-    const hash = try Hash.hashData(allocator, version.url);
+    const hash = try Hash.hashDataByUrl(allocator, version.url);
 
     return Package{
         .allocator = allocator,

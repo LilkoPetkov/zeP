@@ -9,8 +9,9 @@ pub const package_files = struct {
 
 pub const filtering = struct {
     pub const folders = [_][]const u8{
+        "node_modules",
+        "zig-out",
         ".git",
-        ".vscode",
         ".zig-cache",
     };
 

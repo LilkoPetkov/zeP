@@ -3,17 +3,16 @@ const Constants = @import("constants");
 const Logger = @import("logger");
 
 /// Get hash from any url
-pub fn hashData(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
+pub fn hashDataByUrl(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     const uri = std.Uri.parse(url) catch {
         return error.InvalidUrl;
     };
-
-    var hasher = std.crypto.hash.sha2.Sha256.init(.{});
 
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
     var body = std.Io.Writer.Allocating.init(allocator);
+    defer body.deinit();
 
     const fetched = try client.fetch(.{
         .location = .{ .uri = uri },
@@ -26,6 +25,15 @@ pub fn hashData(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     }
 
     const data = body.written();
+    const hashed = try hashData(allocator, data);
+    return hashed;
+}
+
+pub fn hashData(allocator: std.mem.Allocator, data: []const u8) ![]u8 {
+    var hasher = std.crypto.hash.sha2.Sha256.init(.{});
+
+    var client = std.http.Client{ .allocator = allocator };
+    defer client.deinit();
     hasher.update(data);
 
     var hash: [32]u8 = undefined;

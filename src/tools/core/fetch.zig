@@ -196,7 +196,7 @@ fn loadFromLocal(
 
     if (!Fs.existsFile(path)) return error.PackageNotFound;
 
-    return self.json.parseJsonFromFile(
+    return Json.parseJsonFromFile(
         Structs.Packages.PackageStruct,
         path,
         Constants.Default.mb * 10,

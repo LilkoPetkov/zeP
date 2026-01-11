@@ -109,7 +109,7 @@ pub fn addPathToManifest(
 
     package_manifest.value.packages = list.items;
 
-    try self.json.writePretty(self.paths.pkg_manifest, package_manifest.value);
+    try Json.writePretty(self.paths.pkg_manifest, package_manifest.value);
 }
 
 pub fn removePathFromManifest(
@@ -154,7 +154,7 @@ pub fn removePathFromManifest(
     }
 
     package_manifest.value.packages = list.items;
-    try self.json.writePretty(self.paths.pkg_manifest, package_manifest.value);
+    try Json.writePretty(self.paths.pkg_manifest, package_manifest.value);
 }
 
 pub fn manifestAdd(
@@ -187,7 +187,7 @@ pub fn manifestAdd(
         }.match,
     );
 
-    try self.json.writePretty(Constants.Extras.package_files.manifest, pkg);
+    try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
 }
 
 pub fn lockAdd(
@@ -234,7 +234,7 @@ pub fn lockAdd(
     defer package_json.deinit();
     lock.root = package_json.value;
 
-    try self.json.writePretty(Constants.Extras.package_files.lock, lock);
+    try Json.writePretty(Constants.Extras.package_files.lock, lock);
 }
 
 pub fn lockRemove(
@@ -261,7 +261,7 @@ pub fn lockRemove(
     defer package_json.deinit();
     lock.root = package_json.value;
 
-    try self.json.writePretty(Constants.Extras.package_files.lock, lock);
+    try Json.writePretty(Constants.Extras.package_files.lock, lock);
 }
 
 pub fn manifestRemove(
@@ -281,7 +281,7 @@ pub fn manifestRemove(
         }.match,
     );
 
-    try self.json.writePretty(Constants.Extras.package_files.manifest, pkg);
+    try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
 }
 
 fn appendUnique(
