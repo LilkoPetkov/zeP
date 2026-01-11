@@ -13,10 +13,24 @@ fn artifactInstall(ctx: *Context, artifact: *Artifact) !void {
 
     artifact.install(target_version, target) catch |err| {
         switch (err) {
+            error.UrlNotFound => {
+                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.printer.append("Url was not found.\n\n", .{}, .{});
+            },
             error.VersionNotFound => {
+                try ctx.logger.@"error"("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
+            error.VersionHasNoPath => {
+                try ctx.logger.@"error"("Version has no path...", @src());
+                try ctx.printer.append("Version {s} has no path.\n\n", .{target_version}, .{});
+            },
+            error.TarballNotFound => {
+                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
+            },
             else => {
+                try ctx.logger.@"error"("Installing failed...", @src());
                 try ctx.printer.append("Installing failed\n\n", .{}, .{});
             },
         }
@@ -31,14 +45,25 @@ fn artifactUninstall(ctx: *Context, artifact: *Artifact) !void {
 
     artifact.uninstall(target_version, target) catch |err| {
         switch (err) {
+            error.UrlNotFound => {
+                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.printer.append("Url was not found.\n\n", .{}, .{});
+            },
+            error.TarballNotFound => {
+                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
+            },
             error.VersionNotFound => {
+                try ctx.logger.@"error"("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
             error.VersionNotInstalled => {
+                try ctx.logger.@"error"("Version not installed...", @src());
                 try ctx.printer.append("Version {s} is not installed.\n\n", .{target_version}, .{});
             },
             else => {
-                try ctx.printer.append("Installing failed\n\n", .{}, .{});
+                try ctx.logger.@"error"("Uninsalling failed...", @src());
+                try ctx.printer.append("Uninstalling failed\n\n", .{}, .{});
             },
         }
     };
@@ -53,14 +78,25 @@ fn artifactSwitch(ctx: *Context, artifact: *Artifact) !void {
 
     artifact.switchVersion(target_version, target) catch |err| {
         switch (err) {
+            error.UrlNotFound => {
+                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.printer.append("Url was not found.\n\n", .{}, .{});
+            },
+            error.TarballNotFound => {
+                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
+            },
             error.VersionNotFound => {
+                try ctx.logger.@"error"("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
             error.VersionNotInstalled => {
+                try ctx.logger.@"error"("Version not installed...", @src());
                 try ctx.printer.append("Version {s} is not installed.\n\n", .{target_version}, .{});
             },
             else => {
-                try ctx.printer.append("Installing failed\n\n", .{}, .{});
+                try ctx.logger.@"error"("Switching failed...", @src());
+                try ctx.printer.append("Switching failed\n\n", .{}, .{});
             },
         }
     };
