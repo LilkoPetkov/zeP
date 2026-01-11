@@ -1,9 +1,7 @@
-.zig-cache
-release
-
 zig-out
 zep-out
 
+.zig-cache
 .zep/*
 !.zep/injector.zig
 !.zep/.conf
