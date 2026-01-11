@@ -43,8 +43,7 @@ pub fn createZigProject(
         return;
     }
 
-    var zig_version: []const u8 = default_zig_version orelse "0.14.0";
-
+    var zig_version: []const u8 = default_zig_version orelse Constants.Default.zig_version;
     blk: {
         if (default_zig_version != null) break :blk;
 

@@ -11,17 +11,14 @@ const Json = @import("json.zig");
 const Package = @import("package.zig");
 
 allocator: std.mem.Allocator,
-json: Json,
 paths: Constants.Paths.Paths,
 
 pub fn init(
     allocator: std.mem.Allocator,
-    json: Json,
     paths: Constants.Paths.Paths,
 ) Manifest {
     return .{
         .allocator = allocator,
-        .json = json,
         .paths = paths,
     };
 }
@@ -109,7 +106,11 @@ pub fn addPathToManifest(
 
     package_manifest.value.packages = list.items;
 
-    try Json.writePretty(self.paths.pkg_manifest, package_manifest.value);
+    try Json.writePretty(
+        self.allocator,
+        self.paths.pkg_manifest,
+        package_manifest.value,
+    );
 }
 
 pub fn removePathFromManifest(
@@ -154,7 +155,7 @@ pub fn removePathFromManifest(
     }
 
     package_manifest.value.packages = list.items;
-    try Json.writePretty(self.paths.pkg_manifest, package_manifest.value);
+    try Json.writePretty(self.allocator, self.paths.pkg_manifest, package_manifest.value);
 }
 
 pub fn manifestAdd(
@@ -187,7 +188,11 @@ pub fn manifestAdd(
         }.match,
     );
 
-    try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
+    try Json.writePretty(
+        self.allocator,
+        Constants.Extras.package_files.manifest,
+        pkg,
+    );
 }
 
 pub fn lockAdd(
@@ -234,7 +239,11 @@ pub fn lockAdd(
     defer package_json.deinit();
     lock.root = package_json.value;
 
-    try Json.writePretty(Constants.Extras.package_files.lock, lock);
+    try Json.writePretty(
+        self.allocator,
+        Constants.Extras.package_files.lock,
+        lock,
+    );
 }
 
 pub fn lockRemove(
@@ -261,7 +270,11 @@ pub fn lockRemove(
     defer package_json.deinit();
     lock.root = package_json.value;
 
-    try Json.writePretty(Constants.Extras.package_files.lock, lock);
+    try Json.writePretty(
+        self.allocator,
+        Constants.Extras.package_files.lock,
+        lock,
+    );
 }
 
 pub fn manifestRemove(
@@ -281,7 +294,11 @@ pub fn manifestRemove(
         }.match,
     );
 
-    try Json.writePretty(Constants.Extras.package_files.manifest, pkg);
+    try Json.writePretty(
+        self.allocator,
+        Constants.Extras.package_files.manifest,
+        pkg,
+    );
 }
 
 fn appendUnique(

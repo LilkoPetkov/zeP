@@ -4,10 +4,6 @@ const Logger = @import("logger");
 
 /// Get hash from any url
 pub fn hashDataByUrl(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
-    const uri = std.Uri.parse(url) catch {
-        return error.InvalidUrl;
-    };
-
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
@@ -15,7 +11,7 @@ pub fn hashDataByUrl(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     defer body.deinit();
 
     const fetched = try client.fetch(.{
-        .location = .{ .uri = uri },
+        .location = .{ .url = url },
         .method = .GET,
         .response_writer = &body.writer,
     });

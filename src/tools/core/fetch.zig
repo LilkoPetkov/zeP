@@ -11,19 +11,16 @@ const Json = @import("json.zig");
 
 /// writing into files.
 allocator: std.mem.Allocator,
-json: Json,
 paths: Constants.Paths.Paths,
 install_unverified_packages: bool = false,
 
 pub fn init(
     allocator: std.mem.Allocator,
-    json: Json,
     paths: Constants.Paths.Paths,
 ) Fetch {
     return Fetch{
         .allocator = allocator,
         .paths = paths,
-        .json = json,
     };
 }
 
@@ -33,11 +30,9 @@ pub fn fetch(
     client: *std.http.Client,
     options: Structs.Fetch.FetchOptions,
 ) !std.json.Parsed(std.json.Value) {
-    const uri = try std.Uri.parse(url);
-
     var body = std.Io.Writer.Allocating.init(self.allocator);
     const res = try client.fetch(.{
-        .location = .{ .uri = uri },
+        .location = .{ .url = url },
         .method = options.method,
         .payload = options.payload,
         .extra_headers = options.headers,
@@ -168,7 +163,7 @@ fn fetchFromUrl(
 
     var body = std.Io.Writer.Allocating.init(self.allocator);
     const res = try client.fetch(.{
-        .location = .{ .uri = try std.Uri.parse(url) },
+        .location = .{ .url = url },
         .method = .GET,
         .response_writer = &body.writer,
     });
@@ -197,6 +192,7 @@ fn loadFromLocal(
     if (!Fs.existsFile(path)) return error.PackageNotFound;
 
     return Json.parseJsonFromFile(
+        self.allocator,
         Structs.Packages.PackageStruct,
         path,
         Constants.Default.mb * 10,
