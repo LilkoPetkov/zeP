@@ -45,6 +45,10 @@ pub fn setup(
         paths.cached,
         paths.pkg_root,
         paths.zig_root,
+        paths.prebuilt,
+        paths.custom,
+        paths.auth_root,
+        paths.logs_root,
     };
     for (create_paths) |p| {
         _ = Fs.openOrCreateDir(p) catch |err| {
