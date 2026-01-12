@@ -51,6 +51,23 @@ fn isPackageFetched(
     return Fs.existsDir(target_path);
 }
 
+fn isPackageInManifest(
+    self: *Installer,
+    package_id: []const u8,
+) !bool {
+    const manifest = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageJsonStruct,
+        Constants.Extras.package_files.manifest,
+    );
+    defer manifest.deinit();
+
+    var match = false;
+    for (manifest.value.packages) |pkg| {
+        if (std.mem.eql(u8, pkg, package_id)) match = true;
+    }
+    return match;
+}
+
 fn isPackageInstalled(
     self: *Installer,
     package_name: []const u8,
@@ -111,7 +128,8 @@ pub fn install(
     blk: {
         const v = package_version orelse break :blk;
         const package_id = try std.fmt.allocPrint(self.ctx.allocator, "{s}@{s}", .{ package_name, v });
-        if (!try self.isPackageFetched(package_id)) break :blk;
+        defer self.ctx.allocator.free(package_id);
+        if (!try self.isPackageInManifest(package_id)) break :blk if (!try self.isPackageFetched(package_id)) break :blk;
         if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
         break :blk;
     }
@@ -126,7 +144,9 @@ pub fn install(
     );
     defer package.deinit();
     if (try self.isPackageFetched(package.id)) {
-        if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
+        if (try self.isPackageInManifest(package.id)) {
+            if (try self.isPackageInstalled(package_name)) return error.AlreadyInstalled;
+        }
         try self.setPackage(package);
         try self.ctx.printer.append(
             "Successfully installed - {s}\n\n",
