@@ -39,7 +39,7 @@ pub fn setup(
     paths: *Constants.Paths.Paths,
     printer: *Printer,
 ) !void {
-    const create_paths = [5][]const u8{
+    const create_paths = [_][]const u8{
         paths.root,
         paths.zep_root,
         paths.cached,
