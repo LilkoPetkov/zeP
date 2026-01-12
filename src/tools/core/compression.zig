@@ -98,6 +98,8 @@ pub fn compress(
         self.allocator,
         &.{ self.paths.cached, a },
     );
+    try Fs.deleteFileIfExists(archive_path);
+
     defer {
         Fs.deleteFileIfExists(archive_path) catch {
             self.printer.append(
@@ -110,7 +112,7 @@ pub fn compress(
     }
 
     blk: {
-        var archive_file = try Fs.openOrCreateFile(archive_path, .{ .truncate = true });
+        var archive_file = try Fs.openOrCreateFile(archive_path);
         defer archive_file.close();
         var b: [Constants.Default.kb * 32]u8 = undefined;
         var writer = archive_file.writer(&b);
