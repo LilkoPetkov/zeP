@@ -260,7 +260,11 @@ pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []cons
     }
 
     if (self.artifact_type == .zep) {
-        if (!std.mem.eql(u8, Constants.Default.version, target_version)) {
+        var outdated = false;
+        const v = version.version;
+        if (v.len == 3) outdated = !std.mem.eql(u8, "0.8", v);
+
+        if (outdated) {
             try self.ctx.printer.append("Warning: {s} is below 0.8, which is incompatible with the newer versions.\n", .{target_version}, .{});
             try self.ctx.printer.append("After switching to this version, you will not be able to switch to 0.8 or later versions.\n", .{}, .{});
 
