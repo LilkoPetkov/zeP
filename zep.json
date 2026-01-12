@@ -8,7 +8,11 @@
   "description": "A new zig Package manager, and version manager for zig.",
   "version": "1.0.2",
   "license": "GPLv3",
-  "packages": ["clap@0.11.0", "mvzr@0.3.7", "logly@0.1.0"],
+  "packages": [
+    "mvzr@0.3.7",
+    "logly@0.1.0",
+    "clap@0.11.0"
+  ],
   "dev_packages": [],
   "build": {
     "entry": "/src/main.zig",
