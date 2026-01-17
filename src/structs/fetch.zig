@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const ProjectStruct = struct {
+pub const PackageStruct = struct {
     ID: []const u8,
     UserID: []const u8,
     Name: []const u8,
@@ -13,7 +13,7 @@ pub const ProjectStruct = struct {
 pub const ReleaseStruct = struct {
     ID: []const u8,
     UserID: []const u8,
-    ProjectID: []const u8,
+    PackageID: []const u8,
     Url: []const u8,
     Release: []const u8,
     ZigVersion: []const u8,
@@ -24,7 +24,14 @@ pub const ReleaseStruct = struct {
 };
 
 pub const FetchOptions = struct {
-    payload: ?[]const u8 = null,
+    payload: ?[]u8 = null,
     headers: []const std.http.Header = &.{},
     method: std.http.Method = .POST,
+};
+
+pub const User = struct {
+    Id: []const u8,
+    Username: []const u8,
+    Email: []const u8,
+    CreatedAt: []const u8,
 };
