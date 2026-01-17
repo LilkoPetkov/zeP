@@ -42,7 +42,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     try printer.append("\n", .{}, .{});
 
     var manifest = Manifest.init(alloc, paths);
-    const fetcher = Fetch.init(alloc, paths);
+    const fetcher = Fetch.init(alloc, paths, manifest);
 
     const compressor = Compressor.init(
         alloc,
