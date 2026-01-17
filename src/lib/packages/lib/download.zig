@@ -12,7 +12,6 @@ const Package = @import("core").Package;
 const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 
 const Cacher = @import("cache.zig");
-const Projects = @import("../../cloud/project.zig");
 const Context = @import("context");
 
 ctx: *Context,
@@ -72,14 +71,14 @@ fn downloadAndExtract(
 }
 
 fn resolveCloudUrl(
-    project: *Projects,
+    ctx: *Context,
     name: []const u8,
     version: []const u8,
 ) ?[]const u8 {
-    const releases = project.getReleasesFromProject(name) catch return null;
-    defer releases.deinit();
+    var releases = ctx.fetcher.fetchReleases(name) catch return null;
+    defer releases.deinit(ctx.allocator);
 
-    for (releases.value) |r| {
+    for (releases.items) |r| {
         if (std.mem.eql(u8, r.Release, version)) {
             return r.Url;
         }
@@ -141,13 +140,12 @@ fn fetchPackage(
     if (Fs.existsDir(path)) try Fs.deleteTreeIfExists(path);
 
     try self.ctx.printer.append("Fetching package... [{s}]\n", .{url}, .{});
-    var project = Projects.init(self.ctx);
     var split = std.mem.splitAny(u8, package_id, "@");
     const package_name = split.first();
     const package_version = split.next() orelse "";
 
     if (install_unverified_packages) {
-        const u = resolveCloudUrl(&project, package_name, package_version);
+        const u = resolveCloudUrl(self.ctx, package_name, package_version);
         if (u) |cloud_url| {
             try self.downloadAndExtract(
                 cloud_url,
