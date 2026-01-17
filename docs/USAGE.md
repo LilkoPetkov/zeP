@@ -7,35 +7,6 @@ It provides easy bootstrapping, dependency management, and running of Zig projec
 
 ---
 
-## Installing zeP
-
-### **Windows (PowerShell, as Administrator)**
-
-```powershell
-& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://zep.run/installer/installer.ps1')))
-```
-
-### **Linux**
-
-```bash
-curl -fsSL https://zep.run/installer/installer.sh | bash
-```
-
-### **AUR**
-
-```bash
-yay -S zep-bin
-```
-
-### **macOS**
-
-```bash
-brew tap XerWoho/homebrew-zep
-brew install zep
-```
-
----
-
 ## Bootstrap a Project
 
 `zep bootstrap` prepares a new project or sets up an existing one with dependencies.
