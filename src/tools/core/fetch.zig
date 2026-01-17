@@ -8,19 +8,23 @@ const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
 const Json = @import("json.zig");
+const Manifest = @import("manifest.zig");
 
 /// writing into files.
 allocator: std.mem.Allocator,
 paths: Constants.Paths.Paths,
+manifest: Manifest,
 install_unverified_packages: bool = false,
 
 pub fn init(
     allocator: std.mem.Allocator,
     paths: Constants.Paths.Paths,
+    manifest: Manifest,
 ) Fetch {
     return Fetch{
         .allocator = allocator,
         .paths = paths,
+        .manifest = manifest,
     };
 }
 
@@ -31,6 +35,7 @@ pub fn fetch(
     options: Structs.Fetch.FetchOptions,
 ) !std.json.Parsed(std.json.Value) {
     var body = std.Io.Writer.Allocating.init(self.allocator);
+    defer body.deinit();
     const res = try client.fetch(.{
         .location = .{ .url = url },
         .method = options.method,
@@ -47,103 +52,220 @@ pub fn fetch(
         std.json.Value,
         self.allocator,
         written,
-        .{},
+        .{
+            .allocate = .alloc_always,
+        },
     );
 }
 
-pub fn fetchProject(self: *Fetch, name: []const u8) !struct {
-    project: std.json.Parsed(Structs.Fetch.ProjectStruct),
-    releases: std.json.Parsed([]Structs.Fetch.ReleaseStruct),
-} {
+fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.PackageStruct {
     const url = try std.fmt.allocPrint(
         self.allocator,
-        Constants.Default.zep_url ++ "/api/get/project?name={s}",
+        Constants.Default.zep_url ++ "/api/v1/package?name={s}",
         .{name},
     );
     defer self.allocator.free(url);
 
     var client = std.http.Client{ .allocator = self.allocator };
     defer client.deinit();
-    const get_project_response = try self.fetch(
+    const get = try self.fetch(
         url,
         &client,
         .{
             .method = .GET,
         },
     );
-    defer get_project_response.deinit();
-    const get_project_object = get_project_response.value.object;
-    const is_get_project_successful = get_project_object.get("success") orelse return error.FetchFailed;
-    if (!is_get_project_successful.bool) {
+    defer get.deinit();
+    const get_object = get.value.object;
+    const success = get_object.get("success") orelse return error.FetchFailed;
+    if (!success.bool) {
         return error.FetchFailed;
     }
-    const project = get_project_object.get("project") orelse return error.FetchFailed;
-    const project_decoded = try self.allocator.alloc(
-        u8,
-        try std.base64.standard.Decoder.calcSizeForSlice(project.string),
-    );
-    try std.base64.standard.Decoder.decode(project_decoded, project.string);
-    const project_parsed: std.json.Parsed(Structs.Fetch.ProjectStruct) = try std.json.parseFromSlice(
-        Structs.Fetch.ProjectStruct,
-        self.allocator,
-        project_decoded,
-        .{},
-    );
+    const object_package = get_object.get("package") orelse return error.FetchFailed;
+    var object = object_package.object;
+    defer object.deinit();
 
-    const releases = get_project_object.get("releases") orelse return error.FetchFailed;
-    const release_decoded = try self.allocator.alloc(
-        u8,
-        try std.base64.standard.Decoder.calcSizeForSlice(releases.string),
-    );
-    try std.base64.standard.Decoder.decode(release_decoded, releases.string);
-    const release_parsed: std.json.Parsed([]Structs.Fetch.ReleaseStruct) = try std.json.parseFromSlice(
-        []Structs.Fetch.ReleaseStruct,
-        self.allocator,
-        release_decoded,
-        .{},
-    );
-
-    return .{
-        .project = project_parsed,
-        .releases = release_parsed,
+    const package_id = object.get("id") orelse return error.FetchFailed;
+    const package_user_id = object.get("userId") orelse return error.FetchFailed;
+    const package_name = object.get("name") orelse return error.FetchFailed;
+    const package_description = object.get("description") orelse return error.FetchFailed;
+    const package_docs = object.get("docs") orelse return error.FetchFailed;
+    const package_tags = object.get("tags") orelse return error.FetchFailed;
+    const package_created_at = object.get("created_at") orelse return error.FetchFailed;
+    const package = Structs.Fetch.PackageStruct{
+        .ID = package_id.string,
+        .UserID = package_user_id.string,
+        .Name = package_name.string,
+        .Description = package_description.string,
+        .Docs = package_docs.string,
+        .Tags = package_tags.string,
+        .CreatedAt = package_created_at.string,
     };
+
+    return package;
 }
 
-fn fetchFromProject(
+pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
+    var auth = try self.manifest.readManifest(
+        Structs.Manifests.AuthManifest,
+        self.paths.auth_manifest,
+    );
+    defer auth.deinit();
+    if (auth.value.token.len == 0) {
+        return error.NotAuthed;
+    }
+
+    const url = Constants.Default.zep_url ++ "/api/v1/packages";
+    var client = std.http.Client{ .allocator = self.allocator };
+    defer client.deinit();
+    const get = try self.fetch(
+        url,
+        &client,
+        .{
+            .method = .GET,
+            .headers = &.{
+                std.http.Header{
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
+                },
+            },
+        },
+    );
+    defer get.deinit();
+    const object = get.value.object;
+    const success = object.get("success") orelse return error.FetchFailed;
+    if (!success.bool) {
+        return error.FetchFailed;
+    }
+    const object_packages = object.get("packages") orelse return error.FetchFailed;
+    const array = object_packages.array;
+    defer array.deinit();
+
+    var packages = try std.ArrayList(Structs.Fetch.PackageStruct).initCapacity(
+        self.allocator,
+        array.items.len,
+    );
+    for (array.items) |package_value| {
+        const package = package_value.object;
+        const package_id = package.get("id") orelse return error.FetchFailed;
+        const package_user_id = package.get("userId") orelse return error.FetchFailed;
+        const package_name = package.get("name") orelse return error.FetchFailed;
+        const package_description = package.get("description") orelse return error.FetchFailed;
+        const package_docs = package.get("docs") orelse return error.FetchFailed;
+        const package_tags = package.get("tags") orelse return error.FetchFailed;
+        const package_created_at = package.get("created_at") orelse return error.FetchFailed;
+        const package_struct = Structs.Fetch.PackageStruct{
+            .ID = package_id.string,
+            .UserID = package_user_id.string,
+            .Name = package_name.string,
+            .Description = package_description.string,
+            .Docs = package_docs.string,
+            .Tags = package_tags.string,
+            .CreatedAt = package_created_at.string,
+        };
+
+        try packages.append(self.allocator, package_struct);
+    }
+
+    return packages;
+}
+
+pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetch.ReleaseStruct) {
+    var auth = try self.manifest.readManifest(
+        Structs.Manifests.AuthManifest,
+        self.paths.auth_manifest,
+    );
+    defer auth.deinit();
+    if (auth.value.token.len == 0) {
+        return error.NotAuthed;
+    }
+
+    const url = try std.fmt.allocPrint(
+        self.allocator,
+        Constants.Default.zep_url ++ "/api/v1/releases?package_name={s}",
+        .{name},
+    );
+    defer self.allocator.free(url);
+
+    var client = std.http.Client{ .allocator = self.allocator };
+    defer client.deinit();
+    const get = try self.fetch(
+        url,
+        &client,
+        .{
+            .method = .GET,
+            .headers = &.{
+                std.http.Header{
+                    .name = "Authorization",
+                    .value = try auth.value.bearer(),
+                },
+            },
+        },
+    );
+    defer get.deinit();
+    const object = get.value.object;
+    const success = object.get("success") orelse return error.FetchFailed;
+    if (!success.bool) {
+        return error.FetchFailed;
+    }
+    const object_releases = object.get("releases") orelse return error.FetchFailed;
+    const array = object_releases.array;
+    defer array.deinit();
+
+    var releases = try std.ArrayList(Structs.Fetch.ReleaseStruct).initCapacity(
+        self.allocator,
+        array.items.len,
+    );
+    for (array.items) |release_value| {
+        const release = release_value.object;
+        const release_id = release.get("id") orelse return error.FetchFailed;
+        const release_user_id = release.get("userId") orelse return error.FetchFailed;
+        const release_package_id = release.get("packageId") orelse return error.FetchFailed;
+        const release_url = release.get("url") orelse return error.FetchFailed;
+        const release_release = release.get("release") orelse return error.FetchFailed;
+        const release_zig_version = release.get("zig_version") orelse return error.FetchFailed;
+        const release_hash = release.get("hash") orelse return error.FetchFailed;
+        const release_root_file = release.get("root_file") orelse return error.FetchFailed;
+        const release_created_at = release.get("created_at") orelse return error.FetchFailed;
+        const release_updated_at = release.get("updated_at") orelse return error.FetchFailed;
+        const release_struct = Structs.Fetch.ReleaseStruct{
+            .ID = release_id.string,
+            .UserID = release_user_id.string,
+            .PackageID = release_package_id.string,
+            .Url = release_url.string,
+            .Release = release_release.string,
+            .ZigVersion = release_zig_version.string,
+            .Hash = release_hash.string,
+            .RootFile = release_root_file.string,
+            .CreatedAt = release_created_at.string,
+            .UpdatedAt = release_updated_at.string,
+        };
+
+        try releases.append(self.allocator, release_struct);
+    }
+
+    return releases;
+}
+
+fn fetchFromPackage(
     self: *Fetch,
     package_name: []const u8,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
-    const fetched = try self.fetchProject(package_name);
+    var releases = try self.fetchReleases(package_name);
+    defer releases.deinit(self.allocator);
+    const package = try self._fetchPackage(package_name);
 
-    var versions = try std.ArrayList(Structs.Packages.PackageVersions)
-        .initCapacity(self.allocator, fetched.releases.value.len);
-
-    for (fetched.releases.value) |r| {
-        try versions.append(self.allocator, .{
-            .root_file = r.RootFile,
-            .sha256sum = r.Hash,
-            .url = r.Url,
-            .version = r.Release,
-            .zig_version = r.ZigVersion,
-        });
-    }
-
-    const p = std.json.Parsed(Structs.Packages.PackageStruct){
-        .arena = undefined,
-        .value = .{
-            .author = fetched.project.value.UserID,
-            .name = fetched.project.value.Name,
-            .docs = fetched.project.value.Docs,
-            .versions = versions.items,
-        },
-    };
-
-    const s = try std.json.Stringify.valueAlloc(self.allocator, p.value, .{});
+    const stringified = try std.json.Stringify.valueAlloc(self.allocator, .{
+        .author = package.UserID,
+        .name = package.Name,
+        .docs = package.Docs,
+        .versions = releases.items,
+    }, .{});
     return std.json.parseFromSlice(
         Structs.Packages.PackageStruct,
         self.allocator,
-        s,
-        .{},
+        stringified,
+        .{ .allocate = .alloc_always },
     );
 }
 
@@ -174,7 +296,7 @@ fn fetchFromUrl(
         Structs.Packages.PackageStruct,
         self.allocator,
         body.written(),
-        .{},
+        .{ .allocate = .alloc_always },
     );
 }
 
@@ -204,7 +326,7 @@ pub fn fetchPackage(
     package_name: []const u8,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
     if (self.install_unverified_packages) {
-        if (self.fetchFromProject(package_name)) |pkg| {
+        if (self.fetchFromPackage(package_name)) |pkg| {
             return pkg;
         } else |_| {}
     }
