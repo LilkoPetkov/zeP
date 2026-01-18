@@ -1,8 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Logger = @import("logger");
+const Loggexr = @import("logger");
 const Constants = @import("constants");
+const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
 const Printer = @import("printer.zig");
@@ -12,9 +13,9 @@ fn setupEnviromentPath(tmp_path: []const u8) !void {
     const sh_file =
         \\ #!/bin/bash
         \\ 
-        \\ USR_LOCAL_BIN="$HOME/.local/bin"
-        \\ export PATH="$USR_LOCAL_BIN:$PATH"
-        \\ grep -qxF "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$USR_LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
+        \\ BIN="$HOME/.zep/bin"
+        \\ export PATH="$BIN:$PATH"
+        \\ grep -qxF "export PATH=\"$BIN:\$PATH\"" "$HOME/.bashrc" || echo "export PATH=\"$BIN:\$PATH\"" >> "$HOME/.bashrc"
     ;
 
     const tmp = try Fs.openOrCreateFile(tmp_path);
@@ -40,8 +41,8 @@ pub fn setup(
     printer: *Printer,
 ) !void {
     const create_paths = [_][]const u8{
-        paths.root,
         paths.zep_root,
+        paths.bin,
         paths.cached,
         paths.pkg_root,
         paths.zig_root,
@@ -64,7 +65,7 @@ pub fn setup(
 
     if (builtin.os.tag != .linux) return;
 
-    const tmp_path = try std.fs.path.join(allocator, &.{ paths.root, "temp" });
+    const tmp_path = try std.fs.path.join(allocator, &.{ paths.base, "temp" });
     const tmp_file = try std.fs.path.join(allocator, &.{ tmp_path, "tmp_exe" });
 
     defer {
