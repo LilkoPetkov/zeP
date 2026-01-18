@@ -10,10 +10,14 @@ const Commands = enum {
     doctor,
     inject,
     install,
-    package,
+
+    custom,
+    info,
+    list,
+
     paths,
     prebuilt,
-    project,
+    package,
     purge,
     release,
     setup,
@@ -31,7 +35,9 @@ const Commands = enum {
     manifest,
 };
 
-const PackageController = @import("commands/_package.zig");
+const CustomController = @import("commands/_custom.zig");
+const InfoController = @import("commands/_info.zig");
+const ListController = @import("commands/_list.zig");
 const ArtifactController = @import("commands/_artifact.zig");
 const AuthController = @import("commands/_auth.zig");
 const CacheController = @import("commands/_cache.zig");
@@ -41,7 +47,7 @@ const InjectController = @import("commands/_inject.zig");
 const InstallController = @import("commands/_install.zig");
 const PathsController = @import("commands/_paths.zig");
 const PrebuiltController = @import("commands/_prebuilt.zig");
-const ProjectController = @import("commands/_project.zig");
+const PackageController = @import("commands/_package.zig");
 const PurgeController = @import("commands/_purge.zig");
 const ReleaseController = @import("commands/_release.zig");
 const SetupController = @import("commands/_setup.zig");
@@ -69,7 +75,7 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         .auth => AuthController._authController(ctx),
         .prebuilt => PrebuiltController._prebuiltController(ctx),
         .release => ReleaseController._releaseController(ctx),
-        .project => ProjectController._projectController(ctx),
+        .package => PackageController._packageController(ctx),
         .purge => PurgeController._purgeController(ctx),
         .cache => CacheController._cacheController(ctx),
         .doctor => DoctorController._doctorController(ctx),
@@ -77,7 +83,11 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         .setup => SetupController._setupController(ctx),
         .version => VersionController._versionController(ctx),
         .whoami => WhoamiController._whoamiController(ctx),
-        .package => PackageController._packageController(ctx),
+
+        .custom => CustomController._customController(ctx),
+        .info => InfoController._infoController(ctx),
+        .list => ListController._listController(ctx),
+
         .cmd => CmdController._cmdController(ctx),
         .inject => InjectController._injectController(ctx),
         .manifest => ManifestController._manifestController(ctx),
@@ -102,13 +112,13 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         switch (err) {
             error.ZigInvalidSubcommand => {
                 std.debug.print(
-                    "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n  zep zig install [version] (target)\n  zep zig list\n  zep zig prune\n\n",
+                    "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n  zep zig install [version] (target)\n  zep zig list\n\n",
                     .{},
                 );
             },
             error.ZepInvalidSubcommand => {
                 std.debug.print(
-                    "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n  zep zep install [version] (target)\n  zep zep list\n  zep zep prune\n\n",
+                    "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n  zep zep install [version] (target)\n  zep zep list\n\n",
                     .{},
                 );
             },
@@ -136,9 +146,9 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
                     .{},
                 );
             },
-            error.ProjectInvalidSubcommand => {
+            error.PackageInvalidSubcommand => {
                 std.debug.print(
-                    "--- PROJECT COMMANDS ---\n  zep project list\n  zep project create\n  zep project delete\n\n",
+                    "--- YOUR PACKAGE COMMANDS ---\n  zep package list\n  zep package create\n  zep package delete\n\n",
                     .{},
                 );
             },
@@ -148,15 +158,27 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
                     .{},
                 );
             },
-            error.PackageInvalidSubcommand => {
+            error.CustomInvalidSubcommand => {
                 std.debug.print(
-                    "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
+                    "--- CUSTOM PACKAGE COMMANDS ---\n  zep custom remove [custom package name]\n  zep custom add\n\n",
                     .{},
                 );
             },
-            error.PackageMissingArguments => {
+            error.CustomMissingArguments => {
                 std.debug.print(
-                    "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
+                    "--- CUSTOM PACKAGE COMMANDS ---\n   zep custom remove [custom package name]\n  zep custom add\n\n",
+                    .{},
+                );
+            },
+            error.InfoMissingArguments => {
+                std.debug.print(
+                    "--- PACKAGE COMMANDS ---\n  zep info [target]\n\n",
+                    .{},
+                );
+            },
+            error.ListMissingArguments => {
+                std.debug.print(
+                    "--- PACKAGE COMMANDS ---\n  zep list [target]\n\n",
                     .{},
                 );
             },

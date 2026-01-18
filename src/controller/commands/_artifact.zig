@@ -103,12 +103,6 @@ fn artifactSwitch(ctx: *Context, artifact: *Artifact) !void {
     return;
 }
 
-fn artifactPrune(ctx: *Context, artifact: *Artifact) !void {
-    _ = ctx;
-    try artifact.prune();
-    return;
-}
-
 fn artifactList(ctx: *Context, artifact: *Artifact) !void {
     _ = ctx;
     try artifact.list();
@@ -140,8 +134,6 @@ pub fn _artifactController(
         try artifactUninstall(ctx, &artifact);
     } else if (std.mem.eql(u8, arg, "switch")) {
         try artifactSwitch(ctx, &artifact);
-    } else if (std.mem.eql(u8, arg, "prune")) {
-        try artifactPrune(ctx, &artifact);
     } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
     {

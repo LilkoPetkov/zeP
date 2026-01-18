@@ -10,6 +10,14 @@ fn authLogin(ctx: *Context, auth: *Auth) !void {
                 try ctx.logger.@"error"("Invalid Password", @src());
                 try ctx.printer.append("Invalid password.\n", .{}, .{});
             },
+            error.AlreadyAuthed => {
+                try ctx.logger.@"error"("Already Authenticated", @src());
+                try ctx.printer.append(
+                    "Already authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
             error.FetchFailed => {
                 try ctx.logger.@"error"("Fetching Login Failed", @src());
                 try ctx.printer.append(

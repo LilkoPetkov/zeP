@@ -1,84 +1,128 @@
 const std = @import("std");
 
-const Custom = @import("../../lib/packages/custom.zig");
-const Lister = @import("../../lib/packages/list.zig");
-const Package = @import("core").Package;
+const Package = @import("../../lib/cloud/package.zig");
 
 const Context = @import("context");
-
-fn packageAdd(ctx: *Context) !void {
-    var custom = Custom.init(ctx);
-    try custom.requestPackage();
-    return;
-}
-
-fn packageRemove(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.PackageMissingArguments;
-    const package = ctx.args[3];
-    var custom = Custom.init(ctx);
-    try custom.removePackage(package);
-    return;
-}
-
-fn packageList(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.PackageMissingArguments;
-
-    const package = ctx.args[3];
-    var split = std.mem.splitScalar(u8, package, '@');
-    const package_name = split.first();
-    Lister.list(ctx, package_name) catch |err| {
+fn packageCreate(ctx: *Context, package: *Package) !void {
+    package.create() catch |err| {
         switch (err) {
-            error.PackageNotFound => {
-                try ctx.printer.append("Package not found...\n\n", .{}, .{ .color = .red });
-                return;
+            error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.printer.append(
+                    "Not authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Create Package Failed", @src());
+                try ctx.printer.append(
+                    "Fetching package create failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
             },
             else => {
-                try ctx.printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
+                try ctx.logger.@"error"("Creating Package Failed", @src());
+                try ctx.printer.append(
+                    "Creating package failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
             },
         }
     };
+    return;
 }
 
-fn packageInfo(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.PackageMissingArguments;
+fn packageList(ctx: *Context, package: *Package) !void {
+    package.list() catch |err| {
+        switch (err) {
+            error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.printer.append(
+                    "Not authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Packages Failed", @src());
+                try ctx.printer.append(
+                    "Fetching packages failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
 
-    const package_id = ctx.args[3];
-    var split = std.mem.splitScalar(u8, package_id, '@');
-    const package_name = split.first();
-    const package_version = split.next();
-    var package = try Package.init(
-        ctx.allocator,
-        &ctx.printer,
-        &ctx.fetcher,
-        package_name,
-        package_version,
-    );
-    defer package.deinit();
+            else => {
+                try ctx.logger.@"error"("Listing Packages Failed", @src());
+                try ctx.printer.append(
+                    "Listing package failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
+    return;
+}
 
-    std.debug.print("Package Name: {s}\n", .{package_name});
-    std.debug.print("Version: {s}\n", .{package.package.version});
-    std.debug.print("Sha256Sum: {s}\n", .{package.package.sha256sum});
-    std.debug.print("Url: {s}\n", .{package.package.url});
-    std.debug.print("Root File: {s}\n", .{package.package.root_file});
-    std.debug.print("Zig Version: {s}\n", .{package.package.zig_version});
-    std.debug.print("\n", .{});
+fn packageDelete(ctx: *Context, package: *Package) !void {
+    package.delete() catch |err| {
+        switch (err) {
+            error.NotAuthed => {
+                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.printer.append(
+                    "Not authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.logger.@"error"("Fetching Delete Failed", @src());
+                try ctx.printer.append(
+                    "Fetching package delete failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.NotFound => {
+                try ctx.logger.@"error"("Package Not Found", @src());
+                try ctx.printer.append(
+                    "Package not found.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            else => {
+                try ctx.logger.@"error"("Deleting Package Failed", @src());
+                try ctx.printer.append(
+                    "Deleting package failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
+    return;
 }
 
 pub fn _packageController(ctx: *Context) !void {
     if (ctx.args.len < 3) return error.PackageInvalidSubcommand;
 
+    var package = Package.init(ctx);
+
     const arg = ctx.args[2];
-    if (std.mem.eql(u8, arg, "add")) {
-        try packageAdd(ctx);
-    } else if (std.mem.eql(u8, arg, "remove")) {
-        try packageRemove(ctx);
-    } else if (std.mem.eql(u8, arg, "info")) {
-        try packageInfo(ctx);
+    if (std.mem.eql(u8, arg, "create")) {
+        try packageCreate(ctx, &package);
     } else if (std.mem.eql(u8, arg, "list") or
         std.mem.eql(u8, arg, "ls"))
     {
-        try packageList(ctx);
+        try packageList(ctx, &package);
+    } else if (std.mem.eql(u8, arg, "delete")) {
+        try packageDelete(ctx, &package);
     } else {
-        return error.PackageInvalidSubcommand;
+        return error.PackagerInvalidSubcommand;
     }
 }

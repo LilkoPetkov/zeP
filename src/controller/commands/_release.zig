@@ -25,8 +25,8 @@ fn releaseCreate(ctx: *Context, release: *Release) !void {
             else => {
                 try ctx.logger.@"error"("Creating Release Failed", @src());
                 try ctx.printer.append(
-                    "Creating release failed.\n",
-                    .{},
+                    "Creating release failed. Err={any}\n",
+                    .{err},
                     .{ .color = .bright_red },
                 );
             },

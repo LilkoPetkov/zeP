@@ -2,10 +2,9 @@ const std = @import("std");
 const Context = @import("context");
 
 fn paths(ctx: *Context) !void {
-    try ctx.printer.append("\n--- ZEP PATHS ---\n\nBase: {s}\nCustom: {s}\nRoot: {s}\nPrebuilt: {s}\ncached: {s}\nPackage-Manifest: {s}\nPackge-Root: {s}\nzep-Manifest: {s}\nzep-Root: {s}\nZig-Manifest: {s}\nZig-Root: {s}\n\n", .{
+    try ctx.printer.append("\n--- ZEP PATHS ---\n\nBase: {s}\nCustom: {s}\nPrebuilt: {s}\ncached: {s}\nPackage-Manifest: {s}\nPackge-Root: {s}\nzep-Manifest: {s}\nzep-Root: {s}\nZig-Manifest: {s}\nZig-Root: {s}\n\n", .{
         ctx.paths.base,
         ctx.paths.custom,
-        ctx.paths.root,
         ctx.paths.prebuilt,
         ctx.paths.cached,
 

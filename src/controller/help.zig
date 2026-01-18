@@ -22,7 +22,7 @@ pub fn help(ctx: *Context) void {
         .{},
     );
     std.debug.print(
-        "--- PROJECT COMMANDS ---\n  zep project list\n  zep project create\n  zep project delete\n\n",
+        "--- YOUR PACKAGE COMMANDS ---\n  zep package list\n  zep package create\n  zep package delete\n\n",
         .{},
     );
     std.debug.print(
@@ -30,19 +30,19 @@ pub fn help(ctx: *Context) void {
         .{},
     );
     std.debug.print(
-        "--- CMD COMMANDS ---\n  zep cmd run [cmd]\n  zep cmd add\n  zep cmd remove <cmd>\n  zep cmd list\n\n",
+        "--- CMD COMMANDS ---\n  zep cmd run [cmd]\n  zep cmd add\n  zep cmd remove [cmd]\n  zep cmd list\n\n",
         .{},
     );
     std.debug.print(
-        "--- PACKAGE COMMANDS ---\n  zep install (target)@(version)\n  zep uninstall [target]\n\n",
+        "--- PACKAGE COMMANDS ---\n  zep install (target)@(version)\n  zep uninstall [target]\n  zep list [target]\n  zep info [target]\n\n",
         .{},
     );
     std.debug.print(
-        "  zep purge\n  zep cache [list|clean|size] (package_id)\n  zep inject\n\n",
+        "--- CONFIG COMMANDS ---\n  zep purge\n  zep cache [list|clean|size] (package_id)\n  zep inject\n\n",
         .{},
     );
     std.debug.print(
-        "--- CUSTOM PACKAGE COMMANDS ---\n  zep package list [target]\n  zep package info [target]\n  zep package remove [custom package name]\n  zep package add\n\n",
+        "--- CUSTOM PACKAGE COMMANDS ---\n  zep custom remove [custom package name]\n  zep custom add\n\n",
         .{},
     );
     std.debug.print(
