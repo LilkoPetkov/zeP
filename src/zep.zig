@@ -19,6 +19,7 @@ const PackageFiles = @import("lib/functions/package_files.zig");
 const Artifact = @import("lib/artifact/artifact.zig");
 
 const Context = @import("context");
+const Migrate = @import("migrate.zig");
 
 pub fn start(alloc: std.mem.Allocator) !Context {
     const args = try std.process.argsAlloc(alloc);
@@ -50,14 +51,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         paths,
     );
 
-    const create_paths = [5][]const u8{
-        paths.root,
-        paths.zep_root,
-        paths.cached,
-        paths.pkg_root,
-        paths.zig_root,
-    };
-
     var ctx = Context{
         .allocator = alloc,
         .fetcher = fetcher,
@@ -68,6 +61,15 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         .compressor = compressor,
         .args = args,
     };
+    try Migrate.migratePaths(&ctx);
+
+    const create_paths = [5][]const u8{
+        paths.base,
+        paths.zep_root,
+        paths.cached,
+        paths.pkg_root,
+        paths.zig_root,
+    };
 
     var is_created = true;
     for (create_paths) |p| {
@@ -76,28 +78,11 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     }
 
     if (!is_created) {
-        try printer.append("\nNo setup detected. Run '$ zep setup'?\n", .{}, .{
-            .color = .blue,
-            .weight = .bold,
-        });
-
-        const answer = try Prompt.input(
-            alloc,
-            &printer,
-            "(Y/n) > ",
-            .{},
+        try Setup.setup(
+            ctx.allocator,
+            &ctx.paths,
+            &ctx.printer,
         );
-        if (answer.len == 0 or
-            std.mem.startsWith(u8, answer, "y") or
-            std.mem.startsWith(u8, answer, "Y"))
-        {
-            try logger.info("Running setup...", @src());
-            try Setup.setup(
-                ctx.allocator,
-                &ctx.paths,
-                &ctx.printer,
-            );
-        }
     }
 
     const zep_version_exists = Fs.existsFile(paths.zep_manifest);

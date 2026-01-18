@@ -1,41 +1,71 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+pub fn oldbase(allocator: std.mem.Allocator) ![]const u8 {
+    var base: []const u8 = undefined;
+    if (builtin.os.tag == .windows) {
+        base = "C:\\Users\\Public\\AppData\\Local\\zeP";
+    } else if (builtin.os.tag == .linux) {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        base = try std.fs.path.join(allocator, &.{ home, ".local", "zeP" });
+    } else if (builtin.os.tag == .macos) {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        base = try std.fs.path.join(allocator, &.{ home, "Library", "Application Support", "zeP" });
+    } else {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        base = home;
+    }
+
+    return base;
+}
+
+pub fn oldbinaries(allocator: std.mem.Allocator) ![]const u8 {
+    var binaries: []const u8 = undefined;
+    if (builtin.os.tag == .windows) {
+        binaries = "C:\\Users\\Public\\AppData\\Local\\zeP";
+    } else {
+        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
+        binaries = try std.fs.path.join(allocator, &.{ home, ".local", "bin" });
+    }
+
+    return binaries;
+}
+
 /// Returns absolute paths of specific
 /// operating system.
 pub fn paths(allocator: std.mem.Allocator) !Paths {
     var base: []const u8 = undefined;
 
     if (builtin.os.tag == .windows) {
-        base = "C:\\Users\\Public\\AppData\\Local";
-    } else if (builtin.os.tag == .linux) {
-        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
-        base = try std.fs.path.join(allocator, &.{ home, ".local" });
-    } else if (builtin.os.tag == .macos) {
-        const home = std.posix.getenv("HOME") orelse return error.MissingHome;
-        base = try std.fs.path.join(allocator, &.{ home, "Library", "Application Support" });
+        var env_map = try std.process.getEnvMap(allocator);
+        defer env_map.deinit();
+
+        const home = env_map.get("HOMEPATH") orelse return error.MissingHome;
+        const chome = try std.fmt.allocPrint(allocator, "C:{s}", .{home});
+        base = try std.fs.path.join(allocator, &.{ chome, ".zep" });
     } else {
         const home = std.posix.getenv("HOME") orelse return error.MissingHome;
-        base = home;
+        base = try std.fs.path.join(allocator, &.{ home, ".zep" });
     }
+
     return .{
         .allocator = allocator,
         .base = base,
-        .root = try std.fs.path.join(allocator, &.{ base, "zeP" }),
-        .prebuilt = try std.fs.path.join(allocator, &.{ base, "zeP", "prebuilt" }),
-        .cached = try std.fs.path.join(allocator, &.{ base, "zeP", "cached" }),
-        .custom = try std.fs.path.join(allocator, &.{ base, "zeP", "custom" }),
+        .bin = try std.fs.path.join(allocator, &.{ base, "bin" }),
+        .prebuilt = try std.fs.path.join(allocator, &.{ base, "prebuilt" }),
+        .cached = try std.fs.path.join(allocator, &.{ base, "cached" }),
+        .custom = try std.fs.path.join(allocator, &.{ base, "custom" }),
 
-        .pkg_root = try std.fs.path.join(allocator, &.{ base, "zeP", "pkg" }),
-        .zig_root = try std.fs.path.join(allocator, &.{ base, "zeP", "zig" }),
-        .zep_root = try std.fs.path.join(allocator, &.{ base, "zeP", "zep" }),
-        .logs_root = try std.fs.path.join(allocator, &.{ base, "zeP", "logs" }),
-        .auth_root = try std.fs.path.join(allocator, &.{ base, "zeP", "auth" }),
+        .pkg_root = try std.fs.path.join(allocator, &.{ base, "pkg" }),
+        .zig_root = try std.fs.path.join(allocator, &.{ base, "zig" }),
+        .zep_root = try std.fs.path.join(allocator, &.{ base, "zep" }),
+        .auth_root = try std.fs.path.join(allocator, &.{ base, "auth" }),
+        .logs_root = try std.fs.path.join(allocator, &.{ base, "logs" }),
 
-        .pkg_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "pkg", "manifest.json" }),
-        .zig_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "zig", "manifest.json" }),
-        .zep_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "zep", "manifest.json" }),
-        .auth_manifest = try std.fs.path.join(allocator, &.{ base, "zeP", "auth", "manifest.json" }),
+        .pkg_manifest = try std.fs.path.join(allocator, &.{ base, "pkg", "manifest.json" }),
+        .zig_manifest = try std.fs.path.join(allocator, &.{ base, "zig", "manifest.json" }),
+        .zep_manifest = try std.fs.path.join(allocator, &.{ base, "zep", "manifest.json" }),
+        .auth_manifest = try std.fs.path.join(allocator, &.{ base, "auth", "manifest.json" }),
     };
 }
 
@@ -43,7 +73,7 @@ pub const Paths = struct {
     allocator: std.mem.Allocator,
 
     base: []const u8,
-    root: []const u8,
+    bin: []const u8,
     prebuilt: []const u8,
     custom: []const u8,
     cached: []const u8,
@@ -61,8 +91,8 @@ pub const Paths = struct {
 
     pub fn deinit(self: *Paths) void {
         // self.allocator.free(self.base);
-        self.allocator.free(self.root);
         self.allocator.free(self.prebuilt);
+        self.allocator.free(self.bin);
         self.allocator.free(self.custom);
         self.allocator.free(self.cached);
 
