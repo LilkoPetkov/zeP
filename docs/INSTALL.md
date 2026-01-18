@@ -5,13 +5,13 @@
 ### **Windows (PowerShell, as Administrator)**
 
 ```powershell
-powershell -c "irm https://zep.run/installer/installer.ps1|iex"
+powershell -c "irm https://zep.run/install.ps1|iex"
 ```
 
 ### **Linux**
 
 ```bash
-curl -fsSL https://zep.run/installer/installer.sh | bash
+curl -fsSL https://zep.run/install.sh | bash
 ```
 
 ### **AUR**
