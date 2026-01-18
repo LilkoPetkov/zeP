@@ -1,4 +1,5 @@
 const std = @import("std");
+const mvzr = @import("mvzr");
 
 pub const Release = @This();
 
@@ -242,6 +243,35 @@ fn formFileHeader(
     );
 }
 
+fn releaseAvailable(package_name: []const u8, release: []const u8) bool {
+    const release_patt = "^([a-zA-Z]+)?[0-9]+\\.[0-9]+(\\.[0-9]+)?{1,30}$";
+    const release_regex = mvzr.compile(release_patt).?;
+    if (!release_regex.isMatch(release)) {
+        std.debug.print("\n\n\n\n\n\n\n", .{});
+        return false;
+    }
+
+    const allocator = std.heap.page_allocator;
+    const url = std.fmt.allocPrint(
+        allocator,
+        Constants.Default.zep_url ++ "/api/v1/release?package_name={s}&release={s}",
+        .{
+            package_name,
+            release,
+        },
+    ) catch return false;
+    defer allocator.free(url);
+    var client = std.http.Client{ .allocator = allocator };
+    defer client.deinit();
+    const f = client.fetch(
+        .{
+            .method = .GET,
+            .location = .{ .url = url },
+        },
+    ) catch return false;
+    return f.status != .ok;
+}
+
 pub fn create(self: *Release) !void {
     try self.ctx.logger.info("Creating Release", @src());
 
@@ -307,8 +337,23 @@ pub fn create(self: *Release) !void {
         self.ctx.allocator,
         &self.ctx.printer,
         " > [Version] Release*: ",
-        .{ .required = true },
+        .{
+            .required = true,
+        },
     );
+
+    const available = releaseAvailable(target.Name, p_release);
+    if (!available) {
+        try self.ctx.printer.append(
+            "{s} is not available for project {s}.\n\n",
+            .{ p_release, target.Name },
+            .{
+                .color = .red,
+                .weight = .bold,
+            },
+        );
+        return error.InvalidRelease;
+    }
 
     const zig_version = try Prompt.input(
         self.ctx.allocator,

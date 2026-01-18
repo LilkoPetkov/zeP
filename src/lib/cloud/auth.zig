@@ -17,13 +17,13 @@ const Context = @import("context");
 const mvzr = @import("mvzr");
 
 fn verifyEmail(a: []const u8) bool {
-    const email_patt = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}";
+    const email_patt = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
     const email_regex = mvzr.compile(email_patt).?;
     return email_regex.isMatch(a);
 }
 
 fn verifyUsername(a: []const u8) bool {
-    const username_patt = "^[a-zA-Z0-9]{3,}";
+    const username_patt = "^[a-zA-Z0-9_]{3,}";
     const username_regex = mvzr.compile(username_patt).?;
     if (!username_regex.isMatch(a)) return false;
 

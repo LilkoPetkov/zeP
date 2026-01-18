@@ -159,7 +159,7 @@ pub fn list(self: *Package) !void {
 }
 
 fn packageNameAvailable(package_name: []const u8) bool {
-    const package_patt = "^[a-zA-Z]{2,}";
+    const package_patt = "^[a-z-]{2,20}";
     const package_regex = mvzr.compile(package_patt).?;
     if (!package_regex.isMatch(package_name)) return false;
 
