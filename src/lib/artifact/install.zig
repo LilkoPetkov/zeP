@@ -148,8 +148,6 @@ fn downloadFile(self: *ArtifactInstaller, url: []const u8, out_path: []const u8)
     var out_file = try Fs.openOrCreateFile(out_path);
     defer out_file.close();
     _ = try out_file.write(data);
-
-    try self.ctx.printer.append("\n", .{}, .{});
 }
 
 /// Decompress for Windows (.zip)
