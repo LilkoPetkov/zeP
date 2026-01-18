@@ -37,28 +37,19 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
         const artifact_path = try std.fs.path.join(ctx.allocator, &.{ absolute_path, exe });
         defer ctx.allocator.free(artifact_path);
         if (!Fs.existsFile(artifact_path)) {
-            if (artifact_type == .zig) {
-                std.debug.print("\nZig file does not exists! {s}\n", .{artifact_path});
-            } else {
-                std.debug.print("\nZep file does not exists! {s}\n", .{artifact_path});
-            }
-            return error.ManifestNotFound;
-        }
-
-        const sym_link_path_directory = try std.fs.path.join(
-            ctx.allocator,
-            &.{
-                if (artifact_type == .zig) ctx.paths.zig_root else ctx.paths.zep_root, "e",
-            },
-        );
-        if (!Fs.existsDir(sym_link_path_directory)) {
-            try std.fs.cwd().makePath(sym_link_path_directory);
+            std.debug.print(
+                "\n{s} file does not exists! {s}\n",
+                .{
+                    if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
+                },
+            );
+            return error.FileNotFound;
         }
 
         const sym_link_path = try std.fs.path.join(
             ctx.allocator,
             &.{
-                sym_link_path_directory,
+                ctx.paths.bin,
                 exe,
             },
         );
@@ -82,20 +73,28 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
         defer ctx.allocator.free(artifact_path);
 
         if (!Fs.existsFile(artifact_path)) {
-            if (artifact_type == .zig) {
-                std.debug.print("\nZig file does not exists! {s}\n", .{artifact_path});
-            } else {
-                std.debug.print("\nZep file does not exists! {s}\n", .{artifact_path});
-            }
-            return error.ManifestNotFound;
+            std.debug.print(
+                "\n{s} file does not exists! {s}\n",
+                .{
+                    if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
+                },
+            );
+            return error.FileNotFound;
         }
 
         const artifact_target_file = try Fs.openFile(artifact_path);
         defer artifact_target_file.close();
         try artifact_target_file.chmod(0o755);
 
-        const sym_link_path = try std.fs.path.join(ctx.allocator, &.{ ctx.paths.base, "bin", if (artifact_type == .zig) "zig" else "zep" });
+        const sym_link_path = try std.fs.path.join(
+            ctx.allocator,
+            &.{
+                ctx.paths.bin,
+                if (artifact_type == .zig) "zig" else "zep",
+            },
+        );
         defer ctx.allocator.free(sym_link_path);
+
         Fs.deleteFileIfExists(sym_link_path) catch {};
         Fs.deleteDirIfExists(sym_link_path) catch {};
 

@@ -39,7 +39,6 @@ pub fn pruneVersions(self: *ArtifactPruner, artifact_type: Structs.Extras.Artifa
     defer self.ctx.allocator.free(versions_directory);
 
     if (!Fs.existsDir(versions_directory)) {
-        try self.ctx.printer.append("No versions installed!\n\n", .{}, .{});
         return;
     }
 
@@ -49,11 +48,6 @@ pub fn pruneVersions(self: *ArtifactPruner, artifact_type: Structs.Extras.Artifa
     );
     defer manifest.deinit();
     if (manifest.value.path.len == 0) {
-        if (artifact_type == .zep) {
-            std.debug.print("\nManifest path is not defined! Use\n $ zep zep switch <zep-version>\nTo fix!\n", .{});
-        } else {
-            std.debug.print("\nManifest path is not defined! Use\n $ zep zig switch <zig-version>\nTo fix!\n", .{});
-        }
         return error.ManifestNotFound;
     }
 

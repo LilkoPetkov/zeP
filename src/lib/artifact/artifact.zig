@@ -248,6 +248,8 @@ pub fn uninstall(
         try self.uninstaller.uninstall(version.path);
         try Fs.deleteTreeIfExists(version_dir);
     }
+
+    try self.pruner.pruneVersions(self.artifact_type);
     return;
 }
 
@@ -299,8 +301,4 @@ pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []cons
 
 pub fn list(self: *Artifact) !void {
     try self.lister.listVersions(self.artifact_type);
-}
-
-pub fn prune(self: *Artifact) !void {
-    try self.pruner.pruneVersions(self.artifact_type);
 }
