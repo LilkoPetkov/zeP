@@ -1,47 +1,47 @@
 {
-	"schema": 2,
-	"root": {
-		"author": "Xerrs",
-		"tags": [],
-		"zig_version": "0.15.2",
-		"repo": "https://github.com/XerWoho/zeP",
-		"name": "zeP",
-		"cmd": [],
-		"description": "A new zig Package manager, and version manager for zig.",
-		"version": "1.0.2",
-		"license": "GPLv3",
-		"packages": [
-			"logly@0.1.0",
-			"mvzr@0.3.7",
-			"clap@0.11.0"
-		],
-		"dev_packages": [],
-		"build": {
-			"entry": "/src/main.zig",
-			"target": "x86_64-windows"
-		}
-	},
-	"packages": [
-		{
-			"name": "logly@0.1.0",
-			"hash": "144f509d7acf6abd810aff6fd2b68376bdd3d75dd38dc6ad48dad394aa991334",
-			"source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.0.zip",
-			"zig_version": "0.15.1",
-			"root_file": "/src/logly.zig"
-		},
-		{
-			"name": "mvzr@0.3.7",
-			"hash": "c3c797c0b6dda78ee206be823bbd505c612d533816fd7b12435ed1ae20ec0597",
-			"source": "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.zip",
-			"zig_version": "0.15.0",
-			"root_file": "/src/mvzr.zig"
-		},
-		{
-			"name": "clap@0.11.0",
-			"hash": "5add36c27cca8ce2fe8c7da8d42d58f842216fc4d3043b2a570b141bc4c99a54",
-			"source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
-			"zig_version": "0.15.1",
-			"root_file": "/clap.zig"
-		}
-	]
+  "schema": 2,
+  "root": {
+    "author": "Xerrs",
+    "tags": [],
+    "zig_version": "0.15.2",
+    "repo": "https://github.com/XerWoho/zeP",
+    "name": "zeP",
+    "cmd": [],
+    "description": "A new zig Package manager, and version manager for zig.",
+    "version": "1.0.2",
+    "license": "GPLv3",
+    "packages": [
+      "logly@0.1.0",
+      "mvzr@0.3.7",
+      "clap@0.11.0"
+    ],
+    "dev_packages": [],
+    "build": {
+      "entry": "/src/main.zig",
+      "target": "x86_64-windows"
+    }
+  },
+  "packages": [
+    {
+      "name": "logly@0.1.0",
+      "hash": "144f509d7acf6abd810aff6fd2b68376bdd3d75dd38dc6ad48dad394aa991334",
+      "source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.0.zip",
+      "zig_version": "0.15.1",
+      "root_file": "/src/logly.zig"
+    },
+    {
+      "name": "mvzr@0.3.7",
+      "hash": "c3c797c0b6dda78ee206be823bbd505c612d533816fd7b12435ed1ae20ec0597",
+      "source": "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.zip",
+      "zig_version": "0.15.0",
+      "root_file": "/src/mvzr.zig"
+    },
+    {
+      "name": "clap@0.11.0",
+      "hash": "5add36c27cca8ce2fe8c7da8d42d58f842216fc4d3043b2a570b141bc4c99a54",
+      "source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
+      "zig_version": "0.15.1",
+      "root_file": "/clap.zig"
+    }
+  ]
 }
