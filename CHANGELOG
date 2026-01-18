@@ -1,12 +1,13 @@
-1.0.0 (Jan 9th, 2026)
-Errors imporved
-Logging added
-Docs updated
-
-1.0.1 (Jan 10th, 2026)
-Invalid Command messsages improved
-Fixed init bug
-Removed important files/folders from the filters [/src/constants/extras.zig]
+1.0.3 (Jan 18th, 2026)
+Moved the root folder to ~/.zep instead (added migrate function)
+Removed artifact pruning, uninstall does it by default after each uninstallation
+API Route changes
+On Installation, setup is not run by default
+Setup does not print information out or requests to be run, if required
+Migration runs by default on each run
+zep and zig executeables are located at ~/.zep/bin now.
+Docs have been moved around and seperated
+Installation bug fixes => "Extracting..." hung.
 
 1.0.2 (Jan 11th, 2026)
 Testing added [/tests]
@@ -17,3 +18,13 @@ Memory Leaks fixed
 Removed hard-coded filters within archive() [/src/tools/core/compression.zig]
 Updated .gitignore [/.gitignore]
 Removed ZSTD submodule, instead cloned [/vendor]
+
+1.0.1 (Jan 10th, 2026)
+Invalid Command messsages improved
+Fixed init bug
+Removed important files/folders from the filters [/src/constants/extras.zig]
+
+1.0.0 (Jan 9th, 2026)
+Errors imporved
+Logging added
+Docs updated
