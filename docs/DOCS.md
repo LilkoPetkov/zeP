@@ -192,18 +192,6 @@ zep zep uninstall <version>
 
 ---
 
-### **Prune (zep/zig)**
-
-```bash
-zep zig prune
-zep zep prune
-```
-
-- Prunes empty folders of zig or zep versions
-- Only deletes if the folders have no files/folder in them
-
----
-
 ### **PreBuilt Commands**
 
 #### **Build a preBuilt**
