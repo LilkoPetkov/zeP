@@ -9,7 +9,7 @@ const Prompt = @import("cli").Prompt;
 const Fs = @import("io").Fs;
 const Compressor = @import("core").Compressor;
 
-const Projects = @import("project.zig");
+const Packages = @import("package.zig");
 
 const FetchOptions = struct {
     payload: ?[]const u8 = null,
@@ -22,7 +22,7 @@ const boundary =
 
 const Context = @import("context");
 
-/// Handles Projects
+/// Handles Packages
 ctx: *Context,
 
 pub fn init(ctx: *Context) Release {
@@ -38,54 +38,54 @@ pub fn delete(self: *Release) !void {
     defer auth.deinit();
     if (auth.value.token.len == 0) return error.NotAuthed;
 
-    var initted_project = Projects.init(self.ctx);
-    const projects = try initted_project.getProjects();
-    defer projects.deinit();
+    var packages = try self.ctx.fetcher.fetchPackages();
+    defer packages.deinit(self.ctx.allocator);
 
-    try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.value.len == 0) {
-        try self.ctx.printer.append("-- No projects --\n", .{}, .{});
+    try self.ctx.printer.append("Available packages:\n", .{}, .{});
+    if (packages.items.len == 0) {
+        try self.ctx.printer.append("-- No packages --\n\n", .{}, .{ .color = .bright_red });
         return;
     }
 
-    for (projects.value, 0..) |r, i| {
+    for (packages.items, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});
 
-    const project_index_str = try Prompt.input(
+    const package_index_str = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
         "TARGET >> ",
         .{ .required = true },
     );
-    try self.ctx.printer.append("\n", .{}, .{});
 
-    const project_index = try std.fmt.parseInt(
+    const package_index = std.fmt.parseInt(
         usize,
-        project_index_str,
+        package_index_str,
         10,
-    );
+    ) catch return error.InvalidSelection;
 
-    if (project_index >= projects.value.len)
+    if (package_index >= packages.items.len)
         return error.InvalidSelection;
 
-    const project_target = projects.value[project_index];
+    const package_target = packages.items[package_index];
+    try self.ctx.printer.append("Selected: {s}\n\n", .{package_target.Name}, .{ .color = .bright_black });
+
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const releases = try initted_project.getReleasesFromProject(project_target.Name);
-    defer releases.deinit();
+    var releases = try self.ctx.fetcher.fetchReleases(package_target.Name);
+    defer releases.deinit(self.ctx.allocator);
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
-    if (releases.value.len == 0) {
-        try self.ctx.printer.append("-- No releases --\n", .{}, .{});
+    if (releases.items.len == 0) {
+        try self.ctx.printer.append("-- No releases --\n\n", .{}, .{ .color = .bright_red });
         return;
     }
-    for (releases.value, 0..) |v, i| {
+    for (releases.items, 0..) |v, i| {
         try self.ctx.printer.append(
             "  [{d}] - {s} {s}\n",
-            .{ i, project_target.Name, v.Release },
+            .{ i, package_target.Name, v.Release },
             .{ .color = .bright_blue },
         );
     }
@@ -96,23 +96,23 @@ pub fn delete(self: *Release) !void {
         "TARGET >> ",
         .{ .required = true },
     );
-    try self.ctx.printer.append("\n", .{}, .{});
 
-    const release_index = try std.fmt.parseInt(
+    const release_index = std.fmt.parseInt(
         usize,
         release_index_str,
         10,
-    );
+    ) catch return error.InvalidSelection;
 
-    if (release_index >= releases.value.len)
+    if (release_index >= releases.items.len)
         return error.InvalidSelection;
 
-    const release_target = releases.value[release_index];
+    const release_target = releases.items[release_index];
+    try self.ctx.printer.append("Selected: {s}\n\n", .{release_target.Release}, .{ .color = .bright_black });
 
     const url = try std.fmt.allocPrint(
         self.ctx.allocator,
-        Constants.Default.zep_url ++ "/api/delete/release?id={s}&project_id={s}",
-        .{ release_target.ID, project_target.ID },
+        Constants.Default.zep_url ++ "/api/v1/release?id={s}&package_id={s}",
+        .{ release_target.ID, package_target.ID },
     );
     const delete_release_response = self.ctx.fetcher.fetch(
         url,
@@ -142,57 +142,57 @@ pub fn delete(self: *Release) !void {
 pub fn list(self: *Release) !void {
     try self.ctx.logger.info("Listing Release", @src());
 
-    var initted_project = Projects.init(self.ctx);
-    const projects = try initted_project.getProjects();
-    defer projects.deinit();
+    var packages = try self.ctx.fetcher.fetchPackages();
+    defer packages.deinit(self.ctx.allocator);
 
-    try self.ctx.printer.append("Available projects:\n", .{}, .{});
-    if (projects.value.len == 0) {
-        try self.ctx.logger.info("No Project", @src());
-        try self.ctx.printer.append("-- No projects --\n\n", .{}, .{});
+    try self.ctx.printer.append("Available packages:\n", .{}, .{});
+    if (packages.items.len == 0) {
+        try self.ctx.logger.info("No Package", @src());
+        try self.ctx.printer.append("-- No packages --\n\n", .{}, .{ .color = .bright_red });
         return;
     }
 
-    for (projects.value, 0..) |r, i| {
+    for (packages.items, 0..) |r, i| {
         try self.ctx.printer.append(" [{d}] - {s}\n", .{ i, r.Name }, .{});
     }
     try self.ctx.printer.append("\n", .{}, .{});
 
-    const project_index_str = try Prompt.input(
+    const package_index_str = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
         "TARGET >> ",
         .{ .required = true },
     );
-    try self.ctx.printer.append("\n", .{}, .{});
 
-    const project_index = try std.fmt.parseInt(
+    const package_index = std.fmt.parseInt(
         usize,
-        project_index_str,
+        package_index_str,
         10,
-    );
+    ) catch return error.InvalidSelection;
 
-    try self.ctx.logger.infof("Project Selected {d}", .{project_index}, @src());
+    try self.ctx.logger.infof("Package Selected {d}", .{package_index}, @src());
 
-    if (project_index >= projects.value.len) {
-        try self.ctx.logger.info("Invalid Project Selected", @src());
+    if (package_index >= packages.items.len) {
+        try self.ctx.logger.info("Invalid Package Selected", @src());
         return error.InvalidSelection;
     }
 
-    const project_target = projects.value[project_index];
-    const releases = try initted_project.getReleasesFromProject(project_target.Name);
-    defer releases.deinit();
+    const package_target = packages.items[package_index];
+    try self.ctx.printer.append("Selected: {s}\n\n", .{package_target.Name}, .{ .color = .bright_black });
+
+    var releases = try self.ctx.fetcher.fetchReleases(package_target.Name);
+    defer releases.deinit(self.ctx.allocator);
 
     try self.ctx.printer.append("Available releases:\n", .{}, .{});
-    if (releases.value.len == 0) {
-        try self.ctx.logger.info("No Releases for Project", @src());
-        try self.ctx.printer.append("-- No releases --\n", .{}, .{});
+    if (releases.items.len == 0) {
+        try self.ctx.logger.info("No Releases for Package", @src());
+        try self.ctx.printer.append("-- No releases --\n\n", .{}, .{ .color = .bright_red });
     }
 
-    for (releases.value, 0..) |v, i| {
+    for (releases.items, 0..) |v, i| {
         try self.ctx.printer.append(
             "  [{d}] - {s} {s}\n",
-            .{ i, project_target.Name, v.Release },
+            .{ i, package_target.Name, v.Release },
             .{ .color = .bright_blue },
         );
     }
@@ -201,12 +201,7 @@ pub fn list(self: *Release) !void {
 
 const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 const TEMPORARY_FILE = "pkg.tar.zstd";
-fn compressProject(
-    self: *Release,
-) ![]const u8 {
-    defer {
-        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
-    }
+fn compressPackage(self: *Release) ![]const u8 {
     const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
     try self.ctx.compressor.compress(".", output);
 
@@ -262,14 +257,12 @@ pub fn create(self: *Release) !void {
     defer auth.deinit();
     if (auth.value.token.len == 0) return error.NotAuthed;
 
-    var initted_project = Projects.init(self.ctx);
+    var packages = try self.ctx.fetcher.fetchPackages();
+    defer packages.deinit(self.ctx.allocator);
 
-    const projects = try initted_project.getProjects();
-    defer projects.deinit();
-
-    if (projects.value.len == 0) {
+    if (packages.items.len == 0) {
         try self.ctx.printer.append(
-            "No project available!\nCreate project first!\n\n",
+            "No package available!\nCreate package first!\n\n",
             .{},
             .{ .color = .red },
         );
@@ -277,12 +270,12 @@ pub fn create(self: *Release) !void {
     }
 
     try self.ctx.printer.append(
-        "Select Project target:\n",
+        "Select Package target:\n",
         .{},
         .{ .color = .blue, .weight = .bold },
     );
 
-    for (0.., projects.value) |i, r| {
+    for (0.., packages.items) |i, r| {
         try self.ctx.printer.append(
             " - [{d}] {s}\n",
             .{ i, r.Name },
@@ -298,16 +291,17 @@ pub fn create(self: *Release) !void {
         .{ .required = true },
     );
 
-    const index = try std.fmt.parseInt(
+    const index = std.fmt.parseInt(
         usize,
         index_str,
         10,
-    );
+    ) catch return error.InvalidSelection;
 
-    if (index >= projects.value.len)
+    if (index >= packages.items.len)
         return error.InvalidSelection;
 
-    const target = projects.value[index];
+    const target = packages.items[index];
+    try self.ctx.printer.append("Selected: {s}\n\n", .{target.Name}, .{ .color = .bright_black });
 
     const p_release = try Prompt.input(
         self.ctx.allocator,
@@ -331,8 +325,10 @@ pub fn create(self: *Release) !void {
     );
     try self.ctx.printer.append("\n", .{}, .{});
 
-    const archive = try self.compressProject();
-
+    const archive = try self.compressPackage();
+    defer {
+        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
+    }
     const file = try Fs.openFile(archive);
     defer file.close();
 
@@ -351,15 +347,14 @@ pub fn create(self: *Release) !void {
         try std.fmt.allocPrint(self.ctx.allocator, "{x}", .{digest});
 
     try self.ctx.logger.info("Building Form File for Release", @src());
-    const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
     const body = try std.mem.concat(
         self.ctx.allocator,
         u8,
         &.{
-            try self.formFileHeader(output, "application/zstd"),
+            try self.formFileHeader("bundled_release", "application/zstd"),
             data,
             "\r\n",
-            try self.formField("project_id", target.ID),
+            try self.formField("package_id", target.ID),
             try self.formField("hash", hash_hex),
             try self.formField("release", p_release),
             try self.formField("zig_version", zig_version),
@@ -375,7 +370,7 @@ pub fn create(self: *Release) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const uri = try std.Uri.parse(Constants.Default.zep_url ++ "/api/post/release");
+    const uri = try std.Uri.parse(Constants.Default.zep_url ++ "/api/v1/release");
     var req = try client.request(.POST, uri, .{});
     defer req.deinit();
 
@@ -387,6 +382,14 @@ pub fn create(self: *Release) !void {
 
     var head_buf: [Constants.Default.kb]u8 = undefined;
     var head = req.receiveHead(&head_buf) catch return error.FetchFailed;
+    if (head.head.status != .ok) {
+        try self.ctx.printer.append(
+            "Releasing has failed.\n",
+            .{},
+            .{ .color = .bright_red },
+        );
+        return;
+    }
 
     var read_buf: [Constants.Default.kb]u8 = undefined;
     var response_reader = head.reader(&read_buf);
@@ -395,15 +398,16 @@ pub fn create(self: *Release) !void {
     _ = try response_reader.readSliceAll(response_buffer);
 
     try self.ctx.printer.append(
-        "Release {s} has been successfully projectd!\n",
+        "{s} {s} has been successfully released!\n",
         .{
+            target.Name,
             p_release,
         },
         .{ .color = .bright_green },
     );
 
     try self.ctx.printer.append(
-        "Install project via\n $ zep install {s}@{s} --unverified\n\n",
+        "Install package via\n $ zep install {s}@{s} --unverified\n\n",
         .{
             target.Name,
             p_release,

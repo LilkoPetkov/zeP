@@ -14,8 +14,8 @@ const Manifest = @import("core").Manifest;
 const Fetch = @import("core").Fetch;
 
 const Context = @import("context");
-
 const mvzr = @import("mvzr");
+
 fn verifyEmail(a: []const u8) bool {
     const email_patt = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}";
     const email_regex = mvzr.compile(email_patt).?;
@@ -35,7 +35,7 @@ fn verifyUsername(a: []const u8) bool {
 
     const url = std.fmt.allocPrint(
         allocator,
-        Constants.Default.zep_url ++ "/api/get/name?name={s}",
+        Constants.Default.zep_url ++ "/api/v1/user?name={s}",
         .{a},
     ) catch return false;
     defer allocator.free(url);
@@ -56,20 +56,7 @@ pub fn init(ctx: *Context) !Auth {
     };
 }
 
-const FetchOptions = struct {
-    payload: ?[]const u8 = null,
-    headers: []const std.http.Header = &.{},
-    method: std.http.Method = .POST,
-};
-
-const User = struct {
-    Id: []const u8,
-    Username: []const u8,
-    Email: []const u8,
-    CreatedAt: []const u8,
-};
-
-fn getUserData(self: *Auth) !std.json.Parsed(User) {
+fn getUserData(self: *Auth) !Structs.Fetch.User {
     try self.ctx.logger.info("Fetching User Data", @src());
 
     var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
@@ -82,8 +69,8 @@ fn getUserData(self: *Auth) !std.json.Parsed(User) {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const profile_response = try self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/whoami",
+    const get = self.ctx.fetcher.fetch(
+        Constants.Default.zep_url ++ "/api/v1/whoami",
         &client,
         .{
             .method = .GET,
@@ -94,19 +81,31 @@ fn getUserData(self: *Auth) !std.json.Parsed(User) {
                 },
             },
         },
-    );
-    defer profile_response.deinit();
-    const profile_object = profile_response.value.object;
-    const is_profile_success = profile_object.get("success") orelse return error.FetchFailed;
-    if (!is_profile_success.bool) {
+    ) catch |err| {
+        std.debug.print("{any}\n", .{err});
+        return error.FetchFailed;
+    };
+    defer get.deinit();
+    const object = get.value.object;
+    const success = object.get("success") orelse return error.FetchFailed;
+    if (!success.bool) {
         return error.FetchFailed;
     }
 
-    const user = profile_object.get("user") orelse return error.FetchFailed;
-    const encoded = user.string;
-    const decoded = try self.ctx.allocator.alloc(u8, try std.base64.standard.Decoder.calcSizeForSlice(encoded));
-    try std.base64.standard.Decoder.decode(decoded, encoded);
-    const parsed: std.json.Parsed(User) = try std.json.parseFromSlice(User, self.ctx.allocator, decoded, .{});
+    const object_user = object.get("user") orelse return error.FetchFailed;
+    const user = object_user.object;
+
+    const user_id = user.get("id") orelse return error.FetchFailed;
+    const user_username = user.get("username") orelse return error.FetchFailed;
+    const user_email = user.get("email") orelse return error.FetchFailed;
+    const user_created_at = user.get("created_at") orelse return error.FetchFailed;
+    const parsed = Structs.Fetch.User{
+        .Id = user_id.string,
+        .Username = user_username.string,
+        .Email = user_email.string,
+        .CreatedAt = user_created_at.string,
+    };
+
     return parsed;
 }
 
@@ -114,12 +113,10 @@ pub fn whoami(self: *Auth) !void {
     try self.ctx.logger.info("Authenticating (Whoami)", @src());
 
     const user = try self.getUserData();
-    defer user.deinit();
-
-    try self.ctx.printer.append(" - {s}\n", .{user.value.Username}, .{ .color = .bright_blue });
-    try self.ctx.printer.append("   > id: {s}\n", .{user.value.Id}, .{});
-    try self.ctx.printer.append("   > email: {s}\n", .{user.value.Email}, .{});
-    try self.ctx.printer.append("   > created at: {s}\n\n", .{user.value.CreatedAt}, .{});
+    try self.ctx.printer.append(" - {s}\n", .{user.Username}, .{ .color = .bright_blue });
+    try self.ctx.printer.append("   > id: {s}\n", .{user.Id}, .{});
+    try self.ctx.printer.append("   > email: {s}\n", .{user.Email}, .{});
+    try self.ctx.printer.append("   > created at: {s}\n\n", .{user.CreatedAt}, .{});
 }
 
 pub fn register(self: *Auth) !void {
@@ -167,19 +164,23 @@ pub fn register(self: *Auth) !void {
     blk: {
         const url = try std.fmt.allocPrint(
             self.ctx.allocator,
-            Constants.Default.zep_url ++ "/api/get/email?email={s}",
+            Constants.Default.zep_url ++ "/api/v1/user?email={s}",
             .{email},
         );
         defer self.ctx.allocator.free(url);
-        const check = self.ctx.fetcher.fetch(url, &client, .{ .method = .GET }) catch |err| {
+        const get = self.ctx.fetcher.fetch(
+            url,
+            &client,
+            .{ .method = .GET },
+        ) catch |err| {
             switch (err) {
                 error.NotFound => break :blk,
                 else => return err,
             }
         };
 
-        const obj = check.value.object;
-        const success = obj.get("success") orelse return error.FetchFailed;
+        const object = get.value.object;
+        const success = object.get("success") orelse return error.FetchFailed;
         if (success.bool) {
             try self.ctx.logger.info("Email already in use", @src());
             try self.ctx.printer.append("\nEmail already in use! Login via\n $ zep auth login\n\n", .{}, .{});
@@ -219,11 +220,25 @@ pub fn register(self: *Auth) !void {
         .email = email,
         .password = password,
     };
+    const register_stringified_payload = try std.json.Stringify.valueAlloc(
+        self.ctx.allocator,
+        register_payload,
+        .{},
+    );
+    defer self.ctx.allocator.free(register_stringified_payload);
 
     const register_response = self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/auth/register",
+        Constants.Default.zep_url ++ "/api/v1/register",
         &client,
-        .{ .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, register_payload, .{}) },
+        .{
+            .headers = &.{
+                std.http.Header{
+                    .name = "Content-Type",
+                    .value = "application/json",
+                },
+            },
+            .payload = register_stringified_payload,
+        },
     ) catch return error.FetchFailed;
 
     defer register_response.deinit();
@@ -258,11 +273,24 @@ pub fn register(self: *Auth) !void {
         .code = code,
         .email = email,
     };
+    const verify_stringified_payload = try std.json.Stringify.valueAlloc(
+        self.ctx.allocator,
+        verify_payload,
+        .{},
+    );
+    defer self.ctx.allocator.free(verify_stringified_payload);
+
     const verify_response = self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/auth/verify",
+        Constants.Default.zep_url ++ "/api/v1/verify",
         &client,
         .{
-            .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, verify_payload, .{}),
+            .headers = &.{
+                std.http.Header{
+                    .name = "Content-Type",
+                    .value = "application/json",
+                },
+            },
+            .payload = verify_stringified_payload,
         },
     ) catch return error.FetchFailed;
     defer verify_response.deinit();
@@ -293,6 +321,15 @@ pub fn register(self: *Auth) !void {
 
 pub fn login(self: *Auth) !void {
     try self.ctx.logger.info("Authenticating (Logging in)", @src());
+
+    blk: {
+        var is_error = false;
+        _ = self.getUserData() catch {
+            is_error = true;
+        };
+        if (is_error) break :blk;
+        return error.AlreadyAuthed;
+    }
 
     try self.ctx.printer.append("--- LOGIN MODE ---\n\n", .{}, .{
         .color = .yellow,
@@ -327,14 +364,27 @@ pub fn login(self: *Auth) !void {
         .email = email,
         .password = password,
     };
+    const login_stringified_payload = try std.json.Stringify.valueAlloc(
+        self.ctx.allocator,
+        login_payload,
+        .{},
+    );
+    defer self.ctx.allocator.free(login_stringified_payload);
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
-
     const login_response = self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/auth/login",
+        Constants.Default.zep_url ++ "/api/v1/login",
         &client,
-        .{ .payload = try std.json.Stringify.valueAlloc(self.ctx.allocator, login_payload, .{}) },
+        .{
+            .headers = &.{
+                std.http.Header{
+                    .name = "Content-Type",
+                    .value = "application/json",
+                },
+            },
+            .payload = login_stringified_payload,
+        },
     ) catch return error.FetchFailed;
     defer login_response.deinit();
     const login_object = login_response.value.object;
@@ -372,7 +422,7 @@ pub fn logout(self: *Auth) !void {
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
     const logout_response = self.ctx.fetcher.fetch(
-        Constants.Default.zep_url ++ "/api/auth/logout",
+        Constants.Default.zep_url ++ "/api/v1/logout",
         &client,
         .{
             .method = .GET,
