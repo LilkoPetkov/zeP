@@ -37,68 +37,83 @@ pub fn migratePaths(ctx: *Context) !void {
     const new_pkg_root = ctx.paths.pkg_root;
     if (!Fs.existsDir(new_pkg_root)) {
         const old_pkg_root = try std.fs.path.join(ctx.allocator, &.{ oldbase, "pkg" });
-        try std.fs.cwd().rename(old_pkg_root, new_pkg_root);
+        if (Fs.existsDir(old_pkg_root)) {
+            try std.fs.cwd().rename(old_pkg_root, new_pkg_root);
+        }
     }
 
     const new_auth_root = ctx.paths.auth_root;
     if (!Fs.existsDir(new_auth_root)) {
         const old_auth_root = try std.fs.path.join(ctx.allocator, &.{ oldbase, "auth" });
-        try std.fs.cwd().rename(old_auth_root, new_auth_root);
+        if (Fs.existsDir(old_auth_root)) {
+            try std.fs.cwd().rename(old_auth_root, new_auth_root);
+        }
     }
 
     const new_log_root = ctx.paths.logs_root;
     if (!Fs.existsDir(new_log_root)) {
         const old_log_root = try std.fs.path.join(ctx.allocator, &.{ oldbase, "logs" });
-        try std.fs.cwd().rename(old_log_root, new_log_root);
+        if (Fs.existsDir(old_log_root)) {
+            try std.fs.cwd().rename(old_log_root, new_log_root);
+        }
     }
 
     const new_prebuilt = ctx.paths.prebuilt;
     if (!Fs.existsDir(new_prebuilt)) {
         const old_prebuilt = try std.fs.path.join(ctx.allocator, &.{ oldbase, "prebuilt" });
-        try std.fs.cwd().rename(old_prebuilt, new_prebuilt);
+        if (Fs.existsDir(old_prebuilt)) {
+            try std.fs.cwd().rename(old_prebuilt, new_prebuilt);
+        }
     }
 
     const new_cached = ctx.paths.cached;
     if (!Fs.existsDir(new_cached)) {
         const old_cached = try std.fs.path.join(ctx.allocator, &.{ oldbase, "cached" });
-        try std.fs.cwd().rename(old_cached, new_cached);
+        if (Fs.existsDir(old_cached)) {
+            try std.fs.cwd().rename(old_cached, new_cached);
+        }
     }
 
     const new_custom = ctx.paths.custom;
     if (!Fs.existsDir(new_custom)) {
         const old_custom = try std.fs.path.join(ctx.allocator, &.{ oldbase, "custom" });
-        try std.fs.cwd().rename(old_custom, new_custom);
+        if (Fs.existsDir(old_custom)) {
+            try std.fs.cwd().rename(old_custom, old_custom);
+        }
     }
 
-    const manifest = try ctx.manifest.readManifest(
-        Structs.PackagesManifest,
-        ctx.paths.pkg_manifest,
-    );
-    defer manifest.deinit();
-
-    for (manifest.value.packages) |package| {
-        const package_name = package.name;
-        const new_package_path = try std.fs.path.join(
-            ctx.allocator,
-            &.{
-                newbase,
-                "pkg",
-                package_name,
-            },
+    if (Fs.existsFile(ctx.paths.pkg_manifest)) {
+        const manifest = try ctx.manifest.readManifest(
+            Structs.PackagesManifest,
+            ctx.paths.pkg_manifest,
         );
+        defer manifest.deinit();
+        for (manifest.value.packages) |package| {
+            const package_name = package.name;
+            const new_package_path = try std.fs.path.join(
+                ctx.allocator,
+                &.{
+                    newbase,
+                    "pkg",
+                    package_name,
+                },
+            );
+            if (!Fs.existsDir(new_package_path)) continue;
 
-        const package_paths = package.paths;
-        for (package_paths) |package_path| {
-            var dir = try std.fs.cwd().openDir(package_path, .{});
-            defer dir.close();
-            var buf: [128]u8 = undefined;
-            const symlinked = try std.fs.cwd().readLink(package_path, &buf);
-            if (std.mem.eql(u8, symlinked, new_package_path)) continue;
+            const package_paths = package.paths;
+            for (package_paths) |package_path| {
+                if (!Fs.existsDir(package_path)) continue;
+                var dir = try std.fs.cwd().openDir(package_path, .{});
+                defer dir.close();
+                var buf: [128]u8 = undefined;
+                const symlinked = try std.fs.cwd().readLink(package_path, &buf);
+                if (std.mem.eql(u8, symlinked, new_package_path)) continue;
 
-            try std.fs.deleteDirAbsolute(package_path);
-            try std.fs.symLinkAbsolute(new_package_path, package_path, .{
-                .is_directory = true,
-            });
+                try Fs.deleteFileIfExists(package_path);
+                try std.fs.symLinkAbsolute(new_package_path, package_path, .{
+                    .is_directory = true,
+                });
+            }
         }
     }
 }
