@@ -8,6 +8,10 @@ Migration runs by default on each run
 zep and zig executeables are located at ~/.zep/bin now.
 Docs have been moved around and seperated
 Installation bug fixes => "Extracting..." hung.
+zep.json is now obsolete
+During Installation progress is displayed [zep installations]
+Installation fixes corrupt files [smart install]
+bufPrint => allocPrint (more predictable)
 
 1.0.2 (Jan 11th, 2026)
 Testing added [/tests]
