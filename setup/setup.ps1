@@ -13,7 +13,7 @@ if (-not (Get-Command "zig" -errorAction SilentlyContinue))
 $zigVersion = @("zig version")
 if (-not ($zigVersion -eq "0.15.2"))
 {
-    Write-Host "zig could not be found"
+    Write-Host "zig version is not compatible with zeP"
     Write-Host "SUGGESTION:"
     Write-Host " $ zep zig install 0.15.2"
     exit
