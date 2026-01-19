@@ -3,7 +3,6 @@ const builtin = @import("builtin");
 
 pub const Downloader = @This();
 
-const Locales = @import("locales");
 const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
@@ -110,15 +109,15 @@ fn extractZip(self: *Downloader, extract_path: []const u8, path: []const u8) !vo
     defer diagnostics.deinit();
     try std.zip.extract(extract_directory, &reader, .{ .diagnostics = &diagnostics });
 
-    var buf: [Constants.Default.kb]u8 = undefined;
-    const extract_target = try std.fmt.bufPrint(
-        &buf,
+    const extract_target = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}/{s}",
         .{
             TEMPORARY_DIRECTORY_PATH,
             diagnostics.root_dir,
         },
     );
+    defer self.ctx.allocator.free(extract_target);
 
     try std.fs.cwd().rename(extract_target, path);
 }
@@ -200,7 +199,11 @@ pub fn downloadPackage(
         };
     } else {
         try self.ctx.printer.append(" > CACHE MISS!\n\n", .{}, .{});
-        try self.fetchPackage(package_id, url, install_unverified_packages);
+        try self.fetchPackage(
+            package_id,
+            url,
+            install_unverified_packages,
+        );
         self.cacher.setPackageToCache(package_id) catch {
             try self.ctx.printer.append(" ! CACHING FAILED\n\n", .{}, .{ .color = .red });
         };

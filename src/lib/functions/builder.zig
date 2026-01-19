@@ -22,12 +22,13 @@ pub fn build(ctx: *Context) !std.ArrayList([]u8) {
         target = Constants.Default.resolveDefaultTarget();
     }
 
-    var buf: [64]u8 = undefined;
-    const execs = try std.fmt.bufPrint(
-        &buf,
+    const execs = try std.fmt.allocPrint(
+        ctx.allocator,
         "-Dtarget={s}",
         .{target},
     );
+    defer ctx.allocator.free(execs);
+
     try ctx.logger.info("Running Build...", @src());
     const args = [_][]const u8{ "zig", "build", "-Doptimize=ReleaseSmall", execs, "-p", "zep-out/" };
     try ctx.printer.append("Executing: \n$ {s}!\n\n", .{try std.mem.join(ctx.allocator, " ", &args)}, .{ .color = .green });

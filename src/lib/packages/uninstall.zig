@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub const Uninstaller = @This();
 
-const Locales = @import("locales");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
@@ -80,8 +79,7 @@ pub fn uninstall(
     defer self.ctx.allocator.free(symbolic_link_path);
 
     if (Fs.existsDir(symbolic_link_path)) {
-        Fs.deleteTreeIfExists(symbolic_link_path) catch {};
-        Fs.deleteFileIfExists(symbolic_link_path) catch {};
+        Fs.deleteSymlinkIfExists(symbolic_link_path);
 
         const cwd = try std.fs.cwd().realpathAlloc(self.ctx.allocator, ".");
         defer self.ctx.allocator.free(cwd);

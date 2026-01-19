@@ -2,11 +2,10 @@ const std = @import("std");
 
 pub const Package = @This();
 
-const Logger = @import("logger");
 const Constants = @import("constants");
-const Locales = @import("locales");
 const Structs = @import("structs");
 
+const Logger = @import("logger").logly.Logger;
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 const Manifest = @import("manifest.zig");
@@ -19,17 +18,24 @@ fn resolveVersion(
     package_version: ?[]const u8,
     fetcher: *Fetch,
     printer: *Printer,
+    logger: *Logger,
 ) !Structs.Packages.PackageVersions {
+    try logger.info("Fetching package version...", @src());
     try printer.append("Finding the package...\n", .{}, .{});
-
-    const parsed_package = try fetcher.fetchPackage(package_name);
+    const parsed_package = try fetcher.fetchPackage(package_name, logger);
     defer parsed_package.deinit();
+    try logger.infof("Package fetched!", .{}, @src());
 
-    try printer.append("Package Found! - {s}\n\n", .{package_name}, .{ .color = .green });
+    try printer.append(
+        "Package Found! - {s}\n",
+        .{package_name},
+        .{ .color = .green },
+    );
 
     const versions = parsed_package.value.versions;
     if (versions.len == 0) {
-        printer.append("\nPackage has no version!\n", .{}, .{ .color = .red }) catch {};
+        try logger.err("Fetching package has no version...", @src());
+        printer.append("Package has no version!\n", .{}, .{ .color = .red }) catch {};
         return error.NoPackageVersion;
     }
 
@@ -67,6 +73,7 @@ pub fn init(
     allocator: std.mem.Allocator,
     printer: *Printer,
     fetcher: *Fetch,
+    logger: *Logger,
     package_name: []const u8,
     package_version: ?[]const u8,
 ) !Package {
@@ -75,6 +82,7 @@ pub fn init(
         package_version,
         fetcher,
         printer,
+        logger,
     );
 
     // Create hash
@@ -128,12 +136,13 @@ pub fn deletePackage(
     manifest: *Manifest,
     force: bool,
 ) !void {
-    var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrint(
-        &buf,
+    const path = try std.fmt.allocPrint(
+        self.allocator,
         "{s}/{s}",
         .{ paths.pkg_root, self.id },
     );
+    defer self.allocator.free(path);
+
     if (!Fs.existsDir(path)) return error.NotInstalled;
 
     const amount = try self.getPackagePathsAmount(paths, manifest);

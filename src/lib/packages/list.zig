@@ -8,7 +8,7 @@ pub fn list(
 ) !void {
     try ctx.logger.info("Listing Package", @src());
 
-    const parsed_package = try ctx.fetcher.fetchPackage(package_name);
+    const parsed_package = try ctx.fetcher.fetchPackage(package_name, ctx.logger);
     defer parsed_package.deinit();
 
     try ctx.printer.append("Package Found! - {s}\n\n", .{package_name}, .{ .color = .green });

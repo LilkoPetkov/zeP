@@ -250,7 +250,9 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
 fn fetchFromPackage(
     self: *Fetch,
     package_name: []const u8,
+    logger: *Logger.logly.Logger,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
+    _ = logger;
     var releases = try self.fetchReleases(package_name);
     defer releases.deinit(self.allocator);
     const package = try self._fetchPackage(package_name);
@@ -272,24 +274,29 @@ fn fetchFromPackage(
 fn fetchFromUrl(
     self: *Fetch,
     package_name: []const u8,
+    logger: *Logger.logly.Logger,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
-    var buf: [128]u8 = undefined;
-    const url = try std.fmt.bufPrint(
-        &buf,
+    const url = try std.fmt.allocPrint(
+        self.allocator,
         Constants.Default.zep_url ++ "/packages/{s}.json",
         .{package_name},
     );
+    defer self.allocator.free(url);
+    try logger.infof("Fetching from url... {s}", .{url}, @src());
 
     var client = std.http.Client{ .allocator = self.allocator };
     defer client.deinit();
 
     var body = std.Io.Writer.Allocating.init(self.allocator);
-    const res = try client.fetch(.{
+    const res = client.fetch(.{
         .location = .{ .url = url },
         .method = .GET,
         .response_writer = &body.writer,
-    });
-
+    }) catch |err| {
+        try logger.infof("Error while fetching... {any}", .{err}, @src());
+        return err;
+    };
+    try logger.infof("Fetched with code... {any}", .{res.status}, @src());
     if (res.status == .not_found) return error.PackageNotFound;
 
     return std.json.parseFromSlice(
@@ -304,12 +311,12 @@ fn loadFromLocal(
     self: *Fetch,
     package_name: []const u8,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
-    var buf: [128]u8 = undefined;
-    const path = try std.fmt.bufPrint(
-        &buf,
+    const path = try std.fmt.allocPrint(
+        self.allocator,
         "{s}/{s}.json",
         .{ self.paths.custom, package_name },
     );
+    defer self.allocator.free(path);
 
     if (!Fs.existsFile(path)) return error.PackageNotFound;
 
@@ -324,17 +331,21 @@ fn loadFromLocal(
 pub fn fetchPackage(
     self: *Fetch,
     package_name: []const u8,
+    logger: *Logger.logly.Logger,
 ) !std.json.Parsed(Structs.Packages.PackageStruct) {
     if (self.install_unverified_packages) {
-        if (self.fetchFromPackage(package_name)) |pkg| {
+        try logger.info("Fetching via package...", @src());
+        if (self.fetchFromPackage(package_name, logger)) |pkg| {
             return pkg;
         } else |_| {}
     }
 
-    if (self.fetchFromUrl(package_name)) |pkg| {
+    try logger.info("Fetching via url...", @src());
+    if (self.fetchFromUrl(package_name, logger)) |pkg| {
         return pkg;
     } else |_| {}
 
+    try logger.info("Fetching via local...", @src());
     if (self.loadFromLocal(package_name)) |pkg| {
         return pkg;
     } else |_| {}

@@ -92,8 +92,13 @@ pub fn compress(
         _ = try Fs.openOrCreateDir(self.paths.cached);
     }
 
-    var buf: [256]u8 = undefined;
-    const a = try std.fmt.bufPrint(&buf, "{d}.tar", .{std.time.nanoTimestamp()});
+    const a = try std.fmt.allocPrint(
+        self.allocator,
+        "{d}.tar",
+        .{std.time.nanoTimestamp()},
+    );
+    defer self.allocator.free(a);
+
     const archive_path = try std.fs.path.join(
         self.allocator,
         &.{ self.paths.cached, a },

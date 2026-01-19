@@ -86,16 +86,15 @@ pub fn requestPackage(self: *CustomPackage) !void {
     );
     defer self.ctx.allocator.free(package_name);
 
-    var buf: [256]u8 = undefined;
-    const custom_package_path = try std.fmt.bufPrint(
-        &buf,
+    const custom_package_path = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}/{s}.json",
         .{
             self.ctx.paths.custom,
             package_name,
         },
     );
-
+    defer self.ctx.allocator.free(custom_package_path);
     if (Fs.existsFile(custom_package_path)) {
         try self.ctx.printer.append("-- PACKAGE EXISTS [ADD VERSION MODE] --\n\n", .{}, .{
             .color = .yellow,
@@ -175,12 +174,12 @@ fn addVersionToPackage(self: *CustomPackage, custom_package_path: []const u8, ve
 pub fn removePackage(self: *CustomPackage, package_name: []const u8) !void {
     try self.ctx.printer.append("Removing package...\n", .{}, .{});
 
-    var buf: [256]u8 = undefined;
-    const custom_package_path = try std.fmt.bufPrint(
-        &buf,
+    const custom_package_path = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}/{s}.json",
         .{ self.ctx.paths.custom, package_name },
     );
+    defer self.ctx.allocator.free(custom_package_path);
 
     if (Fs.existsFile(custom_package_path)) {
         try self.ctx.printer.append("Package found...\n", .{}, .{});

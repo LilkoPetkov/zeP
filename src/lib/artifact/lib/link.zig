@@ -25,14 +25,14 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
     defer ctx.allocator.free(absolute_path);
 
     if (builtin.os.tag == .windows) {
-        var buf: [256]u8 = undefined;
-        const exe = try std.fmt.bufPrint(
-            &buf,
+        const exe = try std.fmt.allocPrint(
+            ctx.allocator,
             "{s}.exe",
             .{
                 if (artifact_type == .zig) "zig" else "zep",
             },
         );
+        defer ctx.allocator.free(exe);
 
         const artifact_path = try std.fs.path.join(ctx.allocator, &.{ absolute_path, exe });
         defer ctx.allocator.free(artifact_path);

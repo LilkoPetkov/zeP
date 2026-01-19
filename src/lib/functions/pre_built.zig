@@ -24,12 +24,13 @@ pub fn init(ctx: *Context) !PreBuilt {
 pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
     try self.ctx.logger.infof("Using Pre Built {s}", .{pre_built_name}, @src());
 
-    var buf: [256]u8 = undefined;
-    const prebuilt_path = try std.fmt.bufPrint(
-        &buf,
+    const prebuilt_path = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}.tar.zstd",
         .{pre_built_name},
     );
+    defer self.ctx.allocator.free(prebuilt_path);
+
     const path = try std.fs.path.join(
         self.ctx.allocator,
         &.{
@@ -60,12 +61,12 @@ pub fn use(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8)
 pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u8) !void {
     try self.ctx.logger.infof("New Pre Built {s}", .{pre_built_name}, @src());
 
-    var buf: [256]u8 = undefined;
-    const path = try std.fmt.bufPrint(
-        &buf,
+    const path = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}/{s}.tar.zstd",
         .{ self.ctx.paths.prebuilt, pre_built_name },
     );
+    defer self.ctx.allocator.free(path);
 
     if (Fs.existsFile(path)) {
         try self.ctx.printer.append("Pre-Built already exists! Overwriting it now...\n\n", .{}, .{});
@@ -84,11 +85,16 @@ pub fn build(self: *PreBuilt, pre_built_name: []const u8, target_path: []const u
 pub fn delete(self: *PreBuilt, pre_built_name: []const u8) !void {
     try self.ctx.logger.infof("Deleting Pre-Built {s}", .{pre_built_name}, @src());
 
-    var buf: [256]u8 = undefined;
     const exts = &[_][]const u8{ ".tar.zstd", ".zep" };
 
     for (exts) |ext| {
-        const path = try std.fmt.bufPrint(&buf, "{s}/{s}{s}", .{ self.ctx.paths.prebuilt, pre_built_name, ext });
+        const path = try std.fmt.allocPrint(
+            self.ctx.allocator,
+            "{s}/{s}{s}",
+            .{ self.ctx.paths.prebuilt, pre_built_name, ext },
+        );
+        defer self.ctx.allocator.free(path);
+
         if (Fs.existsFile(path)) {
             try self.ctx.printer.append("Pre-Built found!\n", .{}, .{ .color = .green });
             try Fs.deleteFileIfExists(path);

@@ -120,8 +120,12 @@ pub fn createZigProject(
     ;
 
     const fingerprint_struct = Fingerprint.generate(name);
-    var buf: [32]u8 = undefined;
-    const fingerprint = try std.fmt.bufPrint(&buf, "0x{x}", .{fingerprint_struct.int()});
+    const fingerprint = try std.fmt.allocPrint(
+        allocator,
+        "0x{x}",
+        .{fingerprint_struct.int()},
+    );
+    defer allocator.free(fingerprint);
 
     const zbz_replace_name = try std.mem.replaceOwned(u8, allocator, zig_build_zon, "{name}", name);
     defer allocator.free(zbz_replace_name);

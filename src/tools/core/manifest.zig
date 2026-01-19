@@ -147,8 +147,13 @@ pub fn removePathFromManifest(
     if (list_path.items.len > 0) {
         try list.append(self.allocator, Structs.Manifests.PackagePaths{ .name = package_id, .paths = list_path.items });
     } else {
-        var buf: [128]u8 = undefined;
-        const package_path = try std.fmt.bufPrint(&buf, "{s}/{s}/", .{ self.paths.pkg_root, package_id });
+        const package_path = try std.fmt.allocPrint(
+            self.allocator,
+            "{s}/{s}/",
+            .{ self.paths.pkg_root, package_id },
+        );
+        defer self.allocator.free(package_path);
+
         if (Fs.existsDir(package_path)) {
             Fs.deleteTreeIfExists(package_path) catch {};
         }

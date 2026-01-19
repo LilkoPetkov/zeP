@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const Locales = @import("locales");
 const Constants = @import("constants");
 const Structs = @import("structs");
 

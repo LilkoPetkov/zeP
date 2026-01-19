@@ -50,12 +50,13 @@ pub fn run(self: *Runner, target_exe: []const u8, args: [][]const u8) !void {
     if (builtin.os.tag == .windows) {
         try exec_args.insert(self.ctx.allocator, 0, target_file);
     } else {
-        var buf: [256]u8 = undefined;
-        const exec = try std.fmt.bufPrint(
-            &buf,
+        const exec = try std.fmt.allocPrint(
+            self.ctx.allocator,
             "./{s}",
             .{target_file},
         );
+        defer self.ctx.allocator.free(exec);
+
         try exec_args.insert(self.ctx.allocator, 0, exec);
     }
 

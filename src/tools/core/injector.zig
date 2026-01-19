@@ -329,8 +329,12 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
     //     .root_source_file = builder.path("..."),
     // });
     const install_prefix_fmt = "{s}.createModule(";
-    var install_prefix_buf: [64]u8 = undefined;
-    const install_prefix = try std.fmt.bufPrint(&install_prefix_buf, install_prefix_fmt, .{build_param});
+    const install_prefix = try std.fmt.allocPrint(
+        self.allocator,
+        install_prefix_fmt,
+        .{build_param},
+    );
+    defer self.allocator.free(install_prefix);
 
     var split_data = std.mem.splitAny(u8, content, "\n");
 

@@ -44,12 +44,12 @@ fn fetchData(
     }
 
     const target_extension = tarball_extension orelse if (builtin.os.tag == .windows) "zip" else "tar.xz";
-    var buf: [256]u8 = undefined;
-    const cached_file = try std.fmt.bufPrint(
-        &buf,
+    const cached_file = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}.{s}",
         .{ name, target_extension },
     );
+    defer self.ctx.allocator.free(cached_file);
 
     const target_path = try std.fs.path.join(
         self.ctx.allocator,

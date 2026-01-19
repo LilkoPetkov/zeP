@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub const Cacher = @This();
 
-const Locales = @import("locales");
 const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
@@ -138,15 +137,15 @@ pub fn deletePackageFromCache(
 ) !void {
     try self.ctx.logger.info("Deleting Cache", @src());
 
-    var buf: [256]u8 = undefined;
-    const path = try std.fmt.bufPrint(
-        &buf,
+    const path = try std.fmt.allocPrint(
+        self.ctx.allocator,
         "{s}/{s}.tar.zstd",
         .{
             self.ctx.paths.cached,
             package_id,
         },
     );
+    defer self.ctx.allocator.free(path);
 
     if (Fs.existsFile(path)) {
         try Fs.deleteFileIfExists(path);
