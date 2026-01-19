@@ -14,6 +14,7 @@ fn info(ctx: *Context) !void {
         ctx.allocator,
         &ctx.printer,
         &ctx.fetcher,
+        ctx.logger,
         package_name,
         package_version,
     );
