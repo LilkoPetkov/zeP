@@ -79,3 +79,14 @@ pub fn deleteTreeIfExists(path: []const u8) !void {
         try std.fs.cwd().deleteTree(path);
     }
 }
+
+/// Deletes symlink if it exists
+pub fn deleteSymlinkIfExists(path: []const u8) void {
+    _ = std.fs.cwd().access(path, .{}) catch {
+        std.fs.cwd().deleteDir(path) catch {};
+        std.fs.cwd().deleteFile(path) catch {};
+        return;
+    };
+    std.fs.cwd().deleteDir(path) catch {};
+    std.fs.cwd().deleteFile(path) catch {};
+}
