@@ -1,10 +1,10 @@
 const std = @import("std");
 pub fn imp(b: *std.Build, exe: *std.Build.Module) void {
- // logly MODULE
- const loglyMod = b.createModule(.{
-     .root_source_file = b.path(".zep/logly/src/logly.zig"),
+ // clap MODULE
+ const clapMod = b.createModule(.{
+     .root_source_file = b.path(".zep/clap/clap.zig"),
  });
- exe.addImport("logly", loglyMod);
+ exe.addImport("clap", clapMod);
  // ----------
  // mvzr MODULE
  const mvzrMod = b.createModule(.{
@@ -12,10 +12,10 @@ pub fn imp(b: *std.Build, exe: *std.Build.Module) void {
  });
  exe.addImport("mvzr", mvzrMod);
  // ----------
- // clap MODULE
- const clapMod = b.createModule(.{
-     .root_source_file = b.path(".zep/clap/clap.zig"),
+ // logly MODULE
+ const loglyMod = b.createModule(.{
+     .root_source_file = b.path(".zep/logly/src/logly.zig"),
  });
- exe.addImport("clap", clapMod);
+ exe.addImport("logly", loglyMod);
  // ----------
 }

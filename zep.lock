@@ -23,11 +23,11 @@
   },
   "packages": [
     {
-      "name": "logly@0.1.0",
-      "hash": "144f509d7acf6abd810aff6fd2b68376bdd3d75dd38dc6ad48dad394aa991334",
-      "source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.0.zip",
+      "name": "clap@0.11.0",
+      "hash": "5add36c27cca8ce2fe8c7da8d42d58f842216fc4d3043b2a570b141bc4c99a54",
+      "source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
       "zig_version": "0.15.1",
-      "root_file": "/src/logly.zig",
+      "root_file": "/clap.zig",
       "packages": []
     },
     {
@@ -39,11 +39,11 @@
       "packages": []
     },
     {
-      "name": "clap@0.11.0",
-      "hash": "5add36c27cca8ce2fe8c7da8d42d58f842216fc4d3043b2a570b141bc4c99a54",
-      "source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
+      "name": "logly@0.1.0",
+      "hash": "144f509d7acf6abd810aff6fd2b68376bdd3d75dd38dc6ad48dad394aa991334",
+      "source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.0.zip",
       "zig_version": "0.15.1",
-      "root_file": "/clap.zig",
+      "root_file": "/src/logly.zig",
       "packages": []
     }
   ]
