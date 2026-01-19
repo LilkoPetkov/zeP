@@ -26,7 +26,7 @@ pub fn help(ctx: *Context) void {
         .{},
     );
     std.debug.print(
-        "--- MANIFEST COMMANDS ---\n  zep init\n  zep manifest modify\n  zep manifest sync\n\n",
+        "--- MANIFEST COMMANDS ---\n  zep init\n  zep manifest modify\n\n",
         .{},
     );
     std.debug.print(

@@ -18,9 +18,7 @@ pub fn purge(ctx: *Context) !void {
     const previous_verbosity = Locales.VERBOSITY_MODE;
     Locales.VERBOSITY_MODE = 0;
 
-    if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        // Initialize zep.ctx.json if missing
-        try ctx.printer.append("zep.ctx.json not initialized.\n", .{}, .{});
+    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
         var initer = try Init.init(
             ctx,
             true,
@@ -29,16 +27,16 @@ pub fn purge(ctx: *Context) !void {
         try ctx.printer.append("Nothing to uninstall.\n", .{}, .{});
         return;
     }
-    var package_json = try ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    var lock = try ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer package_json.deinit();
+    defer lock.deinit();
 
     var uninstaller = Uninstaller.init(
         ctx,
     );
-    for (package_json.value.packages) |package_id| {
+    for (lock.value.root.packages) |package_id| {
         var split = std.mem.splitScalar(u8, package_id, '@');
         const package_name = split.first();
         try ctx.printer.append(" > Uninstalling - {s}...\n", .{package_id}, .{ .verbosity = 0 });

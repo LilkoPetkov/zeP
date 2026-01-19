@@ -70,13 +70,13 @@ pub fn migratePaths(ctx: *Context) !void {
         try std.fs.cwd().rename(old_custom, new_custom);
     }
 
-    const package_manifest = try ctx.manifest.readManifest(
+    const manifest = try ctx.manifest.readManifest(
         Structs.PackagesManifest,
         ctx.paths.pkg_manifest,
     );
-    defer package_manifest.deinit();
+    defer manifest.deinit();
 
-    for (package_manifest.value.packages) |package| {
+    for (manifest.value.packages) |package| {
         const package_name = package.name;
         const new_package_path = try std.fs.path.join(
             ctx.allocator,

@@ -59,35 +59,19 @@ pub fn switchVersion(
         Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
     ) catch return error.ManifestUpdateFailed;
 
-    // Update zep.json and zep.lock
+    // Update zep.lock
     blk: {
         if (artifact_type == .zep) break :blk;
 
         // all need to match for it to be in a zep project
-        if (!Fs.existsFile(Constants.Extras.package_files.lock) or
-            !Fs.existsFile(Constants.Extras.package_files.manifest) or
-            !Fs.existsDir(Constants.Extras.package_files.zep_folder)) break :blk;
-
-        var manifest = try self.ctx.manifest.readManifest(
-            Structs.ZepFiles.PackageJsonStruct,
-            Constants.Extras.package_files.manifest,
-        );
-        defer manifest.deinit();
+        if (!Fs.existsFile(Constants.Extras.package_files.lock)) break :blk;
         var lock = try self.ctx.manifest.readManifest(
             Structs.ZepFiles.PackageLockStruct,
             Constants.Extras.package_files.lock,
         );
         defer lock.deinit();
 
-        manifest.value.zig_version = version;
-        lock.value.root = manifest.value;
-        self.ctx.manifest.writeManifest(
-            Structs.ZepFiles.PackageJsonStruct,
-            Constants.Extras.package_files.manifest,
-            manifest.value,
-        ) catch {
-            return error.JsonUpdateFailed;
-        };
+        lock.value.root.zig_version = version;
         self.ctx.manifest.writeManifest(
             Structs.ZepFiles.PackageLockStruct,
             Constants.Extras.package_files.lock,

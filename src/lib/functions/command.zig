@@ -16,8 +16,8 @@ const Context = @import("context");
 ctx: *Context,
 
 pub fn init(ctx: *Context) !Command {
-    if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        try ctx.printer.append("\nNo zep.json file!\n", .{}, .{ .color = .red });
+    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+        try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
 
@@ -29,11 +29,11 @@ pub fn init(ctx: *Context) !Command {
 pub fn add(self: *Command) !void {
     try self.ctx.logger.info("Adding Command", @src());
 
-    var zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer zep_json.deinit();
+    defer lock.deinit();
 
     var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.ctx.allocator, 10);
     defer cmds.deinit(
@@ -54,7 +54,7 @@ pub fn add(self: *Command) !void {
         },
     );
     defer self.ctx.allocator.free(command_name);
-    for (zep_json.value.cmd) |c| {
+    for (lock.value.root.cmd) |c| {
         if (std.mem.eql(u8, c.name, command_name)) {
             try self.ctx.printer.append("\nCommand already exists! Overwrite? (Y/n)", .{}, .{
                 .color = .red,
@@ -99,24 +99,13 @@ pub fn add(self: *Command) !void {
     const new_command = Structs.ZepFiles.CommandPackageJsonStrcut{ .cmd = command, .name = command_name };
     try cmds.append(self.ctx.allocator, new_command);
 
-    zep_json.value.cmd = cmds.items;
+    lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-        zep_json.value,
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
+        lock.value,
     );
 
-    var zep_lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-    defer zep_lock.deinit();
-    zep_lock.value.root = zep_json.value;
-    try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-        zep_lock.value,
-    );
     try self.ctx.printer.append("Successfully added command!\n\n", .{}, .{ .color = .green });
     return;
 }
@@ -124,13 +113,13 @@ pub fn add(self: *Command) !void {
 pub fn list(self: *Command) !void {
     try self.ctx.logger.info("Listing Commands", @src());
 
-    var zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer zep_json.deinit();
+    defer lock.deinit();
 
-    for (zep_json.value.cmd) |c| {
+    for (lock.value.root.cmd) |c| {
         try self.ctx.printer.append("- Command Name: {s}\n  $ {s}\n\n", .{ c.name, c.cmd }, .{});
     }
     return;
@@ -139,37 +128,25 @@ pub fn list(self: *Command) !void {
 pub fn remove(self: *Command, key: []const u8) !void {
     try self.ctx.logger.infof("Removing Command {s}", .{key}, @src());
 
-    var zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer zep_json.deinit();
+    defer lock.deinit();
 
     var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.ctx.allocator, 5);
     defer cmds.deinit(
         self.ctx.allocator,
     );
-    for (zep_json.value.cmd) |c| {
+    for (lock.value.root.cmd) |c| {
         if (std.mem.eql(u8, c.name, key)) continue;
         try cmds.append(self.ctx.allocator, c);
     }
-    zep_json.value.cmd = cmds.items;
-    try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-        zep_json.value,
-    );
-
-    var zep_lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-    defer zep_lock.deinit();
-    zep_lock.value.root = zep_json.value;
+    lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
-        zep_lock.value,
+        lock.value,
     );
 
     try self.ctx.printer.append("Successfully removed command!\n\n", .{}, .{ .color = .green });
@@ -179,13 +156,13 @@ pub fn remove(self: *Command, key: []const u8) !void {
 pub fn run(self: *Command, key: []const u8) !void {
     try self.ctx.logger.infof("Running Command {s}", .{key}, @src());
 
-    const zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    const lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer zep_json.deinit();
+    defer lock.deinit();
 
-    for (zep_json.value.cmd) |c| {
+    for (lock.value.root.cmd) |c| {
         if (std.mem.eql(u8, c.name, key)) {
             try self.ctx.printer.append("Command was found!\n", .{}, .{ .color = .green });
             var args = try std.ArrayList([]const u8).initCapacity(self.ctx.allocator, 5);

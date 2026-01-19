@@ -38,4 +38,5 @@ pub const LockPackageStruct = struct {
     source: []const u8,
     zig_version: []const u8,
     root_file: []const u8,
+    packages: []LockPackageStruct = &[_]LockPackageStruct{},
 };

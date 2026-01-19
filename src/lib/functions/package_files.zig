@@ -16,8 +16,8 @@ const Context = @import("context");
 ctx: *Context,
 
 pub fn init(ctx: *Context) !PackageFiles {
-    if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        try ctx.printer.append("\nNo zep.json file!\n", .{}, .{ .color = .red });
+    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+        try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
 
@@ -29,11 +29,11 @@ pub fn init(ctx: *Context) !PackageFiles {
 pub fn modify(self: *PackageFiles) !void {
     try self.ctx.logger.info("Modifying Package Files", @src());
 
-    var zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer zep_json.deinit();
+    defer lock.deinit();
 
     try self.ctx.printer.append("--- MODIFYING JSON MODE ---\n", .{}, .{
         .color = .yellow,
@@ -45,7 +45,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Author: ",
         .{
-            .initial_value = zep_json.value.author,
+            .initial_value = lock.value.root.author,
         },
     );
     defer self.ctx.allocator.free(author);
@@ -54,7 +54,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Description: ",
         .{
-            .initial_value = zep_json.value.description,
+            .initial_value = lock.value.root.description,
         },
     );
     defer self.ctx.allocator.free(description);
@@ -63,7 +63,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Name: ",
         .{
-            .initial_value = zep_json.value.name,
+            .initial_value = lock.value.root.name,
         },
     );
     defer self.ctx.allocator.free(name);
@@ -72,7 +72,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> License: ",
         .{
-            .initial_value = zep_json.value.license,
+            .initial_value = lock.value.root.license,
         },
     );
     defer self.ctx.allocator.free(license);
@@ -81,7 +81,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Repo: ",
         .{
-            .initial_value = zep_json.value.repo,
+            .initial_value = lock.value.root.repo,
         },
     );
     defer self.ctx.allocator.free(repo);
@@ -90,7 +90,7 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Version: ",
         .{
-            .initial_value = zep_json.value.version,
+            .initial_value = lock.value.root.version,
         },
     );
     defer self.ctx.allocator.free(version);
@@ -99,62 +99,25 @@ pub fn modify(self: *PackageFiles) !void {
         &self.ctx.printer,
         "> Zig Version: ",
         .{
-            .initial_value = zep_json.value.zig_version,
+            .initial_value = lock.value.root.zig_version,
         },
     );
     defer self.ctx.allocator.free(zig_version);
 
-    zep_json.value.name = name;
-    zep_json.value.license = license;
-    zep_json.value.author = author;
-    zep_json.value.description = description;
-    zep_json.value.repo = repo;
-    zep_json.value.version = version;
-    zep_json.value.zig_version = zig_version;
-
-    try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-        zep_json.value,
-    );
-
-    var zep_lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-    defer zep_lock.deinit();
-    zep_lock.value.root = zep_json.value;
+    lock.value.root.name = name;
+    lock.value.root.license = license;
+    lock.value.root.author = author;
+    lock.value.root.description = description;
+    lock.value.root.repo = repo;
+    lock.value.root.version = version;
+    lock.value.root.zig_version = zig_version;
 
     try self.ctx.manifest.writeManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
-        zep_lock.value,
-    );
-    try self.ctx.printer.append("\nSuccessfully modified zep.json!\n\n", .{}, .{ .color = .green });
-    return;
-}
-
-pub fn sync(self: *PackageFiles) !void {
-    try self.ctx.logger.info("Syncing Package Files", @src());
-
-    var zep_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-    );
-    defer zep_json.deinit();
-
-    var zep_lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-    defer zep_lock.deinit();
-    zep_lock.value.root = zep_json.value;
-    try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-        zep_lock.value,
+        lock.value,
     );
 
-    try self.ctx.printer.append("Successfully moved zep.json into zep.lock!\n\n", .{}, .{ .color = .green });
+    try self.ctx.printer.append("\nSuccessfully modified zep.lock!\n\n", .{}, .{ .color = .green });
     return;
 }

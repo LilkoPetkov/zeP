@@ -15,7 +15,6 @@ const Fetch = @import("core").Fetch;
 const Compressor = @import("core").Compressor;
 
 const Installer = @import("lib/packages/install.zig");
-const PackageFiles = @import("lib/functions/package_files.zig");
 const Artifact = @import("lib/artifact/artifact.zig");
 
 const Context = @import("context");
@@ -111,10 +110,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     }
 
     // First verify that we are in zep project
-    if (Fs.existsFile(Constants.Extras.package_files.lock) and
-        Fs.existsFile(Constants.Extras.package_files.manifest) and
-        Fs.existsDir(Constants.Extras.package_files.zep_folder))
-    {
+    if (Fs.existsFile(Constants.Extras.package_files.lock)) {
         const lock = try manifest.readManifest(
             Structs.ZepFiles.PackageLockStruct,
             Constants.Extras.package_files.lock,
@@ -126,9 +122,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             try printer.append("Lock file schema is NOT matching with zep version.\nAttempting to fix!\n", .{}, .{ .color = .red });
 
             try Fs.deleteFileIfExists(Constants.Extras.package_files.lock);
-            var package_files = try PackageFiles.init(&ctx);
-            try package_files.sync();
-
             const prev_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
             var installer = Installer.init(&ctx);

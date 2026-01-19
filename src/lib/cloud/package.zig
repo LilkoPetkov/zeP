@@ -24,8 +24,8 @@ pub fn init(ctx: *Context) Package {
 pub fn delete(self: *Package) !void {
     try self.ctx.logger.info("Deleting Package", @src());
 
-    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth.deinit();
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
 
     var packages = try self.ctx.fetcher.fetchPackages();
     defer packages.deinit(self.ctx.allocator);
@@ -127,7 +127,7 @@ pub fn delete(self: *Package) !void {
             .headers = &.{
                 std.http.Header{
                     .name = "Authorization",
-                    .value = try auth.value.bearer(),
+                    .value = try manifest.value.bearer(),
                 },
             },
         },
@@ -189,9 +189,9 @@ pub fn create(self: *Package) !void {
         .weight = .bold,
     });
 
-    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth.deinit();
-    if (auth.value.token.len == 0) {
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
+    if (manifest.value.token.len == 0) {
         return error.NotAuthed;
     }
 
@@ -249,7 +249,7 @@ pub fn create(self: *Package) !void {
             .headers = &.{
                 std.http.Header{
                     .name = "Authorization",
-                    .value = try auth.value.bearer(),
+                    .value = try manifest.value.bearer(),
                 },
                 std.http.Header{
                     .name = "Content-Type",

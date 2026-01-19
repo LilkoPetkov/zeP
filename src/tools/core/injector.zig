@@ -274,10 +274,13 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
 
     const build_param = try self.findBuildParam(content);
 
-    var injector_manifest = try self.manifest.readManifest(Structs.Manifests.InjectorManifest, Constants.Extras.package_files.injector_manifest);
-    defer injector_manifest.deinit();
-    const included_modules = injector_manifest.value.included_modules;
-    const excluded_modules = injector_manifest.value.excluded_modules;
+    var manifest = try self.manifest.readManifest(
+        Structs.Manifests.InjectorManifest,
+        Constants.Extras.package_files.injector_manifest,
+    );
+    defer manifest.deinit();
+    const included_modules = manifest.value.included_modules;
+    const excluded_modules = manifest.value.excluded_modules;
 
     display_module_blk: {
         try self.printer.append("Modules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
@@ -349,7 +352,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
             if (!contains(line, ";")) continue;
 
             try self.maybeInject(
-                &injector_manifest.value,
+                &manifest.value,
                 &new_excluded_modules,
                 &new_included_modules,
                 included_modules,
@@ -374,7 +377,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         if (!contains(line, ";")) continue;
 
         try self.maybeInject(
-            &injector_manifest.value,
+            &manifest.value,
             &new_excluded_modules,
             &new_included_modules,
             included_modules,

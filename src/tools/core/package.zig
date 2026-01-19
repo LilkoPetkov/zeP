@@ -103,16 +103,16 @@ pub fn deinit(self: *Package) void {
 fn getPackagePathsAmount(
     self: *Package,
     paths: Constants.Paths.Paths,
-    manifest: *Manifest,
+    _manifest: *Manifest,
 ) !usize {
-    var package_manifest = try manifest.readManifest(
+    var manifest = try _manifest.readManifest(
         Structs.Manifests.PackagesManifest,
         paths.pkg_manifest,
     );
-    defer package_manifest.deinit();
+    defer manifest.deinit();
 
     var package_paths_amount: usize = 0;
-    for (package_manifest.value.packages) |package| {
+    for (manifest.value.packages) |package| {
         if (std.mem.eql(u8, package.name, self.id)) {
             package_paths_amount = package.paths.len;
             break;

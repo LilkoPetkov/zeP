@@ -197,9 +197,14 @@ pub fn manifestAdd(
 
 pub fn lockAdd(
     self: *Manifest,
-    lock: *Structs.ZepFiles.PackageLockStruct,
     package: Package,
 ) !void {
+    var lock = try self.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
+    );
+    defer lock.deinit();
+
     const new_entry = Structs.ZepFiles.LockPackageStruct{
         .name = package.id,
         .hash = package.package_hash,
@@ -208,9 +213,9 @@ pub fn lockAdd(
         .root_file = package.package.root_file,
     };
 
-    lock.packages = try filterOut(
+    lock.value.packages = try filterOut(
         self.allocator,
-        lock.packages,
+        lock.value.packages,
         package.package_name,
         Structs.ZepFiles.LockPackageStruct,
         struct {
@@ -220,9 +225,9 @@ pub fn lockAdd(
         }.match,
     );
 
-    lock.packages = try appendUnique(
+    lock.value.packages = try appendUnique(
         Structs.ZepFiles.LockPackageStruct,
-        lock.packages,
+        lock.value.packages,
         new_entry,
         self.allocator,
         struct {
@@ -232,28 +237,50 @@ pub fn lockAdd(
         }.match,
     );
 
-    var package_json = try self.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    lock.value.root.packages = try filterOut(
+        self.allocator,
+        lock.value.root.packages,
+        new_entry.name,
+        []const u8,
+        struct {
+            fn match(a: []const u8, b: []const u8) bool {
+                return std.mem.startsWith(u8, a, b); // first remove the previous package Name
+            }
+        }.match,
     );
-    defer package_json.deinit();
-    lock.root = package_json.value;
+
+    lock.value.root.packages = try appendUnique(
+        []const u8,
+        lock.value.root.packages,
+        new_entry.name,
+        self.allocator,
+        struct {
+            fn match(a: []const u8, b: []const u8) bool {
+                return std.mem.startsWith(u8, a, b);
+            }
+        }.match,
+    );
 
     try Json.writePretty(
         self.allocator,
         Constants.Extras.package_files.lock,
-        lock,
+        lock.value,
     );
 }
 
 pub fn lockRemove(
     self: *Manifest,
-    lock: *Structs.ZepFiles.PackageLockStruct,
     package_name: []const u8,
 ) !void {
-    lock.packages = try filterOut(
+    var lock = try self.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
+    );
+    defer lock.deinit();
+
+    lock.value.packages = try filterOut(
         self.allocator,
-        lock.packages,
+        lock.value.packages,
         package_name,
         Structs.ZepFiles.LockPackageStruct,
         struct {
@@ -263,29 +290,10 @@ pub fn lockRemove(
         }.match,
     );
 
-    var package_json = try self.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-    );
-    defer package_json.deinit();
-    lock.root = package_json.value;
-
-    try Json.writePretty(
+    lock.value.root.packages = try filterOut(
         self.allocator,
-        Constants.Extras.package_files.lock,
-        lock,
-    );
-}
-
-pub fn manifestRemove(
-    self: *Manifest,
-    pkg: *Structs.ZepFiles.PackageJsonStruct,
-    package_id: []const u8,
-) !void {
-    pkg.packages = try filterOut(
-        self.allocator,
-        pkg.packages,
-        package_id,
+        lock.value.root.packages,
+        package_name,
         []const u8,
         struct {
             fn match(item: []const u8, needle: []const u8) bool {
@@ -296,8 +304,8 @@ pub fn manifestRemove(
 
     try Json.writePretty(
         self.allocator,
-        Constants.Extras.package_files.manifest,
-        pkg,
+        Constants.Extras.package_files.lock,
+        lock.value,
     );
 }
 

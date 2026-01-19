@@ -35,9 +35,9 @@ pub fn init(ctx: *Context) Release {
 pub fn delete(self: *Release) !void {
     try self.ctx.logger.info("Deleting Release", @src());
 
-    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth.deinit();
-    if (auth.value.token.len == 0) return error.NotAuthed;
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
+    if (manifest.value.token.len == 0) return error.NotAuthed;
 
     var packages = try self.ctx.fetcher.fetchPackages();
     defer packages.deinit(self.ctx.allocator);
@@ -123,7 +123,7 @@ pub fn delete(self: *Release) !void {
             .headers = &.{
                 std.http.Header{
                     .name = "Authorization",
-                    .value = try auth.value.bearer(),
+                    .value = try manifest.value.bearer(),
                 },
             },
         },
@@ -280,12 +280,12 @@ pub fn create(self: *Release) !void {
         .weight = .bold,
     });
 
-    var auth = try self.ctx.manifest.readManifest(
+    var manifest = try self.ctx.manifest.readManifest(
         Structs.Manifests.AuthManifest,
         self.ctx.paths.auth_manifest,
     );
-    defer auth.deinit();
-    if (auth.value.token.len == 0) return error.NotAuthed;
+    defer manifest.deinit();
+    if (manifest.value.token.len == 0) return error.NotAuthed;
 
     var packages = try self.ctx.fetcher.fetchPackages();
     defer packages.deinit(self.ctx.allocator);
@@ -420,7 +420,7 @@ pub fn create(self: *Release) !void {
     defer req.deinit();
 
     req.headers.content_type = .{ .override = "multipart/form-data; boundary=" ++ boundary };
-    req.headers.authorization = .{ .override = try auth.value.bearer() };
+    req.headers.authorization = .{ .override = try manifest.value.bearer() };
     req.transfer_encoding = .{ .content_length = body.len };
 
     _ = req.sendBodyComplete(body) catch return error.FetchFailed;

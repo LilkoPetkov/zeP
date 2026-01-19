@@ -60,8 +60,7 @@ pub fn uninstall(
     defer self.ctx.allocator.free(package_id);
 
     try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{});
-    try self.removePackageFromJson(package_id);
-
+    try self.ctx.manifest.lockRemove(package_id);
     var injector = Injector.init(
         self.ctx.allocator,
         &self.ctx.printer,
@@ -99,38 +98,6 @@ pub fn uninstall(
             absolute_path,
         );
     }
-    try self.removePackageFromJson(package_id);
+    try self.ctx.manifest.lockRemove(package_id);
     try self.ctx.printer.append("Successfully deleted - {s}\n\n", .{package_name}, .{ .color = .green });
-}
-
-/// Remove package from `zep.json` and `zep.lock`
-pub fn removePackageFromJson(
-    self: *Uninstaller,
-    package_id: []const u8,
-) !void {
-    try self.ctx.logger.info("Removing Package from .json", @src());
-
-    var package_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-    );
-    var lock_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-
-    defer package_json.deinit();
-    defer lock_json.deinit();
-
-    const previous_verbosity = Locales.VERBOSITY_MODE;
-    Locales.VERBOSITY_MODE = 0;
-    try self.ctx.manifest.manifestRemove(
-        &package_json.value,
-        package_id,
-    );
-    try self.ctx.manifest.lockRemove(
-        &lock_json.value,
-        package_id,
-    );
-    Locales.VERBOSITY_MODE = previous_verbosity;
 }

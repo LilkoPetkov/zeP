@@ -9,7 +9,6 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        "zep.json",
         "zep.lock",
     },
 }

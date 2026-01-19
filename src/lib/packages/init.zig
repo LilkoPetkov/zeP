@@ -110,21 +110,8 @@ fn createFiles(self: *Init) !void {
     _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector);
     _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector_manifest);
 
-    var pkg = Structs.ZepFiles.PackageJsonStruct{
-        .build = Structs.ZepFiles.BuildPackageJsonStruct{},
-    };
-    pkg.zig_version = self.zig_version;
-
-    const lock = Structs.ZepFiles.PackageLockStruct{ .root = pkg };
-
-    if (!Fs.existsFile(Constants.Extras.package_files.manifest)) {
-        try Json.writePretty(
-            self.ctx.allocator,
-            Constants.Extras.package_files.manifest,
-            pkg,
-        );
-    }
-
+    var lock = Structs.ZepFiles.PackageLockStruct{};
+    lock.root.zig_version = self.zig_version;
     if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
         try Json.writePretty(
             self.ctx.allocator,

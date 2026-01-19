@@ -240,11 +240,9 @@ zep runner --target <target-exe> --args <args>
 
 ## **Configuration Files**
 
-### **`zep.json`**
+### **`zep.lock`**
 
 Your project’s declared dependencies.
-
-### **`zep.lock`**
 
 Exact versions, hashes, and metadata of installed packages.
 
@@ -260,24 +258,16 @@ Stores the modules that currently include or exclude packages.
 zep init
 ```
 
-- Adds zep.json, zep.lock and .zep/ with starter values
+- Adds zep.lock and .zep/ with starter values
 - Inits own Zig project, with pre-set values
 
 #### **zep.lock file**
 
 ```bash
-zep manifest sync
-```
-
-- Syncs data from zep.json into zep.lock
-
-#### **zep.json file**
-
-```bash
 zep manifest modify
 ```
 
-- Allows for modification of data within zep.json using terminal
+- Allows for modification of data within zep.lock using terminal
 - More reliable as changes will get automatically reflected onto .lock
 
 #### **Doctor check**

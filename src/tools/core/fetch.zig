@@ -106,12 +106,12 @@ fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.PackageStruct {
 }
 
 pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
-    var auth = try self.manifest.readManifest(
+    var manifest = try self.manifest.readManifest(
         Structs.Manifests.AuthManifest,
         self.paths.auth_manifest,
     );
-    defer auth.deinit();
-    if (auth.value.token.len == 0) {
+    defer manifest.deinit();
+    if (manifest.value.token.len == 0) {
         return error.NotAuthed;
     }
 
@@ -126,7 +126,7 @@ pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
             .headers = &.{
                 std.http.Header{
                     .name = "Authorization",
-                    .value = try auth.value.bearer(),
+                    .value = try manifest.value.bearer(),
                 },
             },
         },

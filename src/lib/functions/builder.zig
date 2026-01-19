@@ -11,13 +11,13 @@ const Context = @import("context");
 pub fn build(ctx: *Context) !std.ArrayList([]u8) {
     try ctx.logger.info("Building", @src());
 
-    const read_manifest = try ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    const lock = try ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer read_manifest.deinit();
+    defer lock.deinit();
 
-    var target = read_manifest.value.build.target;
+    var target = lock.value.root.build.target;
     if (target.len == 0) {
         target = Constants.Default.resolveDefaultTarget();
     }

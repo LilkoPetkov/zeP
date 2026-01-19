@@ -11,14 +11,6 @@ test "version comparison" {
     const latest = try io.Fs.openFile("LATEST");
     defer latest.close();
 
-    const manifest = try core.Json.parseJsonFromFile(
-        test_allocator,
-        structs.ZepFiles.PackageJsonStruct,
-        constants.Extras.package_files.manifest,
-        constants.Default.mb,
-    );
-    defer manifest.deinit();
-
     const lock = try core.Json.parseJsonFromFile(
         test_allocator,
         structs.ZepFiles.PackageLockStruct,
@@ -31,6 +23,5 @@ test "version comparison" {
     defer test_allocator.free(read);
 
     try expect(std.mem.eql(u8, read, constants.Default.version));
-    try expect(std.mem.eql(u8, manifest.value.version, lock.value.root.version));
-    try expect(std.mem.eql(u8, manifest.value.version, read));
+    try expect(std.mem.eql(u8, constants.Default.version, lock.value.root.version));
 }

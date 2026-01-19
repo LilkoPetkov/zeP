@@ -8,28 +8,28 @@ const structs = @import("structs");
 
 test "validate json parsing" {
     const test_allocator = std.testing.allocator;
-    const test_path = "tests/assets/valid.json";
-    const test_manifest = try core.Json.parseJsonFromFile(
+    const test_path = "tests/assets/valid.lock";
+    const test_lock = try core.Json.parseJsonFromFile(
         test_allocator,
-        structs.ZepFiles.PackageJsonStruct,
+        structs.ZepFiles.PackageLockStruct,
         test_path,
         constants.Default.mb,
     );
-    defer test_manifest.deinit();
+    defer test_lock.deinit();
 
-    try expect(std.mem.eql(u8, test_manifest.value.name, "test"));
-    try expect(std.mem.eql(u8, test_manifest.value.author, "tester"));
+    try expect(std.mem.eql(u8, test_lock.value.root.name, "test"));
+    try expect(std.mem.eql(u8, test_lock.value.root.author, "tester"));
 }
 
 test "expect error when json parsing invalid json" {
     const test_allocator = std.testing.allocator;
-    const test_path_unexpected = "tests/assets/unexpected.json";
+    const test_path_unexpected = "tests/assets/unexpected.lock";
 
     try std.testing.expectError(
         error.UnexpectedEndOfInput,
         core.Json.parseJsonFromFile(
             test_allocator,
-            structs.ZepFiles.PackageJsonStruct,
+            structs.ZepFiles.PackageLockStruct,
             test_path_unexpected,
             constants.Default.mb,
         ),
@@ -38,14 +38,14 @@ test "expect error when json parsing invalid json" {
 
 test "expect no error when json parsing missing fields" {
     const test_allocator = std.testing.allocator;
-    const test_path_missing = "tests/assets/missing.json";
+    const test_path_missing = "tests/assets/missing.lock";
     const parsed = try core.Json.parseJsonFromFile(
         test_allocator,
-        structs.ZepFiles.PackageJsonStruct,
+        structs.ZepFiles.PackageLockStruct,
         test_path_missing,
         constants.Default.mb,
     );
     defer parsed.deinit();
 
-    try std.testing.expect(std.mem.eql(u8, parsed.value.version, "0.0.1"));
+    try std.testing.expect(std.mem.eql(u8, parsed.value.root.version, "0.0.1"));
 }

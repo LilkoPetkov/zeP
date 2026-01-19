@@ -11,17 +11,17 @@ const Context = @import("context");
 /// Updates the symbolic link to point to the currently active Artifact installation
 pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !void {
     // Load manifest and get absolute path
-    const read_manifest = try ctx.manifest.readManifest(
+    const manifest = try ctx.manifest.readManifest(
         Structs.Manifests.ArtifactManifest,
         if (artifact_type == .zig) ctx.paths.zig_manifest else ctx.paths.zep_manifest,
     );
-    if (read_manifest.value.path.len == 0) {
+    if (manifest.value.path.len == 0) {
         return error.ManifestNotFound;
     }
 
-    defer read_manifest.deinit();
+    defer manifest.deinit();
 
-    const absolute_path = try std.fs.realpathAlloc(ctx.allocator, read_manifest.value.path);
+    const absolute_path = try std.fs.realpathAlloc(ctx.allocator, manifest.value.path);
     defer ctx.allocator.free(absolute_path);
 
     if (builtin.os.tag == .windows) {

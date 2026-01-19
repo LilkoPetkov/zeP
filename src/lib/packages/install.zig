@@ -55,14 +55,14 @@ fn isPackageInManifest(
     self: *Installer,
     package_id: []const u8,
 ) !bool {
-    const manifest = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
+    const lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.PackageLockStruct,
+        Constants.Extras.package_files.lock,
     );
-    defer manifest.deinit();
+    defer lock.deinit();
 
     var match = false;
-    for (manifest.value.packages) |pkg| {
+    for (lock.value.root.packages) |pkg| {
         if (std.mem.eql(u8, pkg, package_id)) match = true;
     }
     return match;
@@ -201,7 +201,7 @@ fn setPackage(
 ) !void {
     try self.ctx.logger.info("Setting Package", @src());
 
-    try self.addPackageToJson(package);
+    try self.ctx.manifest.lockAdd(package);
 
     var injector = Injector.init(
         self.ctx.allocator,
@@ -241,42 +241,16 @@ fn setPackage(
     };
 }
 
-fn addPackageToJson(
-    self: *Installer,
-    package: Package,
-) !void {
-    var package_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-    );
-    var lock_json = try self.ctx.manifest.readManifest(
+pub fn installAll(self: *Installer) anyerror!void {
+    try self.ctx.logger.info("Installing All", @src());
+
+    var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.PackageLockStruct,
         Constants.Extras.package_files.lock,
     );
 
-    defer package_json.deinit();
-    defer lock_json.deinit();
-    try self.ctx.manifest.manifestAdd(
-        &package_json.value,
-        package.package_name,
-        package.id,
-    );
-    try self.ctx.manifest.lockAdd(
-        &lock_json.value,
-        package,
-    );
-}
-
-pub fn installAll(self: *Installer) anyerror!void {
-    try self.ctx.logger.info("Installing All", @src());
-
-    var package_json = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageJsonStruct,
-        Constants.Extras.package_files.manifest,
-    );
-
-    defer package_json.deinit();
-    for (package_json.value.packages) |package_id| {
+    defer lock.deinit();
+    for (lock.value.root.packages) |package_id| {
         try self.ctx.printer.append(" > Installing - {s}...\n", .{package_id}, .{ .verbosity = 0 });
 
         var package_split = std.mem.splitScalar(u8, package_id, '@');

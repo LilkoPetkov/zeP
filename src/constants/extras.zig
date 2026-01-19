@@ -1,5 +1,4 @@
 pub const package_files = struct {
-    pub const manifest = "zep.json";
     pub const lock = "zep.lock";
     pub const zep_folder = ".zep";
     pub const lock_schema_version = 2;

@@ -59,9 +59,12 @@ pub fn init(ctx: *Context) !Auth {
 fn getUserData(self: *Auth) !Structs.Fetch.User {
     try self.ctx.logger.info("Fetching User Data", @src());
 
-    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth.deinit();
-    if (auth.value.token.len == 0) {
+    var manifest = try self.ctx.manifest.readManifest(
+        Structs.Manifests.AuthManifest,
+        self.ctx.paths.auth_manifest,
+    );
+    defer manifest.deinit();
+    if (manifest.value.token.len == 0) {
         try self.ctx.logger.info("Not Authenticated", @src());
         return error.NotAuthed;
     }
@@ -77,7 +80,7 @@ fn getUserData(self: *Auth) !Structs.Fetch.User {
             .headers = &.{
                 std.http.Header{
                     .name = "Authorization",
-                    .value = try auth.value.bearer(),
+                    .value = try manifest.value.bearer(),
                 },
             },
         },
@@ -311,10 +314,10 @@ pub fn register(self: *Auth) !void {
     try self.ctx.printer.append("Verified.\n", .{}, .{});
 
     const jwt_token = verify_object.get("jwt") orelse return;
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
-    auth_manifest.value.token = jwt_token.string;
-    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
+    manifest.value.token = jwt_token.string;
+    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, manifest.value);
     try self.ctx.logger.info("User authenticated...", @src());
     try self.ctx.printer.append("Logged in.\n", .{}, .{});
 }
@@ -395,10 +398,10 @@ pub fn login(self: *Auth) !void {
     }
 
     const token = login_object.get("jwt") orelse return error.FetchFailed;
-    var auth_manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth_manifest.deinit();
-    auth_manifest.value.token = token.string;
-    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth_manifest.value);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
+    manifest.value.token = token.string;
+    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, manifest.value);
 
     try self.ctx.printer.append("Logged in.\n", .{}, .{});
     try self.ctx.logger.info("User authenticated...", @src());
@@ -413,11 +416,11 @@ pub fn logout(self: *Auth) !void {
     };
     if (is_error) return error.NotAuthed;
 
-    var auth = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
-    defer auth.deinit();
-    const bearer = try auth.value.bearer();
-    auth.value.token = "";
-    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, auth.value);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    defer manifest.deinit();
+    const bearer = try manifest.value.bearer();
+    manifest.value.token = "";
+    try self.ctx.manifest.writeManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest, manifest.value);
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
