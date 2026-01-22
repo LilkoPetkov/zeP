@@ -231,7 +231,7 @@ zep build
 - Runs build command
 
 ```bash
-zep runner --target <target-exe> --args <args>
+zep run --target <target-exe> --args <args>
 ```
 
 - Builds and runs your executeable, including the args
@@ -243,14 +243,7 @@ zep runner --target <target-exe> --args <args>
 ### **`zep.lock`**
 
 Your project’s declared dependencies.
-
 Exact versions, hashes, and metadata of installed packages.
-
-Both are fully auto-managed. Direct editing is unnecessary unless you enjoy breaking things.
-
-### **`.zep/.conf/injector.json`**
-
-Stores the modules that currently include or exclude packages.
 
 #### **Init project**
 
@@ -264,7 +257,7 @@ zep init
 #### **zep.lock file**
 
 ```bash
-zep manifest modify
+zep config
 ```
 
 - Allows for modification of data within zep.lock using terminal
@@ -282,19 +275,19 @@ zep doctor (--fix)
 ### **Authentication**
 
 ```bash
-zep auth register
+zep register
 ```
 
 - Register via email, username and password
 
 ```bash
-zep auth login
+zep login
 ```
 
 - Login into zep.run
 
 ```bash
-zep auth logout
+zep logout
 ```
 
 - Logouts and deletes local token

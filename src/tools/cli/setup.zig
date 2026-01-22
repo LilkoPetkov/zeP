@@ -9,7 +9,8 @@ const Fs = @import("io").Fs;
 const Printer = @import("printer.zig");
 
 fn setupEnviromentPath(tmp_path: []const u8) !void {
-    if (builtin.os.tag != .linux) return;
+    if (!std.fs.has_executable_bit) return;
+
     const sh_file =
         \\ #!/bin/bash
         \\ 

@@ -30,12 +30,12 @@ pub fn modify(self: *PackageFiles) !void {
     try self.ctx.logger.info("Modifying Package Files", @src());
 
     var lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
 
-    try self.ctx.printer.append("--- MODIFYING JSON MODE ---\n", .{}, .{
+    try self.ctx.printer.append("Lock [Edit]:\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
@@ -113,7 +113,7 @@ pub fn modify(self: *PackageFiles) !void {
     lock.value.root.zig_version = zig_version;
 
     try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
         lock.value,
     );

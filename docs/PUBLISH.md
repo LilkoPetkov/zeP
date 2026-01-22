@@ -5,7 +5,7 @@
 ### **Authenticate**
 
 \$ zep auth login
---- LOGIN MODE ---
+Login:
 
 > Enter email: ...
 > Enter password: ...
@@ -15,7 +15,7 @@
 If you do not have a zeP account, register very easily;
 
 \$ zep auth register
---- Register MODE ---
+Register:
 
 > Enter username*: ...
 > Enter email*: ...
@@ -31,7 +31,7 @@ After the verification, you should be authenticated by default.
 ## **Publish Package**
 
 \$ zep package create
---- CREATING PACKAGE MODE ---
+Package:
 
 > Name\*: ...
 > Description: ...
@@ -41,7 +41,7 @@ A package by default, is not installable. Adding your first release however, wil
 to install your package;
 
 \$ zep release create
---- CREATING RELEASE MODE ---
+Release
 
 Select Package target:
 

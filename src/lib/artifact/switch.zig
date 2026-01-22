@@ -1,4 +1,6 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const Link = @import("lib/link.zig");
 
 pub const ArtifactSwitcher = @This();
@@ -40,6 +42,11 @@ pub fn switchVersion(
     target: []const u8,
     artifact_type: Structs.Extras.ArtifactType,
 ) !void {
+    const os_name = @tagName(builtin.os.tag);
+    if (!std.mem.containsAtLeast(u8, target, 1, os_name)) {
+        return error.InvalidOS;
+    }
+
     // Update manifest with new version
     try self.ctx.printer.append("Modifying Manifest...\n", .{}, .{
         .verbosity = 2,
@@ -54,9 +61,9 @@ pub fn switchVersion(
     defer self.ctx.allocator.free(path);
 
     self.ctx.manifest.writeManifest(
-        Structs.Manifests.ArtifactManifest,
+        Structs.Manifests.Artifact,
         if (artifact_type == .zig) self.ctx.paths.zig_manifest else self.ctx.paths.zep_manifest,
-        Structs.Manifests.ArtifactManifest{ .name = name, .path = path },
+        Structs.Manifests.Artifact{ .name = name, .path = path },
     ) catch return error.ManifestUpdateFailed;
 
     // Update zep.lock
@@ -66,14 +73,14 @@ pub fn switchVersion(
         // all need to match for it to be in a zep project
         if (!Fs.existsFile(Constants.Extras.package_files.lock)) break :blk;
         var lock = try self.ctx.manifest.readManifest(
-            Structs.ZepFiles.PackageLockStruct,
+            Structs.ZepFiles.Lock,
             Constants.Extras.package_files.lock,
         );
         defer lock.deinit();
 
         lock.value.root.zig_version = version;
         self.ctx.manifest.writeManifest(
-            Structs.ZepFiles.PackageLockStruct,
+            Structs.ZepFiles.Lock,
             Constants.Extras.package_files.lock,
             lock.value,
         ) catch {

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const PackageStruct = struct {
+pub const Package = struct {
     ID: []const u8,
     UserID: []const u8,
     Name: []const u8,
@@ -10,7 +10,7 @@ pub const PackageStruct = struct {
     CreatedAt: []const u8,
 };
 
-pub const ReleaseStruct = struct {
+pub const Release = struct {
     ID: []const u8,
     UserID: []const u8,
     PackageID: []const u8,

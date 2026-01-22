@@ -35,7 +35,7 @@ pub fn init(ctx: *Context) Release {
 pub fn delete(self: *Release) !void {
     try self.ctx.logger.info("Deleting Release", @src());
 
-    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.Auth, self.ctx.paths.auth_manifest);
     defer manifest.deinit();
     if (manifest.value.token.len == 0) return error.NotAuthed;
 
@@ -275,13 +275,13 @@ fn releaseAvailable(package_name: []const u8, release: []const u8) bool {
 pub fn create(self: *Release) !void {
     try self.ctx.logger.info("Creating Release", @src());
 
-    try self.ctx.printer.append("--- CREATING RELEASE MODE ---\n\n", .{}, .{
+    try self.ctx.printer.append("Release:\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
 
     var manifest = try self.ctx.manifest.readManifest(
-        Structs.Manifests.AuthManifest,
+        Structs.Manifests.Auth,
         self.ctx.paths.auth_manifest,
     );
     defer manifest.deinit();

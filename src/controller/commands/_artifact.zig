@@ -8,30 +8,37 @@ const Context = @import("context");
 fn artifactInstall(ctx: *Context, artifact: *Artifact) !void {
     if (ctx.args.len < 4) return error.MissingArguments;
 
-    const target_version = ctx.args[3];
+    const target_version = if (ctx.args.len < 4) "latest" else ctx.args[3];
     const target = if (ctx.args.len < 5) Constants.Default.resolveDefaultTarget() else ctx.args[4];
 
     artifact.install(target_version, target) catch |err| {
         switch (err) {
             error.UrlNotFound => {
-                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.logger.err("Url not found...", @src());
                 try ctx.printer.append("Url was not found.\n\n", .{}, .{});
             },
             error.VersionNotFound => {
-                try ctx.logger.@"error"("Version not found...", @src());
+                try ctx.logger.err("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
             error.VersionHasNoPath => {
-                try ctx.logger.@"error"("Version has no path...", @src());
+                try ctx.logger.err("Version has no path...", @src());
                 try ctx.printer.append("Version {s} has no path.\n\n", .{target_version}, .{});
             },
             error.TarballNotFound => {
-                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.logger.err("Tarball was not found...", @src());
                 try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
             },
+            error.AlreadyInstalled => {
+                try ctx.printer.append("{s} version already installed.\n", .{artifact.artifact_name}, .{});
+                try ctx.printer.append("Switching to {s} - {s}.\n\n", .{ target_version, target }, .{});
+            },
+            error.InvalidOS => {
+                try ctx.printer.append("Invalid Operating System. Installed, but not switched.\n", .{}, .{});
+            },
             else => {
-                try ctx.logger.@"error"("Installing failed...", @src());
-                try ctx.printer.append("Installing failed\n\n", .{}, .{});
+                try ctx.logger.err("Installing failed...", @src());
+                try ctx.printer.append("Installing failed, err={any}...\n\n", .{err}, .{});
             },
         }
     };
@@ -46,23 +53,23 @@ fn artifactUninstall(ctx: *Context, artifact: *Artifact) !void {
     artifact.uninstall(target_version, target) catch |err| {
         switch (err) {
             error.UrlNotFound => {
-                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.logger.err("Url not found...", @src());
                 try ctx.printer.append("Url was not found.\n\n", .{}, .{});
             },
             error.TarballNotFound => {
-                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.logger.err("Tarball was not found...", @src());
                 try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
             },
             error.VersionNotFound => {
-                try ctx.logger.@"error"("Version not found...", @src());
+                try ctx.logger.err("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
             error.VersionNotInstalled => {
-                try ctx.logger.@"error"("Version not installed...", @src());
+                try ctx.logger.err("Version not installed...", @src());
                 try ctx.printer.append("Version {s} is not installed.\n\n", .{target_version}, .{});
             },
             else => {
-                try ctx.logger.@"error"("Uninsalling failed...", @src());
+                try ctx.logger.err("Uninsalling failed...", @src());
                 try ctx.printer.append("Uninstalling failed\n\n", .{}, .{});
             },
         }
@@ -79,23 +86,26 @@ fn artifactSwitch(ctx: *Context, artifact: *Artifact) !void {
     artifact.switchVersion(target_version, target) catch |err| {
         switch (err) {
             error.UrlNotFound => {
-                try ctx.logger.@"error"("Url not found...", @src());
+                try ctx.logger.err("Url not found...", @src());
                 try ctx.printer.append("Url was not found.\n\n", .{}, .{});
             },
             error.TarballNotFound => {
-                try ctx.logger.@"error"("Tarball was not found...", @src());
+                try ctx.logger.err("Tarball was not found...", @src());
                 try ctx.printer.append("Tarball was not found.\n\n", .{}, .{});
             },
             error.VersionNotFound => {
-                try ctx.logger.@"error"("Version not found...", @src());
+                try ctx.logger.err("Version not found...", @src());
                 try ctx.printer.append("Version {s} was not found.\n\n", .{target_version}, .{});
             },
             error.VersionNotInstalled => {
-                try ctx.logger.@"error"("Version not installed...", @src());
+                try ctx.logger.err("Version not installed...", @src());
                 try ctx.printer.append("Version {s} is not installed.\n\n", .{target_version}, .{});
             },
+            error.InvalidOS => {
+                try ctx.printer.append("Invalid Operating System. Cannot switched.\n", .{}, .{});
+            },
             else => {
-                try ctx.logger.@"error"("Switching failed...", @src());
+                try ctx.logger.err("Switching failed...", @src());
                 try ctx.printer.append("Switching failed\n\n", .{}, .{});
             },
         }
@@ -106,6 +116,26 @@ fn artifactSwitch(ctx: *Context, artifact: *Artifact) !void {
 fn artifactList(ctx: *Context, artifact: *Artifact) !void {
     _ = ctx;
     try artifact.list();
+    return;
+}
+
+fn artifactUpgrade(ctx: *Context, artifact: *Artifact) !void {
+    const target = if (ctx.args.len < 4) Constants.Default.resolveDefaultTarget() else ctx.args[3];
+
+    artifact.install("latest", target) catch |err| {
+        switch (err) {
+            error.AlreadyInstalled => {
+                try ctx.printer.append("{s} already at latest version.\n", .{artifact.artifact_name}, .{});
+            },
+            error.InvalidOS => {
+                try ctx.printer.append("Invalid Operating System.\n", .{}, .{});
+            },
+            else => {
+                try ctx.logger.err("Upgrading failed...", @src());
+                try ctx.printer.append("Upgrading failed\n\n", .{}, .{});
+            },
+        }
+    };
     return;
 }
 
@@ -132,6 +162,8 @@ pub fn _artifactController(
         try artifactInstall(ctx, &artifact);
     } else if (std.mem.eql(u8, arg, "uninstall")) {
         try artifactUninstall(ctx, &artifact);
+    } else if (std.mem.eql(u8, arg, "upgrade")) {
+        try artifactUpgrade(ctx, &artifact);
     } else if (std.mem.eql(u8, arg, "switch")) {
         try artifactSwitch(ctx, &artifact);
     } else if (std.mem.eql(u8, arg, "list") or

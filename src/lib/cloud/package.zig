@@ -24,7 +24,7 @@ pub fn init(ctx: *Context) Package {
 pub fn delete(self: *Package) !void {
     try self.ctx.logger.info("Deleting Package", @src());
 
-    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.Auth, self.ctx.paths.auth_manifest);
     defer manifest.deinit();
 
     var packages = try self.ctx.fetcher.fetchPackages();
@@ -96,15 +96,19 @@ pub fn delete(self: *Package) !void {
             .{},
             .{},
         );
-        const yes_delete_package = try Prompt.input(
+        const answer = try Prompt.input(
             self.ctx.allocator,
             &self.ctx.printer,
             "(y/N) ",
             .{},
         );
-        if (yes_delete_package.len == 0) return;
-        if (!std.mem.startsWith(u8, yes_delete_package, "y") and
-            !std.mem.startsWith(u8, yes_delete_package, "Y")) return;
+        if (answer.len == 0 or
+            (!std.mem.startsWith(u8, answer, "y") and
+                !std.mem.startsWith(u8, answer, "Y")))
+        {
+            try self.ctx.printer.append("\nOk.\n", .{}, .{});
+            return;
+        }
     } else {
         try self.ctx.printer.append(
             "Deleting package...\n\n",
@@ -184,12 +188,12 @@ fn packageNameAvailable(package_name: []const u8) bool {
 pub fn create(self: *Package) !void {
     try self.ctx.logger.info("Creating Package", @src());
 
-    try self.ctx.printer.append("--- CREATING PACKAGE MODE ---\n\n", .{}, .{
+    try self.ctx.printer.append("Package:\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
 
-    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.AuthManifest, self.ctx.paths.auth_manifest);
+    var manifest = try self.ctx.manifest.readManifest(Structs.Manifests.Auth, self.ctx.paths.auth_manifest);
     defer manifest.deinit();
     if (manifest.value.token.len == 0) {
         return error.NotAuthed;
@@ -206,24 +210,13 @@ pub fn create(self: *Package) !void {
         },
     );
 
-    const package_description = try Prompt.input(
-        self.ctx.allocator,
-        &self.ctx.printer,
-        " > Description: ",
-        .{},
-    );
     const package_docs = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
         " > Docs: ",
         .{},
     );
-    const package_tags = try Prompt.input(
-        self.ctx.allocator,
-        &self.ctx.printer,
-        " > Tags (seperated by ,): ",
-        .{},
-    );
+
     const PackagePayload = struct {
         package: struct {
             name: []const u8,
@@ -232,14 +225,22 @@ pub fn create(self: *Package) !void {
             description: []const u8,
         },
     };
+
+    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Extras.package_files.lock);
+    defer lock.deinit();
+
+    const tags = try std.mem.join(self.ctx.allocator, ",", lock.value.root.tags);
+    defer self.ctx.allocator.free(tags);
+
     const package_payload = PackagePayload{
         .package = .{
             .name = package_name,
             .docs = package_docs,
-            .description = package_description,
-            .tags = package_tags,
+            .description = lock.value.root.description,
+            .tags = tags,
         },
     };
+
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
     const package_response = self.ctx.fetcher.fetch(

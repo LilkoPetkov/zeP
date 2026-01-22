@@ -19,7 +19,7 @@ pub fn doctor(
     }
 
     var lock = try ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -31,7 +31,7 @@ pub fn doctor(
         lock.value.schema = Constants.Extras.package_files.lock_schema_version;
 
         try ctx.manifest.writeManifest(
-            Structs.ZepFiles.PackageLockStruct,
+            Structs.ZepFiles.Lock,
             Constants.Extras.package_files.lock,
             lock.value,
         );

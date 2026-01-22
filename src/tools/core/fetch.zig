@@ -47,18 +47,18 @@ pub fn fetch(
     if (res.status == .not_found) {
         return error.NotFound;
     }
-    const written = body.written();
+    const data = body.written();
     return std.json.parseFromSlice(
         std.json.Value,
         self.allocator,
-        written,
+        data,
         .{
             .allocate = .alloc_always,
         },
     );
 }
 
-fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.PackageStruct {
+fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.Package {
     const url = try std.fmt.allocPrint(
         self.allocator,
         Constants.Default.zep_url ++ "/api/v1/package?name={s}",
@@ -92,7 +92,7 @@ fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.PackageStruct {
     const package_docs = object.get("docs") orelse return error.FetchFailed;
     const package_tags = object.get("tags") orelse return error.FetchFailed;
     const package_created_at = object.get("created_at") orelse return error.FetchFailed;
-    const package = Structs.Fetch.PackageStruct{
+    const package = Structs.Fetch.Package{
         .ID = package_id.string,
         .UserID = package_user_id.string,
         .Name = package_name.string,
@@ -105,9 +105,9 @@ fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.PackageStruct {
     return package;
 }
 
-pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
+pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.Package) {
     var manifest = try self.manifest.readManifest(
-        Structs.Manifests.AuthManifest,
+        Structs.Manifests.Auth,
         self.paths.auth_manifest,
     );
     defer manifest.deinit();
@@ -141,7 +141,7 @@ pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
     const array = object_packages.array;
     defer array.deinit();
 
-    var packages = try std.ArrayList(Structs.Fetch.PackageStruct).initCapacity(
+    var packages = try std.ArrayList(Structs.Fetch.Package).initCapacity(
         self.allocator,
         array.items.len,
     );
@@ -154,7 +154,7 @@ pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
         const package_docs = package.get("docs") orelse return error.FetchFailed;
         const package_tags = package.get("tags") orelse return error.FetchFailed;
         const package_created_at = package.get("created_at") orelse return error.FetchFailed;
-        const package_struct = Structs.Fetch.PackageStruct{
+        const package_struct = Structs.Fetch.Package{
             .ID = package_id.string,
             .UserID = package_user_id.string,
             .Name = package_name.string,
@@ -170,9 +170,9 @@ pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.PackageStruct) {
     return packages;
 }
 
-pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetch.ReleaseStruct) {
+pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetch.Release) {
     var auth = try self.manifest.readManifest(
-        Structs.Manifests.AuthManifest,
+        Structs.Manifests.Auth,
         self.paths.auth_manifest,
     );
     defer auth.deinit();
@@ -212,7 +212,7 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
     const array = object_releases.array;
     defer array.deinit();
 
-    var releases = try std.ArrayList(Structs.Fetch.ReleaseStruct).initCapacity(
+    var releases = try std.ArrayList(Structs.Fetch.Release).initCapacity(
         self.allocator,
         array.items.len,
     );
@@ -228,7 +228,7 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
         const release_root_file = release.get("root_file") orelse return error.FetchFailed;
         const release_created_at = release.get("created_at") orelse return error.FetchFailed;
         const release_updated_at = release.get("updated_at") orelse return error.FetchFailed;
-        const release_struct = Structs.Fetch.ReleaseStruct{
+        const release_struct = Structs.Fetch.Release{
             .ID = release_id.string,
             .UserID = release_user_id.string,
             .PackageID = release_package_id.string,
@@ -251,7 +251,7 @@ fn fetchFromPackage(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.PackageStruct) {
+) !std.json.Parsed(Structs.Packages.Package) {
     _ = logger;
     var releases = try self.fetchReleases(package_name);
     defer releases.deinit(self.allocator);
@@ -264,7 +264,7 @@ fn fetchFromPackage(
         .versions = releases.items,
     }, .{});
     return std.json.parseFromSlice(
-        Structs.Packages.PackageStruct,
+        Structs.Packages.Package,
         self.allocator,
         stringified,
         .{ .allocate = .alloc_always },
@@ -275,7 +275,7 @@ fn fetchFromUrl(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.PackageStruct) {
+) !std.json.Parsed(Structs.Packages.Package) {
     const url = try std.fmt.allocPrint(
         self.allocator,
         Constants.Default.zep_url ++ "/packages/{s}.json",
@@ -299,10 +299,11 @@ fn fetchFromUrl(
     try logger.infof("Fetched with code... {any}", .{res.status}, @src());
     if (res.status == .not_found) return error.PackageNotFound;
 
+    const data = body.written();
     return std.json.parseFromSlice(
-        Structs.Packages.PackageStruct,
+        Structs.Packages.Package,
         self.allocator,
-        body.written(),
+        data,
         .{ .allocate = .alloc_always },
     );
 }
@@ -310,7 +311,7 @@ fn fetchFromUrl(
 fn loadFromLocal(
     self: *Fetch,
     package_name: []const u8,
-) !std.json.Parsed(Structs.Packages.PackageStruct) {
+) !std.json.Parsed(Structs.Packages.Package) {
     const path = try std.fmt.allocPrint(
         self.allocator,
         "{s}/{s}.json",
@@ -322,7 +323,7 @@ fn loadFromLocal(
 
     return Json.parseJsonFromFile(
         self.allocator,
-        Structs.Packages.PackageStruct,
+        Structs.Packages.Package,
         path,
         Constants.Default.mb * 10,
     );
@@ -332,7 +333,7 @@ pub fn fetchPackage(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.PackageStruct) {
+) !std.json.Parsed(Structs.Packages.Package) {
     if (self.install_unverified_packages) {
         try logger.info("Fetching via package...", @src());
         if (self.fetchFromPackage(package_name, logger)) |pkg| {

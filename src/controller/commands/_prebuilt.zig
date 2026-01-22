@@ -9,8 +9,7 @@ fn prebuiltBuild(ctx: *Context, prebuilt: *PreBuilt) !void {
     if (ctx.args.len < 4) return error.MissingArguments;
 
     const name = ctx.args[3];
-    const default_target = ".";
-    const target = if (ctx.args.len < 5) default_target else ctx.args[4];
+    const target = if (ctx.args.len < 5) "." else ctx.args[4];
     prebuilt.build(name, target) catch {
         try ctx.printer.append("\nBuilding prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
@@ -21,8 +20,7 @@ fn prebuiltUse(ctx: *Context, prebuilt: *PreBuilt) !void {
     if (ctx.args.len < 4) return error.MissingArguments;
 
     const name = ctx.args[3];
-    const default_target = ".";
-    const target = if (ctx.args.len < 5) default_target else ctx.args[4];
+    const target = if (ctx.args.len < 5) "." else ctx.args[4];
     prebuilt.use(name, target) catch {
         try ctx.printer.append("\nUse prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };

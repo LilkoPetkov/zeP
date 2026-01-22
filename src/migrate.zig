@@ -27,7 +27,7 @@ const builtin = @import("builtin");
 
 const Constants = @import("constants");
 const Paths = Constants.Paths;
-const Structs = @import("structs").Manifests;
+const Structs = @import("structs");
 const Context = @import("context").Context;
 const Fs = @import("io").Fs;
 
@@ -84,7 +84,7 @@ pub fn migratePaths(ctx: *Context) !void {
 
     if (Fs.existsFile(ctx.paths.pkg_manifest)) {
         const manifest = try ctx.manifest.readManifest(
-            Structs.PackagesManifest,
+            Structs.Manifests.Packages,
             ctx.paths.pkg_manifest,
         );
         defer manifest.deinit();
@@ -109,7 +109,7 @@ pub fn migratePaths(ctx: *Context) !void {
                 const symlinked = try std.fs.cwd().readLink(package_path, &buf);
                 if (std.mem.eql(u8, symlinked, new_package_path)) continue;
 
-                try Fs.deleteFileIfExists(package_path);
+                Fs.deleteSymlinkIfExists(package_path);
                 try std.fs.symLinkAbsolute(new_package_path, package_path, .{
                     .is_directory = true,
                 });

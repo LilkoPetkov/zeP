@@ -1,32 +1,41 @@
 const std = @import("std");
-const clap = @import("clap");
 const Constants = @import("constants");
+
+const DefaultArgs = struct {
+    verbosity: usize,
+};
+pub fn parseDefault(
+    args: [][:0]u8,
+) DefaultArgs {
+    var verbosity: usize = 1;
+    for (args) |arg| {
+        if (!std.mem.startsWith(u8, arg, "--verbosity") and
+            !std.mem.startsWith(u8, arg, "-V")) continue;
+        var split = std.mem.splitAny(u8, arg, "=");
+        const val = split.next() orelse continue;
+        const parsed = std.fmt.parseInt(u8, val, 10) catch 1;
+        verbosity = parsed;
+    }
+
+    return DefaultArgs{
+        .verbosity = verbosity,
+    };
+}
 
 const DoctorArgs = struct {
     fix: bool,
 };
-pub fn parseDoctor() !DoctorArgs {
-    const params = comptime clap.parseParamsComptime(
-        \\-f, --fix             Fix given suggestions?
-        \\<str>...
-        \\
-    );
-
-    const allocator = std.heap.page_allocator;
-
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch |err| {
-        // Report useful error and exit.
-        try diag.reportToFile(.stderr(), err);
-        return err;
-    };
-    defer res.deinit();
-
+pub fn parseDoctor(
+    args: [][:0]u8,
+) DoctorArgs {
+    var fix: bool = false;
+    for (args) |arg| {
+        if (!std.mem.startsWith(u8, arg, "--fix") and
+            !std.mem.startsWith(u8, arg, "-F")) continue;
+        fix = true;
+    }
     return DoctorArgs{
-        .fix = res.args.fix != 0,
+        .fix = fix,
     };
 }
 
@@ -34,30 +43,27 @@ const UninstallArgs = struct {
     global: bool,
     force: bool,
 };
-pub fn parseUninstall() !UninstallArgs {
-    const params = comptime clap.parseParamsComptime(
-        \\-g, --global             Uninstall global package?
-        \\-f, --force             Force package uninstall?
-        \\<str>...
-        \\
-    );
-
-    const allocator = std.heap.page_allocator;
-
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch |err| {
-        // Report useful error and exit.
-        try diag.reportToFile(.stderr(), err);
-        return err;
-    };
-    defer res.deinit();
+pub fn parseUninstall(
+    args: [][:0]u8,
+) UninstallArgs {
+    var global: bool = false;
+    var force: bool = false;
+    for (args) |arg| {
+        if (std.mem.startsWith(u8, arg, "--global") or
+            std.mem.startsWith(u8, arg, "-G"))
+        {
+            global = true;
+        }
+        if (std.mem.startsWith(u8, arg, "--force") or
+            std.mem.startsWith(u8, arg, "-F"))
+        {
+            force = true;
+        }
+    }
 
     return UninstallArgs{
-        .global = res.args.global != 0,
-        .force = res.args.force != 0,
+        .global = global,
+        .force = force,
     };
 }
 
@@ -65,113 +71,90 @@ const InstallArgs = struct {
     inject: bool,
     unverified: bool,
 };
-pub fn parseInstall() !InstallArgs {
-    const params = comptime clap.parseParamsComptime(
-        \\-i, --inject             Inject package into inject.zig?
-        \\-u, --unverified             Install packages from unverified source?
-        \\<str>...
-        \\
-    );
-
-    const allocator = std.heap.page_allocator;
-
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch |err| {
-        // Report useful error and exit.
-        try diag.reportToFile(.stderr(), err);
-        return err;
-    };
-    defer res.deinit();
+pub fn parseInstall(
+    args: [][:0]u8,
+) InstallArgs {
+    var inject: bool = false;
+    var unverified: bool = false;
+    for (args) |arg| {
+        if (std.mem.startsWith(u8, arg, "--inject") or
+            std.mem.startsWith(u8, arg, "-I"))
+        {
+            inject = true;
+        }
+        if (std.mem.startsWith(u8, arg, "--unverified") or
+            std.mem.startsWith(u8, arg, "-U"))
+        {
+            unverified = true;
+        }
+    }
 
     return InstallArgs{
-        .inject = res.args.inject != 0,
-        .unverified = res.args.unverified != 0,
+        .inject = inject,
+        .unverified = unverified,
     };
 }
 
 const BootstrapArgs = struct {
     zig: []const u8,
-    deps: [][]const u8,
+    pkgs: []const u8,
 };
-pub fn parseBootstrap() !BootstrapArgs {
-    const params = comptime clap.parseParamsComptime(
-        \\-z, --zig <str>  Zig version.
-        \\-d, --deps <str>  Packages to install.
-        \\<str>...
-        \\
-    );
-
-    const allocator = std.heap.page_allocator;
-
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch |err| {
-        // Report useful error and exit.
-        try diag.reportToFile(.stderr(), err);
-        return err;
-    };
-    defer res.deinit();
-
-    const zig: []const u8 = res.args.zig orelse Constants.Default.zig_version;
-    const raw_deps: []const u8 = res.args.deps orelse "";
-
-    var deps = try std.ArrayList([]const u8).initCapacity(allocator, 20);
-    var deps_split = std.mem.splitScalar(u8, raw_deps, ',');
-    while (deps_split.next()) |d| {
-        const dep = std.mem.trim(u8, d, " ");
-        if (dep.len == 0) continue;
-        try deps.append(allocator, try allocator.dupe(u8, dep));
+pub fn parseBootstrap(
+    args: [][:0]u8,
+) BootstrapArgs {
+    var zig: []const u8 = "";
+    var raw_packages: []const u8 = "";
+    for (args) |arg| {
+        if (!std.mem.startsWith(u8, arg, "--zig") or
+            !std.mem.startsWith(u8, arg, "-Z"))
+        {
+            var split = std.mem.splitAny(u8, arg, "=");
+            const val = split.next() orelse continue;
+            zig = val;
+        }
+        if (!std.mem.startsWith(u8, arg, "--packages") or
+            !std.mem.startsWith(u8, arg, "-P"))
+        {
+            var split = std.mem.splitAny(u8, arg, "=");
+            const val = split.next() orelse continue;
+            raw_packages = val;
+        }
     }
 
     return BootstrapArgs{
-        .zig = try allocator.dupe(u8, zig),
-        .deps = deps.items,
+        .zig = zig,
+        .pkgs = raw_packages,
     };
 }
 
 const RunnerArgs = struct {
     target: []const u8,
-    args: [][]const u8,
+    args: []const u8,
 };
-pub fn parseRunner() !RunnerArgs {
-    const params = comptime clap.parseParamsComptime(
-        \\-t, --target <str>  Target exe to run.
-        \\-a, --args <str>  Arguments to pass into exe.
-        \\<str>...
-        \\
-    );
-
-    const allocator = std.heap.page_allocator;
-
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch |err| {
-        // Report useful error and exit.
-        try diag.reportToFile(.stderr(), err);
-        return err;
-    };
-    defer res.deinit();
-
-    const target: []const u8 = res.args.target orelse "";
-    const raw_args: []const u8 = res.args.args orelse "";
-
-    var args = try std.ArrayList([]const u8).initCapacity(allocator, 3);
-    var args_split = std.mem.splitScalar(u8, raw_args, ' ');
-    while (args_split.next()) |a| {
-        const arg = std.mem.trim(u8, a, " ");
-        if (arg.len == 0) continue;
-        try args.append(allocator, try allocator.dupe(u8, arg));
+pub fn parseRunner(
+    args: [][:0]u8,
+) RunnerArgs {
+    var target: []const u8 = "";
+    var raw_args: []const u8 = "";
+    for (args) |arg| {
+        if (!std.mem.startsWith(u8, arg, "--target") or
+            !std.mem.startsWith(u8, arg, "-T"))
+        {
+            var split = std.mem.splitAny(u8, arg, "=");
+            const val = split.next() orelse continue;
+            target = val;
+        }
+        if (!std.mem.startsWith(u8, arg, "--args") or
+            !std.mem.startsWith(u8, arg, "-A"))
+        {
+            var split = std.mem.splitAny(u8, arg, "=");
+            const val = split.next() orelse continue;
+            raw_args = val;
+        }
     }
 
     return RunnerArgs{
-        .target = try allocator.dupe(u8, target),
-        .args = args.items,
+        .target = target,
+        .args = raw_args,
     };
 }

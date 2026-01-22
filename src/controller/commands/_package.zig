@@ -7,7 +7,7 @@ fn packageCreate(ctx: *Context, package: *Package) !void {
     package.create() catch |err| {
         switch (err) {
             error.NotAuthed => {
-                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.logger.err("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -15,7 +15,7 @@ fn packageCreate(ctx: *Context, package: *Package) !void {
                 );
             },
             error.FetchFailed => {
-                try ctx.logger.@"error"("Fetching Create Package Failed", @src());
+                try ctx.logger.err("Fetching Create Package Failed", @src());
                 try ctx.printer.append(
                     "Fetching package create failed.\n",
                     .{},
@@ -23,7 +23,7 @@ fn packageCreate(ctx: *Context, package: *Package) !void {
                 );
             },
             else => {
-                try ctx.logger.@"error"("Creating Package Failed", @src());
+                try ctx.logger.err("Creating Package Failed", @src());
                 try ctx.printer.append(
                     "Creating package failed.\n",
                     .{},
@@ -39,7 +39,7 @@ fn packageList(ctx: *Context, package: *Package) !void {
     package.list() catch |err| {
         switch (err) {
             error.NotAuthed => {
-                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.logger.err("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -47,7 +47,7 @@ fn packageList(ctx: *Context, package: *Package) !void {
                 );
             },
             error.FetchFailed => {
-                try ctx.logger.@"error"("Fetching Packages Failed", @src());
+                try ctx.logger.err("Fetching Packages Failed", @src());
                 try ctx.printer.append(
                     "Fetching packages failed.\n",
                     .{},
@@ -56,7 +56,7 @@ fn packageList(ctx: *Context, package: *Package) !void {
             },
 
             else => {
-                try ctx.logger.@"error"("Listing Packages Failed", @src());
+                try ctx.logger.err("Listing Packages Failed", @src());
                 try ctx.printer.append(
                     "Listing package failed.\n",
                     .{},
@@ -72,7 +72,7 @@ fn packageDelete(ctx: *Context, package: *Package) !void {
     package.delete() catch |err| {
         switch (err) {
             error.NotAuthed => {
-                try ctx.logger.@"error"("Not Authenticated", @src());
+                try ctx.logger.err("Not Authenticated", @src());
                 try ctx.printer.append(
                     "Not authenticated.\n",
                     .{},
@@ -80,7 +80,7 @@ fn packageDelete(ctx: *Context, package: *Package) !void {
                 );
             },
             error.FetchFailed => {
-                try ctx.logger.@"error"("Fetching Delete Failed", @src());
+                try ctx.logger.err("Fetching Delete Failed", @src());
                 try ctx.printer.append(
                     "Fetching package delete failed.\n",
                     .{},
@@ -88,7 +88,7 @@ fn packageDelete(ctx: *Context, package: *Package) !void {
                 );
             },
             error.NotFound => {
-                try ctx.logger.@"error"("Package Not Found", @src());
+                try ctx.logger.err("Package Not Found", @src());
                 try ctx.printer.append(
                     "Package not found.\n",
                     .{},
@@ -96,7 +96,7 @@ fn packageDelete(ctx: *Context, package: *Package) !void {
                 );
             },
             else => {
-                try ctx.logger.@"error"("Deleting Package Failed", @src());
+                try ctx.logger.err("Deleting Package Failed", @src());
                 try ctx.printer.append(
                     "Deleting package failed.\n",
                     .{},

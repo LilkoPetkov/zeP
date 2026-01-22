@@ -1,42 +1,47 @@
 const Constants = @import("constants");
 const builtin = @import("builtin");
 
-pub const BuildPackageJsonStruct = struct {
+pub const Build = struct {
     entry: []const u8 = "src/main.zig",
-    target: []const u8 = if (builtin.os.tag == .windows) Constants.Default.default_targets.windows else Constants.Default.default_targets.linux,
+    target: []const u8 = if (builtin.os.tag == .windows)
+        Constants.Default.default_targets.windows
+    else
+        Constants.Default.default_targets.linux,
 };
 
-pub const CommandPackageJsonStrcut = struct {
+pub const Command = struct {
     name: []const u8,
     cmd: []const u8,
 };
 
-pub const PackageJsonStruct = struct {
+pub const Root = struct {
     author: []const u8 = "",
     tags: [][]const u8 = &[_][]const u8{},
     zig_version: []const u8 = Constants.Default.zig_version,
     repo: []const u8 = "",
     name: []const u8 = "",
-    cmd: []CommandPackageJsonStrcut = &[_]CommandPackageJsonStrcut{},
+    cmd: []Command = &[_]Command{},
     description: []const u8 = "",
     version: []const u8 = "0.0.1",
     license: []const u8 = "",
     packages: [][]const u8 = &[_][]const u8{},
     dev_packages: [][]const u8 = &[_][]const u8{},
-    build: BuildPackageJsonStruct = .{},
+    build: Build = .{},
 };
 
-pub const PackageLockStruct = struct {
-    schema: u8 = 2,
-    root: PackageJsonStruct = .{},
-    packages: []LockPackageStruct = &[_]LockPackageStruct{},
-};
-
-pub const LockPackageStruct = struct {
+pub const Package = struct {
     name: []const u8,
     hash: []const u8,
     source: []const u8,
     zig_version: []const u8,
     root_file: []const u8,
-    packages: []LockPackageStruct = &[_]LockPackageStruct{},
+    packages: []Package = &[_]Package{},
+};
+
+pub const Lock = struct {
+    schema: u8 = 2,
+    root: Root = .{},
+    packages: []Package = &[_]Package{},
+    included_modules: [][]const u8 = &[_][]const u8{},
+    excluded_modules: [][]const u8 = &[_][]const u8{},
 };

@@ -1,4 +1,6 @@
-pub const PackageVersions = struct {
+const std = @import("std");
+
+pub const Version = struct {
     version: []const u8,
     url: []const u8,
     zig_version: []const u8,
@@ -6,9 +8,9 @@ pub const PackageVersions = struct {
     sha256sum: []const u8,
 };
 
-pub const PackageStruct = struct {
+pub const Package = struct {
     name: []const u8,
     author: []const u8,
     docs: []const u8,
-    versions: []PackageVersions,
+    versions: []Version,
 };

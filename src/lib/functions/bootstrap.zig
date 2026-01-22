@@ -15,7 +15,7 @@ const Context = @import("context");
 pub fn bootstrap(
     ctx: *Context,
     zig_version: []const u8,
-    deps: [][]const u8,
+    pkgs: [][]const u8,
 ) !void {
     try ctx.logger.info("Bootstrapping", @src());
 
@@ -57,10 +57,10 @@ pub fn bootstrap(
     );
 
     try ctx.logger.info("Installing packages...", @src());
-    for (deps) |dep| {
-        var d = std.mem.splitScalar(u8, dep, '@');
-        const package_name = d.first();
-        const package_version = d.next();
+    for (pkgs) |pkg| {
+        var p = std.mem.splitScalar(u8, pkg, '@');
+        const package_name = p.first();
+        const package_version = p.next();
 
         var installer = Installer.init(ctx);
         installer.install_unverified_packages = true;

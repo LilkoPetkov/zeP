@@ -93,11 +93,12 @@ const inject_method = enum {
 fn shouldInject(
     self: *Injector,
     module: []const u8,
-    state: *Structs.Manifests.InjectorManifest,
+    excluded_modules: [][]const u8,
+    included_modules: [][]const u8,
 ) !inject_method {
     if (!self.force_inject) {
-        if (isInArray(state.excluded_modules, module) or
-            isInArray(state.included_modules, module))
+        if (isInArray(excluded_modules, module) or
+            isInArray(included_modules, module))
             return inject_method.nothing;
     }
 
@@ -108,18 +109,18 @@ fn shouldInject(
     );
     defer self.allocator.free(prompt);
 
-    const ans = try Prompt.input(
+    const answer = try Prompt.input(
         self.allocator,
         self.printer,
         prompt,
         .{},
     );
-    const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
+    const answer_yes = !(answer.len > 0 and (answer[0] == 'n' or answer[0] == 'N'));
     const answer_no = !answer_yes;
-    if (isInArray(state.included_modules, module)) {
+    if (isInArray(included_modules, module)) {
         if (answer_yes) return inject_method.nothing;
         if (answer_no) return inject_method.add_exclude;
-    } else if (isInArray(state.excluded_modules, module)) {
+    } else if (isInArray(excluded_modules, module)) {
         if (answer_yes) return inject_method.add_include;
         if (answer_no) return inject_method.nothing;
     } else {
@@ -131,7 +132,7 @@ fn shouldInject(
 
 pub fn initInjector(self: *Injector) !void {
     var lock = try self.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -176,12 +177,21 @@ fn findBuildParam(_: *Injector, content: []const u8) ![]const u8 {
 
 fn importModule(
     self: *Injector,
-    injector_manifest: *Structs.Manifests.InjectorManifest,
     new_excluded_modules: *std.ArrayList([]const u8),
     new_included_modules: *std.ArrayList([]const u8),
     module_name: []const u8,
 ) !inject_method {
-    const modify_injection = try self.shouldInject(module_name, injector_manifest);
+    const lock = try self.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Extras.package_files.lock,
+    );
+    defer lock.deinit();
+
+    const modify_injection = try self.shouldInject(
+        module_name,
+        lock.value.excluded_modules,
+        lock.value.included_modules,
+    );
     switch (modify_injection) {
         inject_method.add_include => {
             try new_included_modules.append(self.allocator, module_name);
@@ -204,7 +214,6 @@ fn importModule(
 
 fn maybeInject(
     self: *Injector,
-    injector_manifest: *Structs.Manifests.InjectorManifest,
     new_excluded: *std.ArrayList([]const u8),
     new_included: *std.ArrayList([]const u8),
     included_modules: [][]const u8,
@@ -213,7 +222,6 @@ fn maybeInject(
     new_content: *std.ArrayList([]const u8),
 ) !void {
     const imported = try self.importModule(
-        injector_manifest,
         new_excluded,
         new_included,
         module_name,
@@ -260,7 +268,15 @@ fn parseModuleDefinition(
 }
 
 pub fn injectIntoBuildZig(self: *Injector) !void {
-    if (Fs.existsFile(Constants.Extras.package_files.injector_manifest)) {
+    var lock = try self.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Extras.package_files.lock,
+    );
+    defer lock.deinit();
+    const included_modules = lock.value.included_modules;
+    const excluded_modules = lock.value.excluded_modules;
+
+    if (included_modules.len != 0 or excluded_modules.len != 0) {
         if (!self.force_inject) return;
     }
 
@@ -273,14 +289,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
     defer self.allocator.free(content);
 
     const build_param = try self.findBuildParam(content);
-
-    var manifest = try self.manifest.readManifest(
-        Structs.Manifests.InjectorManifest,
-        Constants.Extras.package_files.injector_manifest,
-    );
-    defer manifest.deinit();
-    const included_modules = manifest.value.included_modules;
-    const excluded_modules = manifest.value.excluded_modules;
 
     display_module_blk: {
         try self.printer.append("Modules currently imported:\n", .{}, .{ .color = .blue, .weight = .bold });
@@ -299,14 +307,15 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         }
         try self.printer.append("\n", .{}, .{});
 
-        const ans = try Prompt.input(
+        const answer = try Prompt.input(
             self.allocator,
             self.printer,
             "Keep these imports? (Y/n) ",
             .{},
         );
-        const answer_yes = !(ans.len > 0 and (ans[0] == 'n' or ans[0] == 'N'));
+        const answer_yes = !(answer.len > 0 and (answer[0] == 'n' or answer[0] == 'N'));
         if (answer_yes) {
+            try self.printer.append("\nOk.\n", .{}, .{});
             return;
         } else {
             try self.printer.append("\n", .{}, .{});
@@ -356,7 +365,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
             if (!contains(line, ";")) continue;
 
             try self.maybeInject(
-                &manifest.value,
                 &new_excluded_modules,
                 &new_included_modules,
                 included_modules,
@@ -381,7 +389,6 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         if (!contains(line, ";")) continue;
 
         try self.maybeInject(
-            &manifest.value,
             &new_excluded_modules,
             &new_included_modules,
             included_modules,
@@ -445,13 +452,21 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         break :verify_module_blk;
     }
 
+    for (lock.value.included_modules) |i| {
+        if (isInArray(new_excluded_modules.items, i)) continue;
+        try new_included_modules.append(self.allocator, i);
+    }
+    for (lock.value.excluded_modules) |i| {
+        if (isInArray(new_included_modules.items, i)) continue;
+        try new_excluded_modules.append(self.allocator, i);
+    }
+
+    lock.value.included_modules = new_included_modules.items;
+    lock.value.excluded_modules = new_excluded_modules.items;
     try self.manifest.writeManifest(
-        Structs.Manifests.InjectorManifest,
-        Constants.Extras.package_files.injector_manifest,
-        Structs.Manifests.InjectorManifest{
-            .included_modules = new_included_modules.items,
-            .excluded_modules = new_excluded_modules.items,
-        },
+        Structs.ZepFiles.Lock,
+        Constants.Extras.package_files.lock,
+        lock.value,
     );
 
     try file.seekTo(0);

@@ -5,6 +5,7 @@ const Structs = @import("structs");
 const Locales = @import("locales");
 
 const Fs = @import("io").Fs;
+const Prompt = @import("cli").Prompt;
 
 const Uninstaller = @import("uninstall.zig");
 const Init = @import("init.zig");
@@ -12,6 +13,23 @@ const Init = @import("init.zig");
 const Context = @import("context");
 pub fn purge(ctx: *Context) !void {
     try ctx.logger.info("Purging Packages", @src());
+    const lock = try ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Extras.package_files.lock);
+    defer lock.deinit();
+
+    try ctx.printer.append("This project contains {d} packages.\n", .{lock.value.packages.len}, .{});
+    const answer = try Prompt.input(
+        ctx.allocator,
+        &ctx.printer,
+        "Purge them all? (y/N) ",
+        .{},
+    );
+    if (answer.len == 0 or
+        std.mem.startsWith(u8, answer, "n") or
+        std.mem.startsWith(u8, answer, "N"))
+    {
+        try ctx.printer.append("\nOk.\n", .{}, .{});
+        return;
+    }
 
     try ctx.printer.append("Purging packages...\n", .{}, .{});
 
@@ -27,11 +45,6 @@ pub fn purge(ctx: *Context) !void {
         try ctx.printer.append("Nothing to uninstall.\n", .{}, .{});
         return;
     }
-    var lock = try ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
-        Constants.Extras.package_files.lock,
-    );
-    defer lock.deinit();
 
     var uninstaller = Uninstaller.init(
         ctx,

@@ -12,7 +12,7 @@ const Context = @import("context");
 pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !void {
     // Load manifest and get absolute path
     const manifest = try ctx.manifest.readManifest(
-        Structs.Manifests.ArtifactManifest,
+        Structs.Manifests.Artifact,
         if (artifact_type == .zig) ctx.paths.zig_manifest else ctx.paths.zep_manifest,
     );
     if (manifest.value.path.len == 0) {
@@ -59,6 +59,8 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
 
         try std.fs.cwd().symLink(artifact_path, sym_link_path, .{ .is_directory = false });
     } else {
+        if (!std.fs.has_executable_bit) return error.InvalidOS;
+
         var artifact_target: []const u8 = "zig";
         if (artifact_type == .zep) {
             artifact_target = "zeP";

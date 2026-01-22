@@ -76,7 +76,7 @@ pub fn addPathToManifest(
     linked_path: []const u8,
 ) !void {
     var package_manifest = try self.readManifest(
-        Structs.Manifests.PackagesManifest,
+        Structs.Manifests.Packages,
         self.paths.pkg_manifest,
     );
     defer package_manifest.deinit();
@@ -118,9 +118,8 @@ pub fn removePathFromManifest(
     package_id: []const u8,
     linked_path: []const u8,
 ) !void {
-    std.debug.print("{s}", .{self.paths.pkg_manifest});
     var package_manifest = try self.readManifest(
-        Structs.Manifests.PackagesManifest,
+        Structs.Manifests.Packages,
         self.paths.pkg_manifest,
     );
     defer package_manifest.deinit();
@@ -205,14 +204,14 @@ pub fn lockAdd(
     package: Package,
 ) !void {
     var lock = try self.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
 
-    const new_entry = Structs.ZepFiles.LockPackageStruct{
+    const new_entry = Structs.ZepFiles.Package{
         .name = package.id,
-        .hash = package.package_hash,
+        .hash = package.package.sha256sum,
         .source = package.package.url,
         .zig_version = package.package.zig_version,
         .root_file = package.package.root_file,
@@ -222,21 +221,21 @@ pub fn lockAdd(
         self.allocator,
         lock.value.packages,
         package.package_name,
-        Structs.ZepFiles.LockPackageStruct,
+        Structs.ZepFiles.Package,
         struct {
-            fn match(item: Structs.ZepFiles.LockPackageStruct, needle: []const u8) bool {
+            fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
                 return std.mem.startsWith(u8, item.name, needle);
             }
         }.match,
     );
 
     lock.value.packages = try appendUnique(
-        Structs.ZepFiles.LockPackageStruct,
+        Structs.ZepFiles.Package,
         lock.value.packages,
         new_entry,
         self.allocator,
         struct {
-            fn match(item: Structs.ZepFiles.LockPackageStruct, needle: Structs.ZepFiles.LockPackageStruct) bool {
+            fn match(item: Structs.ZepFiles.Package, needle: Structs.ZepFiles.Package) bool {
                 return std.mem.startsWith(u8, item.name, needle.name);
             }
         }.match,
@@ -245,7 +244,7 @@ pub fn lockAdd(
     lock.value.root.packages = try filterOut(
         self.allocator,
         lock.value.root.packages,
-        new_entry.name,
+        package.package_name,
         []const u8,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
@@ -275,10 +274,10 @@ pub fn lockAdd(
 
 pub fn lockRemove(
     self: *Manifest,
-    package_name: []const u8,
+    package_id: []const u8,
 ) !void {
     var lock = try self.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -286,11 +285,11 @@ pub fn lockRemove(
     lock.value.packages = try filterOut(
         self.allocator,
         lock.value.packages,
-        package_name,
-        Structs.ZepFiles.LockPackageStruct,
+        package_id,
+        Structs.ZepFiles.Package,
         struct {
-            fn match(item: Structs.ZepFiles.LockPackageStruct, needle: []const u8) bool {
-                return std.mem.startsWith(u8, item.name, needle);
+            fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
+                return std.mem.eql(u8, item.name, needle);
             }
         }.match,
     );
@@ -298,7 +297,7 @@ pub fn lockRemove(
     lock.value.root.packages = try filterOut(
         self.allocator,
         lock.value.root.packages,
-        package_name,
+        package_id,
         []const u8,
         struct {
             fn match(item: []const u8, needle: []const u8) bool {

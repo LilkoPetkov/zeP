@@ -27,7 +27,7 @@ pub fn uninstall(
     try self.ctx.logger.infof("Uninstalling Package {s}", .{package_name}, @src());
 
     const lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     var package_version: []const u8 = "";

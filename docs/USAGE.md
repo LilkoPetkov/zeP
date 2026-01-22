@@ -14,7 +14,7 @@ It provides easy bootstrapping, dependency management, and running of Zig projec
 ### **Syntax**
 
 ```bash
-zep bootstrap --zig <zig_version> --deps "<package1@version,package2@version,...>"
+zep bootstrap --zig <zig_version> --pkgs "<package1@version,package2@version,...>"
 ```
 
 ### **Options**
@@ -22,25 +22,25 @@ zep bootstrap --zig <zig_version> --deps "<package1@version,package2@version,...
 | Option   | Description                                                                                                     |
 | -------- | --------------------------------------------------------------------------------------------------------------- |
 | `--zig`  | The target Zig version for the project. Installs it if not present, or switches if installed.                   |
-| `--deps` | Comma-separated list of dependencies with versions. Installs and imports missing packages, links existing ones. |
+| `--pkgs` | Comma-separated list of dependencies with versions. Installs and imports missing packages, links existing ones. |
 
 ---
 
 ## Running Projects
 
-`zep runner` builds and executes your project using the configured dependencies.
+`zep run` builds and executes your project using the configured dependencies.
 Zig build is run under the hood, and the runner automatically finds the latest build.
 
 ### **Syntax**
 
 ```bash
-zep runner
+zep run
 ```
 
 You can optionally pass arguments to the executed program:
 
 ```bash
-zep runner --target <target-exe> --args <arg1> <arg2> ...
+zep run --target <target-exe> --args <arg1> <arg2> ...
 ```
 
 ---
@@ -53,7 +53,7 @@ zep runner --target <target-exe> --args <arg1> <arg2> ...
 - Example:
 
 ```bash
-zep bootstrap --zig 0.14.0 --deps "clap@0.10.0,zeit@0.7.0"
+zep bootstrap --zig 0.14.0 --pkgs "clap@0.10.0,zeit@0.7.0"
 ```
 
 ### `new`
@@ -65,13 +65,13 @@ zep bootstrap --zig 0.14.0 --deps "clap@0.10.0,zeit@0.7.0"
 zep new my_project
 ```
 
-### `runner`
+### `run`
 
 - Builds and runs the current project.
 - Example:
 
 ```bash
-zep runner
+zep run
 ```
 
 ---

@@ -1,4 +1,4 @@
-1.0.3 (Jan 18th, 2026)
+1.1.0 (Jan 22nd, 2026)
 Moved the root folder to ~/.zep instead (added migrate function)
 Removed artifact pruning, uninstall does it by default after each uninstallation
 API Route changes
@@ -9,9 +9,15 @@ zep and zig executeables are located at ~/.zep/bin now.
 Docs have been moved around and seperated
 Installation bug fixes => "Extracting..." hung.
 zep.json is now obsolete
-During Installation progress is displayed [zep installations]
 Installation fixes corrupt files [smart install]
 bufPrint => allocPrint (more predictable)
+.zep/.conf/injector.json is now obsolete
+zep.lock stores all required data.
+When creating a new package, most data is taken from the .lock file instead of being prompted.
+Responses for y/N answers; "Ok.".
+Removed clap.zig from dependecies, as it was giving more trouble than needed.
+Verbosity can be specified
+During Installation progress is displayed [zep installations]
 
 1.0.2 (Jan 11th, 2026)
 Testing added [/tests]

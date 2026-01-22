@@ -70,14 +70,16 @@ pub fn build(builder: *std.Build) void {
     });
 
     const args_mod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
-    args_mod.addImport("constants", constants_mod);
     __zepinj__.imp(builder, args_mod);
+    args_mod.addImport("constants", constants_mod);
 
     const context_mod = builder.createModule(.{ .root_source_file = builder.path("src/context.zig") });
+    __zepinj__.imp(builder, context_mod);
     context_mod.addImport("constants", constants_mod);
     context_mod.addImport("cli", clis_mod);
     context_mod.addImport("core", cores_mod);
     context_mod.addImport("logger", loggers_mod);
+    context_mod.addImport("args", args_mod);
 
     const zstd = builder.addLibrary(.{
         .name = "zstd",

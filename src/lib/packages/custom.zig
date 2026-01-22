@@ -23,7 +23,7 @@ fn getOrDefault(value: []const u8, def: []const u8) []const u8 {
     return if (value.len > 0) value else def;
 }
 
-fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
+fn promptVersionData(self: *CustomPackage) !Structs.Packages.Version {
     const url = try Prompt.input(
         self.ctx.allocator,
         &self.ctx.printer,
@@ -53,7 +53,11 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
         .{},
     );
 
-    const hash = Hash.hashDataByUrl(self.ctx.allocator, url) catch |err| {
+    const hash = Hash.hashDataByUrl(
+        self.ctx.allocator,
+        url,
+        self.ctx.logger,
+    ) catch |err| {
         switch (err) {
             else => {
                 try self.ctx.printer.append("\nINVALID URL!\nABORTING!\n", .{}, .{ .color = .red });
@@ -71,7 +75,7 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.PackageVersions {
 }
 
 pub fn requestPackage(self: *CustomPackage) !void {
-    try self.ctx.printer.append("--- ADDING CUSTOM PACKAGE MODE ---\n\n", .{}, .{
+    try self.ctx.printer.append("Custom:\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
@@ -119,10 +123,10 @@ pub fn requestPackage(self: *CustomPackage) !void {
 
     const v = try self.promptVersionData();
 
-    var versions = try std.ArrayList(Structs.Packages.PackageVersions).initCapacity(self.ctx.allocator, 10);
+    var versions = try std.ArrayList(Structs.Packages.Version).initCapacity(self.ctx.allocator, 10);
     try versions.append(self.ctx.allocator, v);
 
-    const pkg = Structs.Packages.PackageStruct{
+    const pkg = Structs.Packages.Package{
         .name = package_name,
         .author = author,
         .docs = "",
@@ -133,7 +137,7 @@ pub fn requestPackage(self: *CustomPackage) !void {
     try self.ctx.printer.append("\nSuccessfully added custom package - {s}\n\n", .{package_name}, .{ .color = .green });
 }
 
-fn addPackage(self: *CustomPackage, custom_package_path: []const u8, package_json: Structs.Packages.PackageStruct) !void {
+fn addPackage(self: *CustomPackage, custom_package_path: []const u8, package_json: Structs.Packages.Package) !void {
     if (Fs.existsFile(custom_package_path)) {
         try Fs.deleteFileIfExists(custom_package_path);
     }
@@ -145,14 +149,14 @@ fn addPackage(self: *CustomPackage, custom_package_path: []const u8, package_jso
     _ = try package_file.write(stringify);
 }
 
-fn addVersionToPackage(self: *CustomPackage, custom_package_path: []const u8, version: Structs.Packages.PackageVersions) !void {
+fn addVersionToPackage(self: *CustomPackage, custom_package_path: []const u8, version: Structs.Packages.Version) !void {
     const package_file = try Fs.openOrCreateFile(custom_package_path);
     defer package_file.close();
     const data = try package_file.readToEndAlloc(self.ctx.allocator, Constants.Default.mb * 5);
-    var parsed: std.json.Parsed(Structs.Packages.PackageStruct) = try std.json.parseFromSlice(Structs.Packages.PackageStruct, self.ctx.allocator, data, .{});
+    var parsed: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(Structs.Packages.Package, self.ctx.allocator, data, .{});
     defer parsed.deinit();
 
-    var versions_array = try std.ArrayList(Structs.Packages.PackageVersions).initCapacity(self.ctx.allocator, 10);
+    var versions_array = try std.ArrayList(Structs.Packages.Version).initCapacity(self.ctx.allocator, 10);
     const versions = parsed.value.versions;
     for (versions) |v| {
         if (std.mem.eql(u8, v.version, version.version)) {

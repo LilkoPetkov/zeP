@@ -102,7 +102,11 @@ fn fetchVersion(self: *Artifact, target_version: []const u8) !std.json.Value {
 /// Get structured version info
 pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u8) !VersionData {
     try self.ctx.logger.infof("Getting target version version={s} target={s}", .{ target_version, target }, @src());
-    try self.ctx.printer.append("Getting target version...\n", .{}, .{});
+    try self.ctx.printer.append(
+        "Getting version {s}, with target {s}...\n",
+        .{ target_version, target },
+        .{},
+    );
 
     const version_data = try self.fetchVersion(target_version);
 
@@ -154,6 +158,9 @@ pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) 
 
     const version = try self.getVersion(target_version, target);
     if (version.path.len == 0) return error.VersionHasNoPath;
+    if (Fs.existsDir(version.path)) {
+        return error.AlreadyInstalled;
+    }
 
     try self.ctx.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
     if (self.artifact_type == .zep) {
@@ -172,20 +179,13 @@ pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) 
                 .{},
             );
             if (answer.len == 0 or
-                std.mem.startsWith(u8, answer, "n") or
-                std.mem.startsWith(u8, answer, "N"))
+                (!std.mem.startsWith(u8, answer, "y") and
+                    !std.mem.startsWith(u8, answer, "Y")))
             {
                 try self.ctx.printer.append("\nOk.\n", .{}, .{});
                 return;
             }
         }
-    }
-
-    if (Fs.existsDir(version.path)) {
-        try self.ctx.printer.append("{s} version already installed.\n", .{self.artifact_name}, .{});
-        try self.ctx.printer.append("Switching to {s} - {s}.\n\n", .{ target_version, target }, .{});
-        try self.switchVersion(target_version, target);
-        return;
     }
 
     try self.installer.install(
@@ -230,7 +230,7 @@ pub fn uninstall(
         break;
     }
     const manifest = try self.ctx.manifest.readManifest(
-        Structs.Manifests.ArtifactManifest,
+        Structs.Manifests.Artifact,
         if (self.artifact_type == .zig) self.ctx.paths.zig_manifest else self.ctx.paths.zep_manifest,
     );
     defer manifest.deinit();
@@ -277,8 +277,8 @@ pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []cons
                 .{},
             );
             if (answer.len == 0 or
-                std.mem.startsWith(u8, answer, "n") or
-                std.mem.startsWith(u8, answer, "N"))
+                (!std.mem.startsWith(u8, answer, "y") and
+                    !std.mem.startsWith(u8, answer, "Y")))
             {
                 try self.ctx.printer.append("\nOk.\n", .{}, .{});
                 return;

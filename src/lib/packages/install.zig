@@ -54,7 +54,7 @@ fn isPackageInLock(
     package_id: []const u8,
 ) !bool {
     const lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -141,10 +141,10 @@ fn uninstallPrevious(
     self: *Installer,
     package: Package,
 ) !void {
-    try self.ctx.logger.info("Uninstalling Previous", @src());
+    try self.ctx.logger.info("Uninstalling Previous Package...", @src());
 
     const lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -198,6 +198,7 @@ pub fn install(
         package_name,
         package_version,
     );
+    try self.ctx.logger.infof("Package received!", .{}, @src());
     defer package.deinit();
     if (v.len == 0) {
         if (try self.isPackageInstalled(package.id)) return error.AlreadyInstalled;
@@ -205,12 +206,11 @@ pub fn install(
 
     try self.setPackage(package);
 
-    try self.ctx.logger.infof("Uninstall Previous Package...", .{}, @src());
     const parsed = package.package;
     try self.uninstallPrevious(package);
 
     const lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
 
@@ -229,7 +229,7 @@ pub fn install(
     }
     try self.ctx.logger.infof("Checking Hash...", .{}, @src());
     try self.ctx.printer.append("Checking Hash...\n", .{}, .{});
-    if (std.mem.eql(u8, package.package_hash, parsed.sha256sum)) {
+    if (std.mem.eql(u8, package.package.sha256sum, parsed.sha256sum)) {
         try self.ctx.printer.append("  > HASH IDENTICAL\n", .{}, .{ .color = .green });
     } else {
         return error.HashMismatch;
@@ -308,7 +308,7 @@ pub fn installAll(self: *Installer) anyerror!void {
     Locales.VERBOSITY_MODE = 0;
 
     var lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();

@@ -12,7 +12,7 @@ pub fn build(ctx: *Context) !std.ArrayList([]u8) {
     try ctx.logger.info("Building", @src());
 
     const lock = try ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();

@@ -30,17 +30,17 @@ pub fn add(self: *Command) !void {
     try self.ctx.logger.info("Adding Command", @src());
 
     var lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
 
-    var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.ctx.allocator, 10);
+    var cmds = try std.ArrayList(Structs.ZepFiles.Command).initCapacity(self.ctx.allocator, 10);
     defer cmds.deinit(
         self.ctx.allocator,
     );
 
-    try self.ctx.printer.append("--- ADDING COMMAND MODE ---\n\n", .{}, .{
+    try self.ctx.printer.append("Command:\n\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
@@ -56,25 +56,25 @@ pub fn add(self: *Command) !void {
     defer self.ctx.allocator.free(command_name);
     for (lock.value.root.cmd) |c| {
         if (std.mem.eql(u8, c.name, command_name)) {
-            try self.ctx.printer.append("\nCommand already exists! Overwrite? (Y/n)", .{}, .{
+            try self.ctx.printer.append("\nCommand already exists! Overwrite? (y/N)", .{}, .{
                 .color = .red,
                 .weight = .bold,
             });
 
-            const input = try Prompt.input(
+            const answer = try Prompt.input(
                 self.ctx.allocator,
                 &self.ctx.printer,
                 "",
                 .{},
             );
-
-            if (std.mem.startsWith(u8, input, "n") or std.mem.startsWith(u8, input, "N")) {
-                try self.ctx.printer.append("Exiting...\n\n", .{}, .{
-                    .color = .white,
-                    .weight = .bold,
-                });
+            if (answer.len == 0 or
+                (!std.mem.startsWith(u8, answer, "y") and
+                    !std.mem.startsWith(u8, answer, "Y")))
+            {
+                try self.ctx.printer.append("\nOk.\n", .{}, .{});
                 return;
             }
+
             try self.ctx.logger.info("Overwriting old command...", @src());
             try self.ctx.printer.append("Overwriting...\n\n", .{}, .{
                 .color = .white,
@@ -96,12 +96,12 @@ pub fn add(self: *Command) !void {
     );
     defer self.ctx.allocator.free(command);
 
-    const new_command = Structs.ZepFiles.CommandPackageJsonStrcut{ .cmd = command, .name = command_name };
+    const new_command = Structs.ZepFiles.Command{ .cmd = command, .name = command_name };
     try cmds.append(self.ctx.allocator, new_command);
 
     lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
         lock.value,
     );
@@ -114,7 +114,7 @@ pub fn list(self: *Command) !void {
     try self.ctx.logger.info("Listing Commands", @src());
 
     var lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
@@ -129,12 +129,12 @@ pub fn remove(self: *Command, key: []const u8) !void {
     try self.ctx.logger.infof("Removing Command {s}", .{key}, @src());
 
     var lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
 
-    var cmds = try std.ArrayList(Structs.ZepFiles.CommandPackageJsonStrcut).initCapacity(self.ctx.allocator, 5);
+    var cmds = try std.ArrayList(Structs.ZepFiles.Command).initCapacity(self.ctx.allocator, 5);
     defer cmds.deinit(
         self.ctx.allocator,
     );
@@ -144,7 +144,7 @@ pub fn remove(self: *Command, key: []const u8) !void {
     }
     lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
         lock.value,
     );
@@ -157,7 +157,7 @@ pub fn run(self: *Command, key: []const u8) !void {
     try self.ctx.logger.infof("Running Command {s}", .{key}, @src());
 
     const lock = try self.ctx.manifest.readManifest(
-        Structs.ZepFiles.PackageLockStruct,
+        Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();

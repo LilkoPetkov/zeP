@@ -43,7 +43,7 @@ pub fn pruneVersions(self: *ArtifactPruner, artifact_type: Structs.Extras.Artifa
     }
 
     const manifest = try self.ctx.manifest.readManifest(
-        Structs.Manifests.ArtifactManifest,
+        Structs.Manifests.Artifact,
         if (artifact_type == .zig) self.ctx.paths.zig_manifest else self.ctx.paths.zep_manifest,
     );
     defer manifest.deinit();

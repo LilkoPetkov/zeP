@@ -11,7 +11,7 @@ test "validate json parsing" {
     const test_path = "tests/assets/valid.lock";
     const test_lock = try core.Json.parseJsonFromFile(
         test_allocator,
-        structs.ZepFiles.PackageLockStruct,
+        structs.ZepFiles.Lock,
         test_path,
         constants.Default.mb,
     );
@@ -29,7 +29,7 @@ test "expect error when json parsing invalid json" {
         error.UnexpectedEndOfInput,
         core.Json.parseJsonFromFile(
             test_allocator,
-            structs.ZepFiles.PackageLockStruct,
+            structs.ZepFiles.Lock,
             test_path_unexpected,
             constants.Default.mb,
         ),
@@ -41,7 +41,7 @@ test "expect no error when json parsing missing fields" {
     const test_path_missing = "tests/assets/missing.lock";
     const parsed = try core.Json.parseJsonFromFile(
         test_allocator,
-        structs.ZepFiles.PackageLockStruct,
+        structs.ZepFiles.Lock,
         test_path_missing,
         constants.Default.mb,
     );

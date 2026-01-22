@@ -6,7 +6,7 @@ pub const zep_url = "https://zep.run";
 pub const zep_download_index = zep_url ++ "/download.json";
 pub const kb = 1024;
 pub const mb = kb * kb;
-pub const version = "1.0.2";
+pub const version = "1.1.0";
 pub const zig_version = "0.15.2";
 
 pub const default_targets = struct {

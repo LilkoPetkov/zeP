@@ -104,15 +104,15 @@ fn fetchData(
     var compressed_file_buf: [Constants.Default.kb * 32]u8 = undefined;
     var reader = compressed_file.reader(&compressed_file_buf);
     try self.ctx.logger.info("Decompressing...", @src());
-    if (builtin.os.tag == .windows) {
-        try self.decompressWindows(
+    if (std.mem.endsWith(u8, tarball, ".zip")) {
+        try self.decompressZip(
             &reader,
             decompressed_directory,
             temporary_directory,
             target,
         );
     } else {
-        try self.decompressPosix(
+        try self.decompressXz(
             &reader,
             decompressed_directory,
             temporary_directory,
@@ -127,31 +127,54 @@ fn downloadFile(self: *ArtifactInstaller, url: []const u8, out_path: []const u8)
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    var body = std.Io.Writer.Allocating.init(self.ctx.allocator);
+    const uri = try std.Uri.parse(url);
     try self.ctx.printer.append("Fetching... [{s}]\n", .{url}, .{});
-    const fetched = try client.fetch(std.http.Client.FetchOptions{
-        .location = .{
-            .url = url,
-        },
-        .method = .GET,
-        .response_writer = &body.writer,
-    });
-
-    if (fetched.status == .not_found) {
-        return error.UrlNotFound;
-    }
+    var req = try client.request(.GET, uri, .{});
+    defer req.deinit();
+    _ = try req.sendBodiless();
 
     try self.ctx.logger.info("Writing body into data...", @src());
     try self.ctx.printer.append("Getting Body...\n", .{}, .{ .verbosity = 2 });
-    const data = body.written();
 
+    var head_buf: [Constants.Default.kb]u8 = undefined;
+    const head = req.receiveHead(&head_buf) catch return error.FetchFailed;
+    if (head.head.status == .not_found) {
+        return error.UrlNotFound;
+    }
+
+    const content_length = head.head.content_length orelse 0;
     var out_file = try Fs.openOrCreateFile(out_path);
     defer out_file.close();
-    _ = try out_file.write(data);
+    var reader = head.request.reader.in;
+
+    var buf: [Constants.Default.kb * 16]u8 = undefined;
+    var downloaded: usize = 0;
+    while (true) {
+        if (downloaded >= content_length) break;
+        if (downloaded > 0 and downloaded != content_length) {
+            self.ctx.printer.pop(1);
+        }
+        const remaining = content_length - downloaded;
+        const read: usize = blk: {
+            const res = try reader.readSliceShort(&buf);
+            break :blk res;
+        };
+        if (read == 0) break;
+        const n = if (remaining < Constants.Default.kb * 16) remaining else read;
+        try out_file.writeAll(buf[0..n]);
+        downloaded += n;
+        const pct = @divTrunc((downloaded * 100), content_length);
+        try self.ctx.printer.append(
+            "\rDownloading: {d}% ({d} / {d} KB)",
+            .{ pct, (downloaded / 1024), (content_length / 1024) },
+            .{},
+        );
+    }
+    try self.ctx.printer.append("\n", .{}, .{});
 }
 
 /// Decompress for Windows (.zip)
-fn decompressWindows(
+fn decompressZip(
     self: *ArtifactInstaller,
     reader: *std.fs.File.Reader,
     decompressed_path: []const u8,
@@ -172,9 +195,39 @@ fn decompressWindows(
         .allocator = self.ctx.allocator,
     };
     defer diagnostics.deinit();
-    try std.zip.extract(dir, reader, .{ .diagnostics = &diagnostics });
 
-    const extract_target = try std.fs.path.join(self.ctx.allocator, &.{ temporary_path, diagnostics.root_dir });
+    var extracted_files_progress: usize = 0;
+    blk: {
+        var iter = try std.zip.Iterator.init(reader);
+        var filename_buf: [std.fs.max_path_bytes]u8 = undefined;
+        while (try iter.next()) |entry| {
+            if (extracted_files_progress > 0) {
+                self.ctx.printer.pop(1);
+            }
+            extracted_files_progress += 1;
+            try self.ctx.printer.append(
+                "\rExtracting: ({d} / {d} Files)",
+                .{ (iter.cd_record_count), (extracted_files_progress) },
+                .{},
+            );
+
+            try entry.extract(
+                reader,
+                .{ .diagnostics = &diagnostics },
+                &filename_buf,
+                dir,
+            );
+            try diagnostics.nextFilename(filename_buf[0..entry.filename_len]);
+        }
+
+        break :blk;
+    }
+    try self.ctx.printer.append("\n", .{}, .{});
+
+    const extract_target = try std.fs.path.join(
+        self.ctx.allocator,
+        &.{ temporary_path, diagnostics.root_dir },
+    );
     defer self.ctx.allocator.free(extract_target);
 
     try self.ctx.printer.append(
@@ -185,10 +238,15 @@ fn decompressWindows(
         },
     );
     try std.fs.cwd().rename(extract_target, new_target);
+
+    const os_name = @tagName(builtin.os.tag);
+    if (!std.mem.containsAtLeast(u8, target, 1, os_name)) {
+        return error.InvalidOS;
+    }
 }
 
 /// Decompress for POSIX (.tar.xz)
-fn decompressPosix(
+fn decompressXz(
     self: *ArtifactInstaller,
     reader: *std.fs.File.Reader,
     decompressed_path: []const u8,
@@ -213,13 +271,32 @@ fn decompressPosix(
     var buf = try std.ArrayList(u8).initCapacity(self.ctx.allocator, 100);
     defer buf.deinit(self.ctx.allocator);
     var decompressed_reader = decompressed.reader();
+
+    var progress: usize = 0;
     while (true) {
+        if (progress > 0) {
+            self.ctx.printer.pop(1);
+        }
+
         var chunk: [4096]u8 = undefined;
         const bytes_read = try decompressed_reader.read(chunk[0..]);
+        progress += bytes_read;
+
+        try self.ctx.printer.append(
+            "\rDecompressing xz: ({d} KB)",
+            .{progress / 1024},
+            .{},
+        );
+
         if (bytes_read == 0) break;
         try buf.appendSlice(self.ctx.allocator, chunk[0..bytes_read]);
     }
     var r = std.Io.Reader.fixed(try buf.toOwnedSlice(self.ctx.allocator));
+    try self.ctx.printer.append(
+        "\rDecompressed!\n",
+        .{},
+        .{},
+    );
 
     const new_target = try std.fs.path.join(self.ctx.allocator, &.{ decompressed_path, target });
     defer self.ctx.allocator.free(new_target);
@@ -233,30 +310,32 @@ fn decompressPosix(
         .allocator = self.ctx.allocator,
     };
 
-    try std.tar.pipeToFileSystem(dir, &r, .{ .mode_mode = .ignore, .diagnostics = &diagnostics });
+    try self.ctx.printer.append("Piping Tar to File system!\n", .{}, .{});
+    try std.tar.pipeToFileSystem(
+        dir,
+        &r,
+        .{ .mode_mode = .ignore, .diagnostics = &diagnostics },
+    );
+    _ = try Fs.openOrCreateDir(new_target);
 
-    const extract_target = try std.fs.path.join(self.ctx.allocator, &.{ temporary_path, diagnostics.root_dir });
+    const extract_target = try std.fs.path.join(
+        self.ctx.allocator,
+        &.{ temporary_path, diagnostics.root_dir },
+    );
     defer self.ctx.allocator.free(extract_target);
-    const stat_extract = try std.fs.cwd().statFile(extract_target);
-    if (stat_extract.kind == .file) {
-        try self.ctx.printer.append(
-            "Extracted {s} => {s}!\n",
-            .{ temporary_path, new_target },
-            .{
-                .verbosity = 2,
-            },
-        );
-        try std.fs.cwd().rename(temporary_path, new_target);
-    } else {
-        try self.ctx.printer.append(
-            "Extracted {s} => {s}!\n",
-            .{ extract_target, new_target },
-            .{
-                .verbosity = 2,
-            },
-        );
-        try std.fs.cwd().rename(extract_target, new_target);
-    }
+    try std.fs.cwd().rename(extract_target, new_target);
+
+    try self.ctx.printer.append(
+        "Extracted {s} => {s}!\n",
+        .{ extract_target, new_target },
+        .{
+            .verbosity = 2,
+        },
+    );
+
+    if (!std.fs.has_executable_bit) return;
+    const os_name = @tagName(builtin.os.tag);
+    if (!std.mem.containsAtLeast(u8, target, 1, os_name)) return error.InvalidOS;
 
     var artifact_target: []const u8 = "zig";
     if (artifact_type == .zep) {
@@ -297,12 +376,12 @@ pub fn install(
     });
     defer self.ctx.allocator.free(path);
     self.ctx.manifest.writeManifest(
-        Structs.Manifests.ArtifactManifest,
+        Structs.Manifests.Artifact,
         if (artifact_type == .zig)
             self.ctx.paths.zig_manifest
         else
             self.ctx.paths.zep_manifest,
-        Structs.Manifests.ArtifactManifest{
+        Structs.Manifests.Artifact{
             .name = name,
             .path = path,
         },
@@ -321,4 +400,29 @@ pub fn install(
     try self.ctx.printer.append("Switched to installed version!\n", .{}, .{
         .color = .green,
     });
+}
+
+fn zipExtractCount(dest: std.fs.Dir, fr: *std.fs.File.Reader, options: std.zip.ExtractOptions) !void {
+    var iter = try std.zip.Iterator.init(fr);
+    var filename_buf: [std.fs.max_path_bytes]u8 = undefined;
+    while (try iter.next()) |entry| {
+        try entry.extract(fr, options, &filename_buf, dest);
+        if (options.diagnostics) |d| {
+            try d.nextFilename(filename_buf[0..entry.filename_len]);
+        }
+    }
+}
+
+fn stripComponents(path: []const u8, count: u32) []const u8 {
+    var i: usize = 0;
+    var c = count;
+    while (c > 0) : (c -= 1) {
+        if (std.mem.indexOfScalarPos(u8, path, i, '/')) |pos| {
+            i = pos + 1;
+        } else {
+            i = path.len;
+            break;
+        }
+    }
+    return path[i..];
 }

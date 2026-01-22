@@ -13,6 +13,7 @@ const Manifest = @import("core").Manifest;
 const Json = @import("core").Json;
 const Fetch = @import("core").Fetch;
 const Compressor = @import("core").Compressor;
+const Args = @import("args");
 
 const Installer = @import("lib/packages/install.zig");
 const Artifact = @import("lib/artifact/artifact.zig");
@@ -49,6 +50,9 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         printer,
         paths,
     );
+
+    const default = Args.parseDefault(args);
+    Locales.VERBOSITY_MODE = @intCast(default.verbosity);
 
     var ctx = Context{
         .allocator = alloc,
@@ -112,7 +116,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     // First verify that we are in zep project
     if (Fs.existsFile(Constants.Extras.package_files.lock)) {
         const lock = try manifest.readManifest(
-            Structs.ZepFiles.PackageLockStruct,
+            Structs.ZepFiles.Lock,
             Constants.Extras.package_files.lock,
         );
         defer lock.deinit();

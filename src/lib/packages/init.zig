@@ -45,7 +45,7 @@ pub fn init(
     };
 
     zig_version = child.stdout[0 .. child.stdout.len - 1];
-    try ctx.printer.append("--- INITING ZEP MODE ---\n\n", .{}, .{
+    try ctx.printer.append("Initing:\n\n", .{}, .{
         .color = .blue,
         .weight = .bold,
     });
@@ -108,9 +108,8 @@ fn createFolders(_: *Init) !void {
 
 fn createFiles(self: *Init) !void {
     _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector);
-    _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector_manifest);
 
-    var lock = Structs.ZepFiles.PackageLockStruct{};
+    var lock = Structs.ZepFiles.Lock{};
     lock.root.zig_version = self.zig_version;
     if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
         try Json.writePretty(

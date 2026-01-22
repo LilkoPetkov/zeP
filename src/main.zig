@@ -2,6 +2,7 @@ const std = @import("std");
 
 const Zep = @import("zep.zig");
 const Controller = @import("controller/controller.zig");
+const Locales = @import("locales");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

@@ -14,7 +14,7 @@ fn uninstall(ctx: *Context) !void {
     const package_name = split.first();
     const package_version = split.next();
 
-    const uninstall_args = try Args.parseUninstall();
+    const uninstall_args = Args.parseUninstall(ctx.args);
     if (uninstall_args.global) {
         var p = try Package.init(
             ctx.allocator,

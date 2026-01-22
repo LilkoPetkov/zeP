@@ -1,72 +1,264 @@
 const std = @import("std");
 const Context = @import("context");
 
+const Commands = @import("commands.zig").Commands;
+
+const cyan = "\x1b[36m";
+const magenta = "\x1b[95m";
+const bold = "\x1b[1m";
+const closer = "\x1b[0m";
+
+fn printCmd(_cmd: []const u8, desc: []const u8) void {
+    std.debug.print(
+        "{s}  {s:<35}{s}  {s}\n",
+        .{ cyan, _cmd, closer, desc },
+    );
+}
+
+fn conv(c: []const u8) ?Commands {
+    return std.meta.stringToEnum(Commands, c);
+}
+
 pub fn help(ctx: *Context) void {
-    _ = ctx;
-    std.debug.print("Usage:\n", .{});
-    std.debug.print(" Legend:\n  > []  # required\n  > ()  # optional\n\n", .{});
     std.debug.print(
-        "--- SIMPLE COMMANDS ---\n  zep version\n  zep help\n  zep paths\n  zep doctor\n\n",
+        "A fast, minimal package manager for Zig projects.\n\n",
         .{},
     );
+
+    const args = ctx.args;
+    blk: {
+        if (args.len > 2) {
+            const c = args[2];
+            const command = conv(c) orelse {
+                break :blk;
+            };
+            switch (command) {
+                .cache => cache(),
+                .package => package(),
+                .release => release(),
+                .auth => auth(),
+                .custom => custom(),
+                .inject => inject(),
+                .bootstrap => bootstrap(),
+                .run => run(),
+                .build => build(),
+                .cmd => cmd(),
+                .prebuilt => prebuilt(),
+                .self => self(),
+                .zig => zig(),
+                else => {
+                    break :blk;
+                },
+            }
+            return;
+        }
+    }
+
     std.debug.print(
-        "--- BUILD COMMANDS ---\n  zep runner (--target <target>) (--args <args>)\n  zep build\n  zep bootstrap (--zig <zig-version>) (--deps <package1,package2>)\n  zep new <name>\n\n",
+        "Usage:\n  zep <COMMAND> [OPTIONS]\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+
+    printCmd("init", "Create a new project");
+    printCmd("version", "Print the zep version");
+    printCmd("help", "Show help information");
+    printCmd("doctor", "Check system and environment health");
+    printCmd("config", "Edit lock file from project");
+    printCmd("purge", "Remove all installed packages from project");
+    printCmd("build", "Build the current project");
+    printCmd("run", "Run the current project");
+    printCmd("bootstrap", "Initialize dependencies and toolchains");
+
+    printCmd("cache", "Manage cache");
+    printCmd("release", "Manage online releases");
+    printCmd("package", "Manage online packages");
+
+    std.debug.print("\n{s}{s}Toolchains:{s}\n", .{ bold, magenta, closer });
+
+    printCmd("zig install", "Install a Zig version");
+    printCmd("zig uninstall", "Remove a Zig version");
+    printCmd("zig switch", "Switch active Zig version");
+
+    std.debug.print("\n", .{});
+
+    printCmd("self install", "Install a specific zep version");
+    printCmd("self uninstall", "Remove a zep version");
+    printCmd("self switch", "Switch active zep version");
+    printCmd("self upgrade", "Upgrade zep to the latest version");
+
+    std.debug.print("\n{s}{s}Auth:{s}\n", .{ bold, magenta, closer });
+
+    printCmd("auth login", "Authenticate with the registry");
+    printCmd("auth register", "Create a new account");
+    printCmd("auth logout", "Log out of the current account");
+    printCmd("auth whoami", "Show the current authenticated user");
+
+    std.debug.print("\n{s}{s}Packages:{s}\n", .{ bold, magenta, closer });
+
+    printCmd("add/install <pkg>", "Install a package");
+    printCmd("remove/uninstall <pkg>", "Remove a package");
+    printCmd("upgrade [pkg]", "Upgrade dependencies");
+    printCmd("list [pkg]", "List package releases");
+    printCmd("info <pkg>", "Show package information");
+
+    std.debug.print("\n{s}{s}Advanced:{s}\n", .{ bold, magenta, closer });
+
+    printCmd("custom", "Manage custom packages");
+    printCmd("prebuilt", "Manage prebuilt binaries");
+    printCmd("cmd", "Manage custom commands");
+    printCmd("inject", "Inject configuration into the environment");
+
     std.debug.print(
-        "--- AUTH COMMANDS ---\n  zep auth login\n  zep auth register\n  zep auth logout\n  zep whoami\n\n",
+        "\nUse 'zep help <command>' for more information on a specific command.\n\n",
         .{},
     );
+    if (args.len > 2) {
+        const c = args[2];
+        std.debug.print(
+            "'zep help {s}' has no help command.\n\n",
+            .{c},
+        );
+    }
+}
+
+pub fn cache() void {
     std.debug.print(
-        "--- RELEASE COMMANDS ---\n  zep release list\n  zep release create\n  zep release delete\n\n",
+        "Usage:\n  cache list|clean|size\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("cache list", "Lists the current packages, cached within the global cache.");
+    printCmd("cache clean <pkg>", "Cleans the whole cache size if no package name was defined. If package name is defined all versions of the package will get cleaned, else the specified version will be cleaned only.");
+    printCmd("cache size", "Prints the total cache size.");
+}
+pub fn package() void {
     std.debug.print(
-        "--- YOUR PACKAGE COMMANDS ---\n  zep package list\n  zep package create\n  zep package delete\n\n",
+        "Usage:\n  package create|delete|list\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands [Authentication required]:{s}\n", .{ bold, magenta, closer });
+    printCmd("package create", "Creates a new package, this is not a release, it is a wrapper in which releases can be created.");
+    printCmd("package delete", "Deletes a package.");
+    printCmd("package list", "Lists all packages from the authenticated account.");
+}
+pub fn release() void {
     std.debug.print(
-        "--- MANIFEST COMMANDS ---\n  zep init\n  zep manifest modify\n\n",
+        "Usage:\n  release create|delete|list\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands [Authentication required]:{s}\n", .{ bold, magenta, closer });
+    printCmd("release create", "Creates a new release, by compressing the current project with zstd.");
+    printCmd("release delete", "Deletes a release.");
+    printCmd("release list", "Lists all releases from the authenticated account, and selected package.");
+}
+pub fn auth() void {
     std.debug.print(
-        "--- CMD COMMANDS ---\n  zep cmd run [cmd]\n  zep cmd add\n  zep cmd remove [cmd]\n  zep cmd list\n\n",
+        "Usage:\n  auth login|register|logout|whoami\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("auth login", "Logs into the main zep.run service.");
+    printCmd("auth register", "Registers into zep.run, with verification code.");
+    printCmd("auth logout", "Logs out of zep.run.");
+    printCmd("auth whoami", "Prints the authenticated users data.");
+}
+pub fn custom() void {
     std.debug.print(
-        "--- PACKAGE COMMANDS ---\n  zep install (target)@(version)\n  zep uninstall [target]\n  zep list [target]\n  zep info [target]\n\n",
+        "Usage:\n  custom add|remove\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("custom add", "Adds a custom package, and stores within the .zep/custom/ folder.");
+    printCmd("custom remove <name>", "Removes custom package, name required.");
+}
+pub fn inject() void {
     std.debug.print(
-        "--- CONFIG COMMANDS ---\n  zep purge\n  zep cache [list|clean|size] (package_id)\n  zep inject\n\n",
+        "Usage:\n  inject\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("inject", "Sets the modules to which the packages are imported to, or excluded from.");
+}
+pub fn bootstrap() void {
     std.debug.print(
-        "--- CUSTOM PACKAGE COMMANDS ---\n  zep custom remove [custom package name]\n  zep custom add\n\n",
+        "Usage:\n  bootstrap\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("bootstrap --zig=? --pkgs=?", "Creates a new zep project, with the specified tool chains. By default the current zig version is used, else the zig version specified is installed. Packages are to be specified in a single string with commas; --pkgs=clap,mvzr,logly.");
+}
+pub fn run() void {
     std.debug.print(
-        "--- PREBUILT COMMANDS ---\n  zep prebuilt [build|use] [name] (target)\n",
+        "Usage:\n  run\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("run --target=? --args=?", "Builds and runs the current project, and executes the specified target, which is by default the first executeable found. The args are passed onto the executeable.");
+}
+pub fn build() void {
     std.debug.print(
-        "  zep prebuilt delete [name]\n  zep prebuilt list\n\n",
+        "Usage:\n  build\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("build", "Builds and runs the current project, and stores it via the zep-run/ folder.");
+}
+pub fn cmd() void {
     std.debug.print(
-        "--- ZIG COMMANDS ---\n  zep zig [uninstall|switch] [version]\n",
+        "Usage:\n  cmd run|add|remove|list\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("cmd list", "Lists available commands from lock file.");
+    printCmd("cmd add", "Adds a new command to the lock file.");
+    printCmd("cmd run <name>", "Runs specified command from the lock file.");
+    printCmd("cmd remove <name>", "Removes a command from the lock file.");
+}
+pub fn prebuilt() void {
     std.debug.print(
-        "  zep zig install [version] (target)\n  zep zig list\n  zep zig prune\n\n",
+        "Usage:\n  prebuilt build|use|list\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("prebuilt build <name> <path?>", "Builds the specified path (default '.'), with the given name.");
+    printCmd("prebuilt use <name> <path?>", "Uses build, and extracts it to specified path.");
+    printCmd("prebuilt delete <name>", "Deletes prebuilt.");
+    printCmd("prebuilt list", "Lists all available prebuilts.");
+}
+pub fn self() void {
     std.debug.print(
-        "--- ZEP COMMANDS ---\n  zep zep [uninstall|switch] [version]\n",
+        "Usage:\n  self install|uninstall|switch|upgrade\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("self install <version?> <target?>", "Installs the zep with the specified target and version, and switches to it. If no target was specified, the system target will be used. If no version was specified latest is used.");
+    printCmd("self uninstall <version> <target?>", "Uninstalls specified zep version.");
+    printCmd("self switch <version> <target?>", "Switches to specified, and installed zep version.");
+    printCmd("self upgrade <target?>", "Upgrades zep verison to latest.");
+}
+pub fn zig() void {
     std.debug.print(
-        "  zep zep install [version] (target)\n  zep zep list\n  zep zep prune\n\n",
+        "Usage:\n  zig install|uninstall|switch\n\n",
         .{},
     );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("zig install <version?> <target?>", "Installs the zig with the specified target and version, and switches to it. If no target was specified, the system target will be used. If no version was specified latest is used.");
+    printCmd("zig uninstall <version> <target?>", "Uninstalls specified zig version.");
+    printCmd("zig switch <version> <target?>", "Switches to specified, and installed zig version.");
+    printCmd("self upgrade <target?>", "Upgrades zig verison to latest.");
 }

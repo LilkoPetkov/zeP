@@ -15,7 +15,7 @@ package() {
 }
 
 post_install() {
-    echo "--- ZEP CONFIG REQUIRED ---"
+    echo "Zep config required."
     echo " ==> Run '/usr/bin/zep setup' to configure zep"
     echo " ==> Then run: /usr/bin/zep zep install ${pkgver}"
 }

@@ -8,12 +8,11 @@
     "name": "zeP",
     "cmd": [],
     "description": "A new zig Package manager, and version manager for zig.",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "license": "GPLv3",
     "packages": [
       "logly@0.1.0",
-      "mvzr@0.3.7",
-      "clap@0.11.0"
+      "mvzr@0.3.7"
     ],
     "dev_packages": [],
     "build": {
@@ -22,14 +21,6 @@
     }
   },
   "packages": [
-    {
-      "name": "clap@0.11.0",
-      "hash": "5add36c27cca8ce2fe8c7da8d42d58f842216fc4d3043b2a570b141bc4c99a54",
-      "source": "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.zip",
-      "zig_version": "0.15.1",
-      "root_file": "/clap.zig",
-      "packages": []
-    },
     {
       "name": "mvzr@0.3.7",
       "hash": "c3c797c0b6dda78ee206be823bbd505c612d533816fd7b12435ed1ae20ec0597",
@@ -46,5 +37,20 @@
       "root_file": "/src/logly.zig",
       "packages": []
     }
+  ],
+  "included_modules": [
+    "zep_executeable_module",
+    "loggers_mod",
+    "context_mod",
+    "args_mod"
+  ],
+  "excluded_modules": [
+    "locales_mod",
+    "constants_mod",
+    "clis_mod",
+    "zep_test_module",
+    "structs_mod",
+    "ios_mod",
+    "cores_mod"
   ]
 }
