@@ -36,8 +36,6 @@ pub fn init(
 }
 
 fn archive(self: *Compressor, tar_writer: *std.tar.Writer, fs_path: []const u8, real_path: []const u8) !void {
-    const alloc = std.heap.page_allocator;
-
     var open_target = try Fs.openDir(fs_path);
     defer open_target.close();
 
@@ -53,8 +51,8 @@ fn archive(self: *Compressor, tar_writer: *std.tar.Writer, fs_path: []const u8, 
         );
         if (is_filtered) continue;
 
-        const tar_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ real_path, input_file_entry.name });
-        const input_fs_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{ fs_path, input_file_entry.name });
+        const tar_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ real_path, input_file_entry.name });
+        const input_fs_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ fs_path, input_file_entry.name });
 
         if (input_file_entry.kind == .directory) {
             try tar_writer.writeDir(tar_path, .{});
@@ -62,7 +60,7 @@ fn archive(self: *Compressor, tar_writer: *std.tar.Writer, fs_path: []const u8, 
             continue;
         }
 
-        const reader_buffer: []u8 = try alloc.alloc(u8, 4096);
+        const reader_buffer: []u8 = try self.allocator.alloc(u8, 4096);
         const input_file = try std.fs.cwd().openFile(input_fs_path, .{ .mode = .read_only });
         defer input_file.close();
 
