@@ -11,6 +11,16 @@ fn install(ctx: *Context) !void {
     const target = if (ctx.args.len < 3) null else ctx.args[2]; // package name;
     var installer = Installer.init(ctx);
     installer.force_inject = install_args.inject;
+
+    const selected =
+        @as(u3, @intFromBool(install_args.unverified)) +
+        @as(u3, @intFromBool(install_args.github)) +
+        @as(u3, @intFromBool(install_args.gitlab));
+
+    if (selected > 1) {
+        return error.InvalidArguments;
+    }
+
     installer.install_unverified_packages = install_args.unverified;
 
     defer installer.deinit();
