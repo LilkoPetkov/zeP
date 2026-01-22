@@ -6,10 +6,10 @@ const Artifact = @import("../../lib/artifact/artifact.zig");
 const Context = @import("context");
 
 fn artifactInstall(ctx: *Context, artifact: *Artifact) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.cmds.len < 4) return error.MissingArguments;
 
-    const target_version = if (ctx.args.len < 4) "latest" else ctx.args[3];
-    const target = if (ctx.args.len < 5) Constants.Default.resolveDefaultTarget() else ctx.args[4];
+    const target_version = if (ctx.cmds.len < 4) "latest" else ctx.cmds[3];
+    const target = if (ctx.cmds.len < 5) Constants.Default.resolveDefaultTarget() else ctx.cmds[4];
 
     artifact.install(target_version, target) catch |err| {
         switch (err) {
@@ -46,9 +46,9 @@ fn artifactInstall(ctx: *Context, artifact: *Artifact) !void {
 }
 
 fn artifactUninstall(ctx: *Context, artifact: *Artifact) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
-    const target_version = ctx.args[3];
-    const target = if (ctx.args.len < 5) Constants.Default.resolveDefaultTarget() else ctx.args[4];
+    if (ctx.cmds.len < 4) return error.MissingArguments;
+    const target_version = ctx.cmds[3];
+    const target = if (ctx.cmds.len < 5) Constants.Default.resolveDefaultTarget() else ctx.cmds[4];
 
     artifact.uninstall(target_version, target) catch |err| {
         switch (err) {
@@ -78,10 +78,10 @@ fn artifactUninstall(ctx: *Context, artifact: *Artifact) !void {
 }
 
 fn artifactSwitch(ctx: *Context, artifact: *Artifact) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.cmds.len < 4) return error.MissingArguments;
 
-    const target_version = ctx.args[3];
-    const target = if (ctx.args.len < 5) Constants.Default.resolveDefaultTarget() else ctx.args[4];
+    const target_version = ctx.cmds[3];
+    const target = if (ctx.cmds.len < 5) Constants.Default.resolveDefaultTarget() else ctx.cmds[4];
 
     artifact.switchVersion(target_version, target) catch |err| {
         switch (err) {
@@ -120,7 +120,7 @@ fn artifactList(ctx: *Context, artifact: *Artifact) !void {
 }
 
 fn artifactUpgrade(ctx: *Context, artifact: *Artifact) !void {
-    const target = if (ctx.args.len < 4) Constants.Default.resolveDefaultTarget() else ctx.args[3];
+    const target = if (ctx.cmds.len < 4) Constants.Default.resolveDefaultTarget() else ctx.cmds[3];
 
     artifact.install("latest", target) catch |err| {
         switch (err) {
@@ -143,7 +143,7 @@ pub fn _artifactController(
     ctx: *Context,
     artifact_type: Structs.Extras.ArtifactType,
 ) !void {
-    if (ctx.args.len < 3) {
+    if (ctx.cmds.len < 3) {
         switch (artifact_type) {
             .zep => return error.ZepInvalidSubcommand,
             .zig => return error.ZigInvalidSubcommand,
@@ -156,7 +156,7 @@ pub fn _artifactController(
     );
     defer artifact.deinit();
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
 
     if (std.mem.eql(u8, arg, "install")) {
         try artifactInstall(ctx, &artifact);

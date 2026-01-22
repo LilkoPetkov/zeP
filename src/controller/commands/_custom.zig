@@ -11,17 +11,17 @@ fn customAdd(ctx: *Context) !void {
 }
 
 fn customRemove(ctx: *Context) !void {
-    if (ctx.args.len < 4) return error.PackageMissingArguments;
-    const package = ctx.args[3];
+    if (ctx.cmds.len < 4) return error.PackageMissingArguments;
+    const package = ctx.cmds[3];
     var custom = Custom.init(ctx);
     try custom.removePackage(package);
     return;
 }
 
 pub fn _customController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.CustomInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.CustomInvalidSubcommand;
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "add")) {
         try customAdd(ctx);
     } else if (std.mem.eql(u8, arg, "remove")) {

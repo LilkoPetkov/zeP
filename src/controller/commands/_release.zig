@@ -108,10 +108,10 @@ fn releaseDelete(ctx: *Context, release: *Release) !void {
 }
 
 pub fn _releaseController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.ReleaseInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.ReleaseInvalidSubcommand;
 
     var release = Release.init(ctx);
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "create")) {
         try releaseCreate(ctx, &release);
     } else if (std.mem.eql(u8, arg, "list") or

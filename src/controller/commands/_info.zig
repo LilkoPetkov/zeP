@@ -4,9 +4,9 @@ const Package = @import("core").Package;
 const Context = @import("context");
 
 fn info(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.InfoMissingArguments;
+    if (ctx.cmds.len < 3) return error.InfoMissingArguments;
 
-    const package_id = ctx.args[2];
+    const package_id = ctx.cmds[2];
     var split = std.mem.splitScalar(u8, package_id, '@');
     const package_name = split.first();
     const package_version = split.next();

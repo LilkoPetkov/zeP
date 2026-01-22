@@ -51,7 +51,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         paths,
     );
 
-    const default = Args.parseDefault(args);
+    const parsed_args = try Args.parseArgs(alloc, args);
+    const default = Args.parseDefault(parsed_args.options);
     Locales.VERBOSITY_MODE = @intCast(default.verbosity);
 
     var ctx = Context{
@@ -63,6 +64,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         .printer = printer,
         .compressor = compressor,
         .args = args,
+        .cmds = parsed_args.cmds,
+        .options = parsed_args.options,
     };
     try Migrate.migratePaths(&ctx);
 

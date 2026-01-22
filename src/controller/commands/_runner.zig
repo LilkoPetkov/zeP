@@ -5,7 +5,7 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn runner(ctx: *Context) !void {
-    const runner_args = Args.parseRunner(ctx.args);
+    const runner_args = Args.parseRunner(ctx.options);
     var args = try std.ArrayList([]const u8).initCapacity(ctx.allocator, 5);
     defer args.deinit(ctx.allocator);
     var split_args = std.mem.splitAny(u8, runner_args.args, ",");

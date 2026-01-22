@@ -109,11 +109,11 @@ fn packageDelete(ctx: *Context, package: *Package) !void {
 }
 
 pub fn _packageController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.PackageInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.PackageInvalidSubcommand;
 
     var package = Package.init(ctx);
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "create")) {
         try packageCreate(ctx, &package);
     } else if (std.mem.eql(u8, arg, "list") or

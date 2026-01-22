@@ -4,7 +4,7 @@ const Cache = @import("../../lib/functions/cache.zig");
 const Context = @import("context");
 
 fn cacheClean(ctx: *Context, cache: *Cache) !void {
-    const cache_name = if (ctx.args.len < 4) null else ctx.args[3];
+    const cache_name = if (ctx.cmds.len < 4) null else ctx.cmds[3];
     try cache.clean(cache_name);
     return;
 }
@@ -20,12 +20,12 @@ fn cacheList(_: *Context, cache: *Cache) !void {
 }
 
 pub fn _cacheController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.CacheInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.CacheInvalidSubcommand;
 
     var cache = try Cache.init(ctx);
     defer cache.deinit();
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "size")) {
         try cacheSize(ctx, &cache);
     } else if (std.mem.eql(u8, arg, "clean")) {

@@ -107,10 +107,10 @@ fn authWhoami(_: *Context, auth: *Auth) !void {
 }
 
 pub fn _authController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.AuthInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.AuthInvalidSubcommand;
 
     var auth = try Auth.init(ctx);
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "login")) {
         try authLogin(ctx, &auth);
     } else if (std.mem.eql(u8, arg, "register")) {

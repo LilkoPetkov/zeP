@@ -4,7 +4,7 @@ const Cmd = @import("../../lib/functions/command.zig");
 const Context = @import("context");
 
 fn cmdRun(ctx: *Context, cmd: *Cmd) !void {
-    const cmd_name = ctx.args[3];
+    const cmd_name = ctx.cmds[3];
     try cmd.run(cmd_name);
     return;
 }
@@ -16,7 +16,7 @@ fn cmdAdd(ctx: *Context, cmd: *Cmd) !void {
 }
 
 fn cmdRemove(ctx: *Context, cmd: *Cmd) !void {
-    const cmd_name = ctx.args[3];
+    const cmd_name = ctx.cmds[3];
     try cmd.remove(cmd_name);
     return;
 }
@@ -28,11 +28,11 @@ fn cmdList(ctx: *Context, cmd: *Cmd) !void {
 }
 
 pub fn _cmdController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.CmdInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.CmdInvalidSubcommand;
 
     var cmd = try Cmd.init(ctx);
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "run")) {
         try cmdRun(ctx, &cmd);
     } else if (std.mem.eql(u8, arg, "add")) {

@@ -10,7 +10,7 @@ fn config(_: *Context, pf: *PackageFiles) !void {
 }
 
 pub fn _configController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.ManifestInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.ManifestInvalidSubcommand;
     var package_files = try PackageFiles.init(ctx);
     try config(ctx, &package_files);
 }

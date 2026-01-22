@@ -6,7 +6,7 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn bootstrap(ctx: *Context) !void {
-    const bootstrap_args = Args.parseBootstrap(ctx.args);
+    const bootstrap_args = Args.parseBootstrap(ctx.options);
     var pkgs = try std.ArrayList([]const u8).initCapacity(ctx.allocator, 5);
     defer pkgs.deinit(ctx.allocator);
     var split_pkgs = std.mem.splitAny(u8, bootstrap_args.pkgs, ",");

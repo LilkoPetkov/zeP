@@ -6,10 +6,10 @@ const Lister = @import("../../lib/packages/list.zig");
 const Context = @import("context");
 
 fn prebuiltBuild(ctx: *Context, prebuilt: *PreBuilt) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.cmds.len < 4) return error.MissingArguments;
 
-    const name = ctx.args[3];
-    const target = if (ctx.args.len < 5) "." else ctx.args[4];
+    const name = ctx.cmds[3];
+    const target = if (ctx.cmds.len < 5) "." else ctx.cmds[4];
     prebuilt.build(name, target) catch {
         try ctx.printer.append("\nBuilding prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
@@ -17,10 +17,10 @@ fn prebuiltBuild(ctx: *Context, prebuilt: *PreBuilt) !void {
 }
 
 fn prebuiltUse(ctx: *Context, prebuilt: *PreBuilt) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.cmds.len < 4) return error.MissingArguments;
 
-    const name = ctx.args[3];
-    const target = if (ctx.args.len < 5) "." else ctx.args[4];
+    const name = ctx.cmds[3];
+    const target = if (ctx.cmds.len < 5) "." else ctx.cmds[4];
     prebuilt.use(name, target) catch {
         try ctx.printer.append("\nUse prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
@@ -35,9 +35,9 @@ fn prebuiltList(ctx: *Context, prebuilt: *PreBuilt) !void {
 }
 
 fn prebuiltDelete(ctx: *Context, prebuilt: *PreBuilt) !void {
-    if (ctx.args.len < 4) return error.MissingArguments;
+    if (ctx.cmds.len < 4) return error.MissingArguments;
 
-    const name = ctx.args[3];
+    const name = ctx.cmds[3];
     prebuilt.delete(name) catch {
         try ctx.printer.append("\nDeleting prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
@@ -45,11 +45,11 @@ fn prebuiltDelete(ctx: *Context, prebuilt: *PreBuilt) !void {
 }
 
 pub fn _prebuiltController(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.PreBuiltInvalidSubcommand;
+    if (ctx.cmds.len < 3) return error.PreBuiltInvalidSubcommand;
 
     var prebuilt = try PreBuilt.init(ctx);
 
-    const arg = ctx.args[2];
+    const arg = ctx.cmds[2];
     if (std.mem.eql(u8, arg, "build")) {
         try prebuiltBuild(ctx, &prebuilt);
     } else if (std.mem.eql(u8, arg, "delete")) {

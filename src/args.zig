@@ -1,18 +1,51 @@
 const std = @import("std");
 const Constants = @import("constants");
 
+const parsedArgs = struct {
+    options: [][]const u8,
+    cmds: [][]const u8,
+};
+
+pub fn parseArgs(
+    allocator: std.mem.Allocator,
+    args: [][:0]u8,
+) !parsedArgs {
+    var options = try std.ArrayList([]const u8).initCapacity(allocator, 5);
+    var cmds = try std.ArrayList([]const u8).initCapacity(allocator, 3);
+
+    for (args) |arg| {
+        if (std.mem.startsWith(u8, arg, "-")) {
+            try options.append(allocator, arg);
+            continue;
+        }
+        try cmds.append(allocator, arg);
+    }
+
+    defer options.deinit(allocator);
+    defer cmds.deinit(allocator);
+
+    const os = try allocator.dupe([]const u8, options.items);
+    const cs = try allocator.dupe([]const u8, cmds.items);
+    return parsedArgs{
+        .options = os,
+        .cmds = cs,
+    };
+}
+
 const DefaultArgs = struct {
     verbosity: usize,
 };
 pub fn parseDefault(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) DefaultArgs {
     var verbosity: usize = 1;
     for (args) |arg| {
         if (!std.mem.startsWith(u8, arg, "--verbosity") and
             !std.mem.startsWith(u8, arg, "-V")) continue;
         var split = std.mem.splitAny(u8, arg, "=");
+        _ = split.next();
         const val = split.next() orelse continue;
+
         const parsed = std.fmt.parseInt(u8, val, 10) catch 1;
         verbosity = parsed;
     }
@@ -26,7 +59,7 @@ const DoctorArgs = struct {
     fix: bool,
 };
 pub fn parseDoctor(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) DoctorArgs {
     var fix: bool = false;
     for (args) |arg| {
@@ -44,7 +77,7 @@ const UninstallArgs = struct {
     force: bool,
 };
 pub fn parseUninstall(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) UninstallArgs {
     var global: bool = false;
     var force: bool = false;
@@ -75,7 +108,7 @@ const InstallArgs = struct {
     gitlab: bool,
 };
 pub fn parseInstall(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) InstallArgs {
     var inject: bool = false;
     var unverified: bool = false;
@@ -124,7 +157,7 @@ const BootstrapArgs = struct {
     pkgs: []const u8,
 };
 pub fn parseBootstrap(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) BootstrapArgs {
     var zig: []const u8 = "";
     var raw_packages: []const u8 = "";
@@ -133,6 +166,7 @@ pub fn parseBootstrap(
             !std.mem.startsWith(u8, arg, "-Z"))
         {
             var split = std.mem.splitAny(u8, arg, "=");
+            _ = split.next();
             const val = split.next() orelse continue;
             zig = val;
         }
@@ -140,6 +174,7 @@ pub fn parseBootstrap(
             !std.mem.startsWith(u8, arg, "-P"))
         {
             var split = std.mem.splitAny(u8, arg, "=");
+            _ = split.next();
             const val = split.next() orelse continue;
             raw_packages = val;
         }
@@ -156,7 +191,7 @@ const RunnerArgs = struct {
     args: []const u8,
 };
 pub fn parseRunner(
-    args: [][:0]u8,
+    args: [][]const u8,
 ) RunnerArgs {
     var target: []const u8 = "";
     var raw_args: []const u8 = "";
@@ -165,6 +200,7 @@ pub fn parseRunner(
             !std.mem.startsWith(u8, arg, "-T"))
         {
             var split = std.mem.splitAny(u8, arg, "=");
+            _ = split.next();
             const val = split.next() orelse continue;
             target = val;
         }
@@ -172,6 +208,7 @@ pub fn parseRunner(
             !std.mem.startsWith(u8, arg, "-A"))
         {
             var split = std.mem.splitAny(u8, arg, "=");
+            _ = split.next();
             const val = split.next() orelse continue;
             raw_args = val;
         }

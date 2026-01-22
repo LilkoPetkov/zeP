@@ -78,8 +78,6 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
     };
     f catch |err| {
         try ctx.logger.errorf("Error. {any}", .{err}, @src());
-        const cmd = try std.mem.join(ctx.allocator, " ", ctx.args);
-        defer ctx.allocator.free(cmd);
         switch (err) {
             error.ZigInvalidSubcommand => {
                 Help.zig();

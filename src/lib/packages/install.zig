@@ -124,8 +124,8 @@ fn isPackageCorrupt(
     );
     defer self.ctx.allocator.free(package_path);
 
-    var sbuf: [256]u8 = undefined;
-    const symlinked = std.fs.cwd().readLink(package_path, &sbuf) catch {
+    var symlinked_buffer: [256]u8 = undefined;
+    const symlinked = std.fs.cwd().readLink(package_path, &symlinked_buffer) catch {
         Fs.deleteSymlinkIfExists(package_path);
         return true;
     };

@@ -4,9 +4,9 @@ const Lister = @import("../../lib/packages/list.zig");
 const Context = @import("context");
 
 fn list(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.ListMissingArguments;
+    if (ctx.cmds.len < 3) return error.ListMissingArguments;
 
-    const package = ctx.args[2];
+    const package = ctx.cmds[2];
     var split = std.mem.splitScalar(u8, package, '@');
     const package_name = split.first();
     Lister.list(ctx, package_name) catch |err| {

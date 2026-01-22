@@ -5,7 +5,7 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn doctor(ctx: *Context) !void {
-    const doctor_args = Args.parseDoctor(ctx.args);
+    const doctor_args = Args.parseDoctor(ctx.options);
     try Doctor.doctor(ctx, doctor_args.fix);
     return;
 }

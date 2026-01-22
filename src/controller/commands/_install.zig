@@ -6,9 +6,9 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn install(ctx: *Context) !void {
-    const install_args = Args.parseInstall(ctx.args);
+    const install_args = Args.parseInstall(ctx.options);
 
-    const target = if (ctx.args.len < 3) null else ctx.args[2]; // package name;
+    const target = if (ctx.cmds.len < 3) null else ctx.cmds[2]; // package name;
     var installer = Installer.init(ctx);
     installer.force_inject = install_args.inject;
 

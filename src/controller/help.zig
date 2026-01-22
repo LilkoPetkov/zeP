@@ -25,10 +25,10 @@ pub fn help(ctx: *Context) void {
         .{},
     );
 
-    const args = ctx.args;
+    const cmds = ctx.cmds;
     blk: {
-        if (args.len > 2) {
-            const c = args[2];
+        if (cmds.len > 2) {
+            const c = cmds[2];
             const command = conv(c) orelse {
                 break :blk;
             };
@@ -114,8 +114,8 @@ pub fn help(ctx: *Context) void {
         "\nUse 'zep help <command>' for more information on a specific command.\n\n",
         .{},
     );
-    if (args.len > 2) {
-        const c = args[2];
+    if (cmds.len > 2) {
+        const c = cmds[2];
         std.debug.print(
             "'zep help {s}' has no help command.\n\n",
             .{c},

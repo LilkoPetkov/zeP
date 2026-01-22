@@ -18,9 +18,14 @@ fetcher: Fetch,
 compressor: Compressor,
 logger: *Logger.logly.Logger,
 args: [][:0]u8,
+options: [][]const u8,
+cmds: [][]const u8,
 
 pub fn deinit(self: *Context) void {
     self.printer.deinit();
     self.paths.deinit();
     self.logger.deinit();
+
+    self.allocator.free(self.cmds);
+    self.allocator.free(self.options);
 }

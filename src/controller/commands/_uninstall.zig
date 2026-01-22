@@ -7,14 +7,14 @@ const Context = @import("context");
 const Args = @import("args");
 
 fn uninstall(ctx: *Context) !void {
-    if (ctx.args.len < 3) return error.UninstallMissingArguments;
+    if (ctx.cmds.len < 3) return error.UninstallMissingArguments;
 
-    const package = ctx.args[2]; // package name;
+    const package = ctx.cmds[2]; // package name;
     var split = std.mem.splitScalar(u8, package, '@');
     const package_name = split.first();
     const package_version = split.next();
 
-    const uninstall_args = Args.parseUninstall(ctx.args);
+    const uninstall_args = Args.parseUninstall(ctx.options);
     if (uninstall_args.global) {
         var p = try Package.init(
             ctx.allocator,
