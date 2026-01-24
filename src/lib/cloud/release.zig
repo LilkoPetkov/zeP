@@ -247,7 +247,6 @@ fn releaseAvailable(package_name: []const u8, release: []const u8) bool {
     const release_patt = "^([a-zA-Z]+)?[0-9]+\\.[0-9]+(\\.[0-9]+)?$";
     const release_regex = mvzr.compile(release_patt).?;
     if (!release_regex.isMatch(release)) {
-        std.debug.print("\n\n\n\n\n\n\n", .{});
         return false;
     }
 

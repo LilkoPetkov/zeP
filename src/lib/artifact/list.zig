@@ -85,7 +85,7 @@ pub fn listVersions(self: *ArtifactLister, artifact_type: Structs.Extras.Artifac
             has_targets = true;
             const target_name = try self.ctx.allocator.dupe(u8, version_entry.name);
             const in_use_target = std.mem.containsAtLeast(u8, manifest.value.path, 1, target_name);
-            try self.ctx.printer.append("  > {s}{s}\n", .{ target_name, if (in_use_version and in_use_target) " (in-use)" else "" }, .{});
+            try self.ctx.printer.append(" > {s}{s}\n", .{ target_name, if (in_use_version and in_use_target) " (in-use)" else "" }, .{});
         }
 
         if (!has_targets) {

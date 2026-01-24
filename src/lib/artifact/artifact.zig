@@ -14,6 +14,7 @@ const ArtifactUninstaller = @import("uninstall.zig");
 const ArtifactLister = @import("list.zig");
 const ArtifactSwitcher = @import("switch.zig");
 const ArtifactPruner = @import("pruner.zig");
+const ArtifactCache = @import("cache.zig");
 
 pub const VersionData = struct {
     path: []const u8,
@@ -31,6 +32,7 @@ uninstaller: ArtifactUninstaller,
 lister: ArtifactLister,
 switcher: ArtifactSwitcher,
 pruner: ArtifactPruner,
+cacher: ArtifactCache,
 
 artifact_type: Structs.Extras.ArtifactType,
 artifact_name: []const u8,
@@ -44,6 +46,7 @@ pub fn init(
     const lister = ArtifactLister.init(ctx);
     const switcher = ArtifactSwitcher.init(ctx);
     const pruner = ArtifactPruner.init(ctx);
+    const cacher = ArtifactCache.init(ctx, artifact_type);
 
     return Artifact{
         .ctx = ctx,
@@ -52,6 +55,7 @@ pub fn init(
         .lister = lister,
         .switcher = switcher,
         .pruner = pruner,
+        .cacher = cacher,
         .artifact_type = artifact_type,
         .artifact_name = if (artifact_type == .zig) "Zig" else "Zep",
     };
@@ -62,6 +66,7 @@ pub fn deinit(self: *Artifact) void {
     self.uninstaller.deinit();
     self.switcher.deinit();
     self.lister.deinit();
+    self.cacher.deinit();
 }
 
 /// Fetch version metadata from Artifact JSON
@@ -162,7 +167,15 @@ pub fn install(self: *Artifact, target_version: []const u8, target: []const u8) 
         return error.AlreadyInstalled;
     }
 
-    try self.ctx.printer.append("Installing version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
+    try self.ctx.printer.append(
+        "[{s}] Installing version: {s}\nWith target: {s}\n\n",
+        .{
+            if (self.artifact_type == .zep) "Zep" else "Zig",
+            target_version,
+            target,
+        },
+        .{},
+    );
     if (self.artifact_type == .zep) {
         var outdated = false;
         const v = version.version;
@@ -212,7 +225,15 @@ pub fn uninstall(
     if (!Fs.existsDir(version.path)) {
         return error.VersionNotInstalled;
     }
-    try self.ctx.printer.append("Uninstalling version: {s}\nWith target: {s}\n\n", .{ target_version, target }, .{});
+    try self.ctx.printer.append(
+        "[{s}] Uninstalling version: {s}\nWith target: {s}\n\n",
+        .{
+            if (self.artifact_type == .zep) "Zep" else "Zig",
+            target_version,
+            target,
+        },
+        .{},
+    );
 
     const version_dir = try std.fs.path.join(
         self.ctx.allocator,
@@ -296,9 +317,24 @@ pub fn switchVersion(self: *Artifact, target_version: []const u8, target: []cons
         .{},
     );
 
-    try self.switcher.switchVersion(version.name, version.version, target, self.artifact_type);
+    try self.switcher.switchVersion(
+        version.name,
+        version.version,
+        target,
+        self.artifact_type,
+    );
 }
 
 pub fn list(self: *Artifact) !void {
     try self.lister.listVersions(self.artifact_type);
+}
+
+pub fn listCache(self: *Artifact) !void {
+    try self.cacher.list();
+}
+pub fn cleanCache(self: *Artifact, version: ?[]const u8) !void {
+    try self.cacher.clean(version);
+}
+pub fn sizeCache(self: *Artifact) !void {
+    try self.cacher.size();
 }

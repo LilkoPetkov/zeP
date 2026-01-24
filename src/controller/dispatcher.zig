@@ -1,5 +1,6 @@
 const std = @import("std");
 const Context = @import("context");
+const Constants = @import("constants");
 const Commands = @import("commands.zig").Commands;
 
 const CustomController = @import("commands/_custom.zig");
@@ -34,6 +35,20 @@ fn conv(c: []const u8) ?Commands {
 
 pub fn dispatcher(ctx: *Context, c: []const u8) !void {
     const command = conv(c) orelse return error.InvalidCommand;
+    switch (command) {
+        .version => {},
+        else => {
+            try ctx.printer.append(
+                "zeP {s}\n\n",
+                .{Constants.Default.version},
+                .{
+                    .color = .bright_black,
+                    .weight = .dim,
+                },
+            );
+        },
+    }
+
     const f = switch (command) {
         .init => InitController._initController(ctx),
 

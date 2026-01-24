@@ -8,7 +8,6 @@ const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
 const Json = @import("json.zig");
-const Package = @import("package.zig");
 
 allocator: std.mem.Allocator,
 paths: Constants.Paths.Paths,
@@ -164,14 +163,13 @@ pub fn removePathFromManifest(
 
 pub fn manifestAdd(
     self: *Manifest,
-    pkg: *Structs.ZepFiles.PackageJsonStruct,
-    package_name: []const u8,
-    package_id: []const u8,
+    pkg: *Structs.ZepFiles.Package,
+    id: []const u8,
 ) !void {
     pkg.packages = try filterOut(
         self.allocator,
         pkg.packages,
-        package_name,
+        id,
         []const u8,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
@@ -183,7 +181,7 @@ pub fn manifestAdd(
     pkg.packages = try appendUnique(
         []const u8,
         pkg.packages,
-        package_id,
+        id,
         self.allocator,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
@@ -201,7 +199,8 @@ pub fn manifestAdd(
 
 pub fn lockAdd(
     self: *Manifest,
-    package: Package,
+    id: []const u8,
+    package: Structs.Packages.Version,
 ) !void {
     var lock = try self.readManifest(
         Structs.ZepFiles.Lock,
@@ -210,17 +209,17 @@ pub fn lockAdd(
     defer lock.deinit();
 
     const new_entry = Structs.ZepFiles.Package{
-        .name = package.id,
-        .hash = package.package.sha256sum,
-        .source = package.package.url,
-        .zig_version = package.package.zig_version,
-        .root_file = package.package.root_file,
+        .name = id,
+        .hash = package.sha256sum,
+        .source = package.url,
+        .zig_version = package.zig_version,
+        .root_file = package.root_file,
     };
 
     lock.value.packages = try filterOut(
         self.allocator,
         lock.value.packages,
-        package.package_name,
+        id,
         Structs.ZepFiles.Package,
         struct {
             fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
@@ -244,7 +243,7 @@ pub fn lockAdd(
     lock.value.root.packages = try filterOut(
         self.allocator,
         lock.value.root.packages,
-        package.package_name,
+        id,
         []const u8,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
@@ -274,7 +273,7 @@ pub fn lockAdd(
 
 pub fn lockRemove(
     self: *Manifest,
-    package_id: []const u8,
+    id: []const u8,
 ) !void {
     var lock = try self.readManifest(
         Structs.ZepFiles.Lock,
@@ -285,7 +284,7 @@ pub fn lockRemove(
     lock.value.packages = try filterOut(
         self.allocator,
         lock.value.packages,
-        package_id,
+        id,
         Structs.ZepFiles.Package,
         struct {
             fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
@@ -297,7 +296,7 @@ pub fn lockRemove(
     lock.value.root.packages = try filterOut(
         self.allocator,
         lock.value.root.packages,
-        package_id,
+        id,
         []const u8,
         struct {
             fn match(item: []const u8, needle: []const u8) bool {

@@ -84,8 +84,7 @@ fn getUserData(self: *Auth) !Structs.Fetch.User {
                 },
             },
         },
-    ) catch |err| {
-        std.debug.print("{any}\n", .{err});
+    ) catch {
         return error.FetchFailed;
     };
     defer get.deinit();

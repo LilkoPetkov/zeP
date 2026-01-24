@@ -82,7 +82,7 @@ pub fn delete(self: *Package) !void {
         );
         for (releases.items) |r| {
             try self.ctx.printer.append(
-                "  > {s} {s}\n    ({s})\n",
+                " > {s} {s}\n    ({s})\n",
                 .{
                     target.Name,
                     r.Release,

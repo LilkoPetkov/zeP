@@ -67,10 +67,17 @@ fn fetchData(
 
     // Download if not cached
     if (!Fs.existsFile(target_path)) {
+        var timer = try std.time.Timer.start();
         try self.downloadFile(tarball, target_path);
+        const read = timer.read();
+        const time = read / std.time.ns_per_s;
+        try self.ctx.printer.append("Took {d} seconds to download file.\n\n", .{time}, .{
+            .color = .bright_black,
+        });
     } else {
         try self.ctx.printer.append("Data found in cache!\n\n", .{}, .{});
     }
+    try self.ctx.printer.append("Decompressing.\n", .{}, .{});
 
     // Open the downloaded file
     var compressed_file = try Fs.openOrCreateFile(target_path);
@@ -138,39 +145,57 @@ fn downloadFile(self: *ArtifactInstaller, url: []const u8, out_path: []const u8)
 
     var head_buf: [Constants.Default.kb]u8 = undefined;
     const head = req.receiveHead(&head_buf) catch return error.FetchFailed;
+
     if (head.head.status == .not_found) {
         return error.UrlNotFound;
     }
 
     const content_length = head.head.content_length orelse 0;
+    var transfer_buffer: [Constants.Default.kb * 16]u8 = undefined;
+    const reader = req.reader.bodyReader(
+        &transfer_buffer,
+        head.head.transfer_encoding,
+        head.head.content_length,
+    );
+
     var out_file = try Fs.openOrCreateFile(out_path);
     defer out_file.close();
-    var reader = head.request.reader.in;
 
     var buf: [Constants.Default.kb * 16]u8 = undefined;
     var downloaded: usize = 0;
+
     while (true) {
-        if (downloaded >= content_length) break;
-        if (downloaded > 0 and downloaded != content_length) {
+        if (downloaded == content_length) break;
+        if (downloaded > 0) {
             self.ctx.printer.pop(1);
         }
-        const remaining = content_length - downloaded;
-        const read: usize = blk: {
-            const res = try reader.readSliceShort(&buf);
-            break :blk res;
-        };
-        if (read == 0) break;
-        const n = if (remaining < Constants.Default.kb * 16) remaining else read;
+
+        const n = try reader.readSliceShort(&buf);
+        if (n == 0) break;
         try out_file.writeAll(buf[0..n]);
         downloaded += n;
-        const pct = @divTrunc((downloaded * 100), content_length);
-        try self.ctx.printer.append(
-            "\rDownloading: {d}% ({d} / {d} KB)",
-            .{ pct, (downloaded / 1024), (content_length / 1024) },
-            .{},
-        );
+
+        if (content_length != 0) {
+            const pct = @min(100, @divTrunc(downloaded * 100, content_length));
+            try self.ctx.printer.append(
+                "\rDownloading: {d}% ({d} / {d} KB)",
+                .{ pct, downloaded / 1024, content_length / 1024 },
+                .{},
+            );
+        } else {
+            try self.ctx.printer.append(
+                "\rDownloading: {d} KB",
+                .{downloaded / 1024},
+                .{},
+            );
+        }
     }
-    try self.ctx.printer.append("\n", .{}, .{});
+    try self.ctx.printer.append(
+        "\n",
+        .{},
+        .{},
+    );
+    return;
 }
 
 /// Decompress for Windows (.zip)

@@ -7,7 +7,7 @@ const Constants = @import("constants");
 const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
-const Package = @import("core").Package;
+const Package = @import("package");
 const Injector = @import("core").Injector;
 const Hash = @import("core").Hash;
 
@@ -148,26 +148,22 @@ fn uninstallPrevious(
         Constants.Extras.package_files.lock,
     );
     defer lock.deinit();
+
+    var uninstaller = Uninstaller.init(self.ctx);
+    defer uninstaller.deinit();
+
     for (lock.value.packages) |lock_package| {
-        var uninstaller = Uninstaller.init(self.ctx);
-        defer uninstaller.deinit();
         if (std.mem.eql(u8, lock_package.name, package.id)) return;
 
         if (std.mem.startsWith(u8, lock_package.name, package.package_name)) {
-            try self.setPackage(package);
-
             try self.ctx.printer.append(
                 "UNINSTALLING PREVIOUS [{s}]\n",
                 .{try self.ctx.allocator.dupe(u8, lock_package.name)},
-                .{ .color = .red },
+                .{ .color = .red, .verbosity = 2 },
             );
             const previous_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
-
-            var split = std.mem.splitScalar(u8, package.id, '@');
-            const package_name = split.first();
-            try uninstaller.uninstall(package_name);
-
+            try uninstaller.uninstall(package.package_name);
             Locales.VERBOSITY_MODE = previous_verbosity;
         }
     }
@@ -191,10 +187,7 @@ pub fn install(
     try self.ctx.logger.infof("Getting Package...", .{}, @src());
     self.ctx.fetcher.install_unverified_packages = self.install_unverified_packages;
     var package = try Package.init(
-        self.ctx.allocator,
-        &self.ctx.printer,
-        &self.ctx.fetcher,
-        self.ctx.logger,
+        self.ctx,
         package_name,
         package_version,
     );
@@ -203,12 +196,10 @@ pub fn install(
     if (v.len == 0) {
         if (try self.isPackageInstalled(package.id)) return error.AlreadyInstalled;
     }
-
-    try self.setPackage(package);
-
     const parsed = package.package;
     try self.uninstallPrevious(package);
 
+    try self.setPackage(package);
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Extras.package_files.lock,
@@ -219,18 +210,35 @@ pub fn install(
         try self.ctx.printer.append("WARNING: ", .{}, .{
             .color = .red,
             .weight = .bold,
+            .verbosity = 2,
         });
-        try self.ctx.printer.append("ZIG VERSIONS ARE NOT MATCHING!\n", .{}, .{
-            .color = .blue,
-            .weight = .bold,
-        });
-        try self.ctx.printer.append("{s} Zig Version: {s}\n", .{ package.id, parsed.zig_version }, .{});
-        try self.ctx.printer.append("Your Zig Version: {s}\n\n", .{lock.value.root.zig_version}, .{});
+        try self.ctx.printer.append(
+            "ZIG VERSIONS ARE NOT MATCHING!\n",
+            .{},
+            .{
+                .color = .blue,
+                .weight = .bold,
+                .verbosity = 2,
+            },
+        );
+        try self.ctx.printer.append(
+            "{s} Zig Version: {s}\n",
+            .{ package.id, parsed.zig_version },
+            .{ .verbosity = 2 },
+        );
+        try self.ctx.printer.append(
+            "Your Zig Version: {s}\n\n",
+            .{lock.value.root.zig_version},
+            .{ .verbosity = 2 },
+        );
     }
     try self.ctx.logger.infof("Checking Hash...", .{}, @src());
-    try self.ctx.printer.append("Checking Hash...\n", .{}, .{});
+    try self.ctx.printer.append("Checking Hash...\n", .{}, .{ .verbosity = 2 });
     if (std.mem.eql(u8, package.package.sha256sum, parsed.sha256sum)) {
-        try self.ctx.printer.append("  > HASH IDENTICAL\n", .{}, .{ .color = .green });
+        try self.ctx.printer.append(" > HASH IDENTICAL\n\n", .{}, .{
+            .color = .green,
+            .verbosity = 2,
+        });
     } else {
         return error.HashMismatch;
     }
@@ -249,7 +257,10 @@ fn setPackage(
     package: Package,
 ) !void {
     try self.ctx.logger.info("Setting Package...", @src());
-    try self.ctx.manifest.lockAdd(package);
+    try self.ctx.manifest.lockAdd(
+        package.id,
+        package.package,
+    );
 
     var injector = Injector.init(
         self.ctx.allocator,
@@ -341,12 +352,18 @@ pub fn installAll(self: *Installer) anyerror!void {
                 },
             }
         };
+
         try self.ctx.printer.append(
             " >> done!\n\n",
             .{},
             .{ .verbosity = 0, .color = .green },
         );
     }
+    try self.ctx.printer.append(
+        "\n",
+        .{},
+        .{ .verbosity = 0 },
+    );
     try self.ctx.printer.append(
         "Installed all!\n",
         .{},

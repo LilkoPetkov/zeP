@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Package = @import("core").Package;
+const Package = @import("package");
 const Context = @import("context");
 
 fn info(ctx: *Context) !void {
@@ -11,22 +11,18 @@ fn info(ctx: *Context) !void {
     const package_name = split.first();
     const package_version = split.next();
     var package = try Package.init(
-        ctx.allocator,
-        &ctx.printer,
-        &ctx.fetcher,
-        ctx.logger,
+        ctx,
         package_name,
         package_version,
     );
     defer package.deinit();
 
-    std.debug.print("Package Name: {s}\n", .{package_name});
-    std.debug.print("Version: {s}\n", .{package.package.version});
-    std.debug.print("Sha256Sum: {s}\n", .{package.package.sha256sum});
-    std.debug.print("Url: {s}\n", .{package.package.url});
-    std.debug.print("Root File: {s}\n", .{package.package.root_file});
-    std.debug.print("Zig Version: {s}\n", .{package.package.zig_version});
-    std.debug.print("\n", .{});
+    try ctx.printer.append("Package Name: {s}\n", .{package_name}, .{});
+    try ctx.printer.append("Version: {s}\n", .{package.package.version}, .{});
+    try ctx.printer.append("Sha256Sum: {s}\n", .{package.package.sha256sum}, .{});
+    try ctx.printer.append("Url: {s}\n", .{package.package.url}, .{});
+    try ctx.printer.append("Root File: {s}\n", .{package.package.root_file}, .{});
+    try ctx.printer.append("Zig Version: {s}\n\n", .{package.package.zig_version}, .{});
 }
 
 pub fn _infoController(ctx: *Context) !void {

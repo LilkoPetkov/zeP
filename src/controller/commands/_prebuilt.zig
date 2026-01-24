@@ -11,7 +11,7 @@ fn prebuiltBuild(ctx: *Context, prebuilt: *PreBuilt) !void {
     const name = ctx.cmds[3];
     const target = if (ctx.cmds.len < 5) "." else ctx.cmds[4];
     prebuilt.build(name, target) catch {
-        try ctx.printer.append("\nBuilding prebuilt has failed...\n\n", .{}, .{ .color = .red });
+        try ctx.printer.append("Building prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
     return;
 }
@@ -22,14 +22,14 @@ fn prebuiltUse(ctx: *Context, prebuilt: *PreBuilt) !void {
     const name = ctx.cmds[3];
     const target = if (ctx.cmds.len < 5) "." else ctx.cmds[4];
     prebuilt.use(name, target) catch {
-        try ctx.printer.append("\nUse prebuilt has failed...\n\n", .{}, .{ .color = .red });
+        try ctx.printer.append("Use prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
     return;
 }
 
 fn prebuiltList(ctx: *Context, prebuilt: *PreBuilt) !void {
     prebuilt.list() catch {
-        try ctx.printer.append("\nListing prebuilts failed...\n\n", .{}, .{ .color = .red });
+        try ctx.printer.append("Listing prebuilts failed...\n\n", .{}, .{ .color = .red });
     };
     return;
 }
@@ -39,7 +39,7 @@ fn prebuiltDelete(ctx: *Context, prebuilt: *PreBuilt) !void {
 
     const name = ctx.cmds[3];
     prebuilt.delete(name) catch {
-        try ctx.printer.append("\nDeleting prebuilt has failed...\n\n", .{}, .{ .color = .red });
+        try ctx.printer.append("Deleting prebuilt has failed...\n\n", .{}, .{ .color = .red });
     };
     return;
 }

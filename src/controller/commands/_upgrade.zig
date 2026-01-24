@@ -12,10 +12,10 @@ fn upgrade(ctx: *Context) !void {
 
         switch (err) {
             error.HashMismatch => {
-                try ctx.printer.append("\n  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
+                try ctx.printer.append("  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
             },
             else => {
-                try ctx.printer.append("\nUpgrading all has failed...\n\n", .{}, .{ .color = .red });
+                try ctx.printer.append("Upgrading all has failed...\n\n", .{}, .{ .color = .red });
             },
         }
     };

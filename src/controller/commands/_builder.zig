@@ -10,12 +10,12 @@ fn builder(ctx: *Context) !void {
         switch (err) {
             error.FileNotFound => {
                 try ctx.printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = .red });
-                try ctx.printer.append("\nSUGGESTION:\n", .{}, .{ .color = .blue });
+                try ctx.printer.append("SUGGESTION:\n", .{}, .{ .color = .blue });
                 try ctx.printer.append(" - Install zig\n $ zep zig install <version>\n\n", .{}, .{});
                 return error.ZigNotInstalled;
             },
             else => {
-                try ctx.printer.append("\nZig building failed!\nExiting.\n\n", .{}, .{ .color = .red });
+                try ctx.printer.append("Zig building failed!\nExiting.\n\n", .{}, .{ .color = .red });
                 return err;
             },
         }

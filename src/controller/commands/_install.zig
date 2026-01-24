@@ -34,10 +34,10 @@ fn install(ctx: *Context) !void {
 
             switch (err) {
                 error.AlreadyInstalled => {
-                    try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
+                    try ctx.printer.append("Already installed!\n\n", .{}, .{ .color = .yellow });
                 },
                 error.PackageNotFound => {
-                    try ctx.printer.append("\nPackage not Found!\n\n", .{}, .{ .color = .yellow });
+                    try ctx.printer.append("Package not Found!\n\n", .{}, .{ .color = .yellow });
                 },
                 error.HashMismatch => {
                     try ctx.printer.append(
@@ -50,7 +50,7 @@ fn install(ctx: *Context) !void {
                     );
                 },
                 else => {
-                    try ctx.printer.append("\nInstalling {s} has failed... {any}\n\n", .{ package, err }, .{ .color = .red });
+                    try ctx.printer.append("Installing {s} has failed... {any}\n\n", .{ package, err }, .{ .color = .red });
                 },
             }
         };
@@ -60,13 +60,13 @@ fn install(ctx: *Context) !void {
 
             switch (err) {
                 error.AlreadyInstalled => {
-                    try ctx.printer.append("\nAlready installed!\n\n", .{}, .{ .color = .yellow });
+                    try ctx.printer.append("Already installed!\n\n", .{}, .{ .color = .yellow });
                 },
                 error.HashMismatch => {
-                    try ctx.printer.append("\n  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
+                    try ctx.printer.append("  ! HASH MISMATCH!\nPLEASE REPORT!\n\n", .{}, .{ .color = .red });
                 },
                 else => {
-                    try ctx.printer.append("\nInstalling all has failed...\n\n", .{}, .{ .color = .red });
+                    try ctx.printer.append("Installing all has failed...\n\n", .{}, .{ .color = .red });
                 },
             }
         };

@@ -6,7 +6,6 @@ const Logger = @import("logger");
 const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
-const Printer = @import("cli").Printer;
 
 const zstd = @import("zstd.zig");
 
@@ -20,17 +19,14 @@ fn isInArray(haystack: []const []const u8, needle: []const u8) bool {
 /// Handles compression using zstd, and
 /// recursion.
 allocator: std.mem.Allocator,
-printer: Printer,
 paths: Constants.Paths.Paths,
 
 pub fn init(
     allocator: std.mem.Allocator,
-    printer: Printer,
     paths: Constants.Paths.Paths,
 ) Compressor {
     return Compressor{
         .allocator = allocator,
-        .printer = printer,
         .paths = paths,
     };
 }
@@ -104,13 +100,7 @@ pub fn compress(
     try Fs.deleteFileIfExists(archive_path);
 
     defer {
-        Fs.deleteFileIfExists(archive_path) catch {
-            self.printer.append(
-                "\nRemoving temp archive failed! [{s}]\n",
-                .{archive_path},
-                .{ .color = .red, .weight = .bold, .verbosity = 0 },
-            ) catch {};
-        };
+        Fs.deleteFileIfExists(archive_path) catch {};
         self.allocator.free(archive_path);
     }
 
@@ -207,5 +197,4 @@ pub fn decompress(self: *Compressor, zstd_path: []const u8, extract_path: []cons
             else => return err,
         }
     };
-    try self.printer.append(" > DECOMPRESSED!\n\n", .{}, .{ .color = .green });
 }

@@ -16,7 +16,7 @@ fn list(ctx: *Context) !void {
                 return;
             },
             else => {
-                try ctx.printer.append("\nListing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
+                try ctx.printer.append("Listing {s} has failed...\n\n", .{package_name}, .{ .color = .red });
             },
         }
     };

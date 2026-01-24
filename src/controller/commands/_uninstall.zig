@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const Uninstaller = @import("../../lib/packages/uninstall.zig");
-const Package = @import("core").Package;
+const Package = @import("package");
 
 const Context = @import("context");
 const Args = @import("args");
@@ -17,22 +17,18 @@ fn uninstall(ctx: *Context) !void {
     const uninstall_args = Args.parseUninstall(ctx.options);
     if (uninstall_args.global) {
         var p = try Package.init(
-            ctx.allocator,
-            &ctx.printer,
-            &ctx.fetcher,
-            ctx.logger,
+            ctx,
             package_name,
             package_version,
         );
         defer p.deinit();
         p.deletePackage(
             ctx.paths,
-            &ctx.manifest,
             uninstall_args.force,
         ) catch |err| {
             switch (err) {
                 error.InUse => {
-                    try ctx.printer.append("\nWARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package}, .{ .color = .red });
+                    try ctx.printer.append("WARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package}, .{ .color = .red });
                     try ctx.printer.append("Use - if you do not care\n $ zep uninstall [target]@[version] -g -f\n\n", .{}, .{ .color = .yellow });
                 },
                 error.NotInstalled => {
@@ -69,7 +65,7 @@ fn uninstall(ctx: *Context) !void {
                 );
             },
             else => {
-                try ctx.printer.append("\nUninstalling {s} has failed...\n\n", .{package_name}, .{ .color = .red });
+                try ctx.printer.append("Uninstalling {s} has failed...\n\n", .{package_name}, .{ .color = .red });
             },
         }
     };

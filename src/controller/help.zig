@@ -1,5 +1,6 @@
 const std = @import("std");
 const Context = @import("context");
+const Constants = @import("constants");
 
 const Commands = @import("commands.zig").Commands;
 
@@ -21,8 +22,8 @@ fn conv(c: []const u8) ?Commands {
 
 pub fn help(ctx: *Context) void {
     std.debug.print(
-        "A fast, minimal package manager for Zig projects.\n\n",
-        .{},
+        "\x1b[96m\x1b[1mZep\x1b[0m is a fast, minimal package manager for Zig. \x1b[30m({s})\x1b[0m\n\n",
+        .{Constants.Default.version},
     );
 
     const cmds = ctx.cmds;

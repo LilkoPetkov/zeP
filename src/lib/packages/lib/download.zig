@@ -4,9 +4,7 @@ const builtin = @import("builtin");
 pub const Downloader = @This();
 
 const Constants = @import("constants");
-
 const Fs = @import("io").Fs;
-const Package = @import("core").Package;
 
 const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 
@@ -136,7 +134,7 @@ fn fetchPackage(
         &.{ self.ctx.paths.pkg_root, package_id },
     );
     defer self.ctx.allocator.free(path);
-    if (Fs.existsDir(path)) try Fs.deleteTreeIfExists(path);
+    if (Fs.existsDir(path)) return;
 
     try self.ctx.printer.append("Fetching package... [{s}]\n", .{url}, .{});
     var split = std.mem.splitAny(u8, package_id, "@");
@@ -184,7 +182,6 @@ pub fn downloadPackage(
     install_unverified_packages: bool,
 ) !void {
     try self.ctx.logger.infof("Downloading Package {s}", .{package_id}, @src());
-    try self.ctx.printer.append("Downloading Package...\n", .{}, .{});
 
     const exists = try self.doesPackageExist(package_id);
     if (exists) {
@@ -192,13 +189,29 @@ pub fn downloadPackage(
         return;
     }
 
+    try self.ctx.printer.append("Checking Cache...\n", .{}, .{
+        .verbosity = 2,
+    });
     const is_cached = try self.cacher.isPackageCached(package_id);
     if (is_cached) {
+        try self.ctx.printer.append(
+            " > CACHE HIT!\n\n",
+            .{},
+            .{
+                .color = .green,
+            },
+        );
         self.cacher.getPackageFromCache(package_id) catch {
             try self.ctx.printer.append(" ! CACHE FAILED\n\n", .{}, .{ .color = .red });
         };
     } else {
-        try self.ctx.printer.append(" > CACHE MISS!\n\n", .{}, .{});
+        try self.ctx.printer.append(
+            " > CACHE MISS!\n\n",
+            .{},
+            .{
+                .color = .bright_red,
+            },
+        );
         try self.fetchPackage(
             package_id,
             url,

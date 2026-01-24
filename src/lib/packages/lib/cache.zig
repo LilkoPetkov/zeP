@@ -5,7 +5,6 @@ pub const Cacher = @This();
 const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
-const Package = @import("core").Package;
 
 const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
 
@@ -79,7 +78,6 @@ pub fn isPackageCached(
 ) !bool {
     try self.ctx.logger.info("Checking Cache", @src());
 
-    try self.ctx.printer.append("\nChecking Cache...\n", .{}, .{});
     const path = try self.cacheFilePath(
         package_id,
     );
@@ -91,8 +89,6 @@ pub fn getPackageFromCache(
     package_id: []const u8,
 ) !void {
     try self.ctx.logger.info("Getting Cache", @src());
-
-    try self.ctx.printer.append(" > CACHE HIT!\n", .{}, .{ .color = .green });
 
     const temporary_output_path = try self.tmpOutputPath(package_id);
     var temporary_directory = try Fs.openOrCreateDir(temporary_output_path);

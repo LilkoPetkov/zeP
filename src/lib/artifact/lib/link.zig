@@ -37,11 +37,12 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
         const artifact_path = try std.fs.path.join(ctx.allocator, &.{ absolute_path, exe });
         defer ctx.allocator.free(artifact_path);
         if (!Fs.existsFile(artifact_path)) {
-            std.debug.print(
+            try ctx.printer.append(
                 "\n{s} file does not exists! {s}\n",
                 .{
                     if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
                 },
+                .{},
             );
             return error.FileNotFound;
         }
@@ -75,11 +76,12 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
         defer ctx.allocator.free(artifact_path);
 
         if (!Fs.existsFile(artifact_path)) {
-            std.debug.print(
+            try ctx.printer.append(
                 "\n{s} file does not exists! {s}\n",
                 .{
                     if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
                 },
+                .{},
             );
             return error.FileNotFound;
         }

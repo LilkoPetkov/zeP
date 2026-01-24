@@ -1,6 +1,7 @@
 const std = @import("std");
 const Structs = @import("structs");
 const Constants = @import("constants");
+const Locales = @import("locales");
 
 const Artifact = @import("../../lib/artifact/artifact.zig");
 const Context = @import("context");
@@ -32,6 +33,11 @@ fn artifactInstall(ctx: *Context, artifact: *Artifact) !void {
             error.AlreadyInstalled => {
                 try ctx.printer.append("{s} version already installed.\n", .{artifact.artifact_name}, .{});
                 try ctx.printer.append("Switching to {s} - {s}.\n\n", .{ target_version, target }, .{});
+
+                const previous_verbosity = Locales.VERBOSITY_MODE;
+                Locales.VERBOSITY_MODE = 0;
+                try artifactSwitch(ctx, artifact);
+                Locales.VERBOSITY_MODE = previous_verbosity;
             },
             error.InvalidOS => {
                 try ctx.printer.append("Invalid Operating System. Installed, but not switched.\n", .{}, .{});
@@ -139,6 +145,34 @@ fn artifactUpgrade(ctx: *Context, artifact: *Artifact) !void {
     return;
 }
 
+fn artifactCache(ctx: *Context, artifact: *Artifact) !void {
+    if (ctx.cmds.len < 4) return error.MissingArguments;
+    const cache_cmd = ctx.cmds[3];
+    if (std.mem.eql(u8, cache_cmd, "list")) {
+        try artifactCacheList(ctx, artifact);
+    } else if (std.mem.eql(u8, cache_cmd, "size")) {
+        try artifactCacheSize(ctx, artifact);
+    } else if (std.mem.eql(u8, cache_cmd, "clean")) {
+        try artifactCacheClean(ctx, artifact);
+    }
+}
+
+fn artifactCacheList(_: *Context, artifact: *Artifact) !void {
+    try artifact.listCache();
+    return;
+}
+
+fn artifactCacheClean(ctx: *Context, artifact: *Artifact) !void {
+    const target_version = if (ctx.cmds.len < 5) null else ctx.cmds[4];
+    try artifact.cleanCache(target_version);
+    return;
+}
+
+fn artifactCacheSize(_: *Context, artifact: *Artifact) !void {
+    try artifact.sizeCache();
+    return;
+}
+
 pub fn _artifactController(
     ctx: *Context,
     artifact_type: Structs.Extras.ArtifactType,
@@ -170,6 +204,8 @@ pub fn _artifactController(
         std.mem.eql(u8, arg, "ls"))
     {
         try artifactList(ctx, &artifact);
+    } else if (std.mem.eql(u8, arg, "cache")) {
+        try artifactCache(ctx, &artifact);
     } else {
         switch (artifact_type) {
             .zep => return error.ZepInvalidSubcommand,

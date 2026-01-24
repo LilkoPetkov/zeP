@@ -4,7 +4,11 @@ const Constants = @import("constants");
 const Context = @import("context");
 
 fn version(ctx: *Context) !void {
-    try ctx.printer.append("zeP {s}\n", .{Constants.Default.version}, .{});
+    try ctx.printer.append(
+        "{s}",
+        .{Constants.Default.version},
+        .{},
+    );
     return;
 }
 
