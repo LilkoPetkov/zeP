@@ -115,18 +115,18 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     }
 
     // First verify that we are in zep project
-    if (Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (Fs.existsFile(Constants.Default.package_files.lock)) {
         const lock = try manifest.readManifest(
             Structs.ZepFiles.Lock,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
         );
         defer lock.deinit();
-        if (lock.value.schema != Constants.Extras.package_files.lock_schema_version) {
+        if (lock.value.schema != Constants.Default.package_files.lock_schema_version) {
             try logger.info("Correcting Lock file...", @src());
 
             try printer.append("Lock file schema is NOT matching with zep version.\nAttempting to fix!\n", .{}, .{ .color = .red });
 
-            try Fs.deleteFileIfExists(Constants.Extras.package_files.lock);
+            try Fs.deleteFileIfExists(Constants.Default.package_files.lock);
             const prev_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
             var installer = Installer.init(&ctx);

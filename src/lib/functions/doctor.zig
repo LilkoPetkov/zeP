@@ -14,25 +14,25 @@ pub fn doctor(
     var is_there_issues = false;
 
     // First verify that we are in zep project
-    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (!Fs.existsFile(Constants.Default.package_files.lock)) {
         try ctx.printer.append("Lock file schema is missing.\n", .{}, .{ .color = .red });
     }
 
     var lock = try ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
-    if (lock.value.schema == Constants.Extras.package_files.lock_schema_version) {
+    if (lock.value.schema == Constants.Default.package_files.lock_schema_version) {
         try ctx.printer.append("Lock file schema is fine.\n", .{}, .{ .color = .green });
     } else if (fix_issues) {
         try ctx.printer.append("Lock file schema is NOT matching with zep version.\n", .{}, .{ .color = .red });
-        lock.value.schema = Constants.Extras.package_files.lock_schema_version;
+        lock.value.schema = Constants.Default.package_files.lock_schema_version;
 
         try ctx.manifest.writeManifest(
             Structs.ZepFiles.Lock,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
             lock.value,
         );
         try ctx.printer.append("Fixed.\n", .{}, .{ .color = .green });

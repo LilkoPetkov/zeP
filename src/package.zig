@@ -20,7 +20,7 @@ fn resolveVersion(
     if (package_version) |v| {
         const lock = try ctx.manifest.readManifest(
             Structs.ZepFiles.Lock,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
         );
         defer lock.deinit();
         const id = try std.fmt.allocPrint(

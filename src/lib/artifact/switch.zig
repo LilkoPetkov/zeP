@@ -71,17 +71,17 @@ pub fn switchVersion(
         if (artifact_type == .zep) break :blk;
 
         // all need to match for it to be in a zep project
-        if (!Fs.existsFile(Constants.Extras.package_files.lock)) break :blk;
+        if (!Fs.existsFile(Constants.Default.package_files.lock)) break :blk;
         var lock = try self.ctx.manifest.readManifest(
             Structs.ZepFiles.Lock,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
         );
         defer lock.deinit();
 
         lock.value.root.zig_version = version;
         self.ctx.manifest.writeManifest(
             Structs.ZepFiles.Lock,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
             lock.value,
         ) catch {
             return error.LockUpdateFailed;

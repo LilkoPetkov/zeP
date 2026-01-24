@@ -27,7 +27,7 @@ pub fn upgrade(
     const prev_verbosity = Locales.VERBOSITY_MODE;
     Locales.VERBOSITY_MODE = 0;
 
-    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Extras.package_files.lock);
+    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Default.package_files.lock);
     defer lock.deinit();
 
     var installer = Installer.init(self.ctx);

@@ -226,7 +226,7 @@ pub fn create(self: *Package) !void {
         },
     };
 
-    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Extras.package_files.lock);
+    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Default.package_files.lock);
     defer lock.deinit();
 
     const tags = try std.mem.join(self.ctx.allocator, ",", lock.value.root.tags);

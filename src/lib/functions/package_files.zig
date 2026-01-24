@@ -16,7 +16,7 @@ const Context = @import("context");
 ctx: *Context,
 
 pub fn init(ctx: *Context) !PackageFiles {
-    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (!Fs.existsFile(Constants.Default.package_files.lock)) {
         try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
@@ -31,7 +31,7 @@ pub fn modify(self: *PackageFiles) !void {
 
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -114,7 +114,7 @@ pub fn modify(self: *PackageFiles) !void {
 
     try self.ctx.manifest.writeManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 

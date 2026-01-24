@@ -13,7 +13,7 @@ const Init = @import("init.zig");
 const Context = @import("context");
 pub fn purge(ctx: *Context) !void {
     try ctx.logger.info("Purging Packages", @src());
-    const lock = try ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Extras.package_files.lock);
+    const lock = try ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Default.package_files.lock);
     defer lock.deinit();
 
     try ctx.printer.append("This project contains {d} packages.\n", .{lock.value.packages.len}, .{});
@@ -36,7 +36,7 @@ pub fn purge(ctx: *Context) !void {
     const previous_verbosity = Locales.VERBOSITY_MODE;
     Locales.VERBOSITY_MODE = 0;
 
-    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (!Fs.existsFile(Constants.Default.package_files.lock)) {
         var initer = try Init.init(
             ctx,
             true,

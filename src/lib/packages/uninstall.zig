@@ -28,7 +28,7 @@ pub fn uninstall(
 
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     var package_version: []const u8 = "";
     for (lock.value.packages) |package| {
@@ -72,7 +72,7 @@ pub fn uninstall(
     const symbolic_link_path = try std.fs.path.join(
         self.ctx.allocator,
         &.{
-            Constants.Extras.package_files.zep_folder,
+            Constants.Default.package_files.zep_folder,
             package_name,
         },
     );

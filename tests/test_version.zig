@@ -14,7 +14,7 @@ test "version comparison" {
     const lock = try core.Json.parseJsonFromFile(
         test_allocator,
         structs.ZepFiles.Lock,
-        constants.Extras.package_files.lock,
+        constants.Default.package_files.lock,
         constants.Default.mb,
     );
     defer lock.deinit();

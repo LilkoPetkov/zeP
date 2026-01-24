@@ -161,42 +161,6 @@ pub fn removePathFromManifest(
     try Json.writePretty(self.allocator, self.paths.pkg_manifest, package_manifest.value);
 }
 
-pub fn manifestAdd(
-    self: *Manifest,
-    pkg: *Structs.ZepFiles.Package,
-    id: []const u8,
-) !void {
-    pkg.packages = try filterOut(
-        self.allocator,
-        pkg.packages,
-        id,
-        []const u8,
-        struct {
-            fn match(a: []const u8, b: []const u8) bool {
-                return std.mem.startsWith(u8, a, b); // first remove the previous package Name
-            }
-        }.match,
-    );
-
-    pkg.packages = try appendUnique(
-        []const u8,
-        pkg.packages,
-        id,
-        self.allocator,
-        struct {
-            fn match(a: []const u8, b: []const u8) bool {
-                return std.mem.startsWith(u8, a, b);
-            }
-        }.match,
-    );
-
-    try Json.writePretty(
-        self.allocator,
-        Constants.Extras.package_files.manifest,
-        pkg,
-    );
-}
-
 pub fn lockAdd(
     self: *Manifest,
     id: []const u8,
@@ -204,7 +168,7 @@ pub fn lockAdd(
 ) !void {
     var lock = try self.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -266,7 +230,7 @@ pub fn lockAdd(
 
     try Json.writePretty(
         self.allocator,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 }
@@ -277,7 +241,7 @@ pub fn lockRemove(
 ) !void {
     var lock = try self.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -307,7 +271,7 @@ pub fn lockRemove(
 
     try Json.writePretty(
         self.allocator,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 }

@@ -16,7 +16,7 @@ const Context = @import("context");
 ctx: *Context,
 
 pub fn init(ctx: *Context) !Command {
-    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (!Fs.existsFile(Constants.Default.package_files.lock)) {
         try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
@@ -31,7 +31,7 @@ pub fn add(self: *Command) !void {
 
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -102,7 +102,7 @@ pub fn add(self: *Command) !void {
     lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 
@@ -115,7 +115,7 @@ pub fn list(self: *Command) !void {
 
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -130,7 +130,7 @@ pub fn remove(self: *Command, key: []const u8) !void {
 
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -145,7 +145,7 @@ pub fn remove(self: *Command, key: []const u8) !void {
     lock.value.root.cmd = cmds.items;
     try self.ctx.manifest.writeManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 
@@ -158,7 +158,7 @@ pub fn run(self: *Command, key: []const u8) !void {
 
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 

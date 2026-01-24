@@ -13,7 +13,7 @@ pub fn build(ctx: *Context) !std.ArrayList([]u8) {
 
     const lock = try ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 

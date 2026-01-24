@@ -100,21 +100,21 @@ pub fn commitInit(self: *Init) !void {
 
 fn createFolders(_: *Init) !void {
     const cwd = std.fs.cwd();
-    _ = cwd.makeDir(Constants.Extras.package_files.zep_folder) catch |err| switch (err) {
+    _ = cwd.makeDir(Constants.Default.package_files.zep_folder) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
 }
 
 fn createFiles(self: *Init) !void {
-    _ = try Fs.openOrCreateFile(Constants.Extras.package_files.injector);
+    _ = try Fs.openOrCreateFile(Constants.Default.package_files.injector);
 
     var lock = Structs.ZepFiles.Lock{};
     lock.root.zig_version = self.zig_version;
-    if (!Fs.existsFile(Constants.Extras.package_files.lock)) {
+    if (!Fs.existsFile(Constants.Default.package_files.lock)) {
         try Json.writePretty(
             self.ctx.allocator,
-            Constants.Extras.package_files.lock,
+            Constants.Default.package_files.lock,
             lock,
         );
     }

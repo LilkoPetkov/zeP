@@ -55,7 +55,7 @@ fn isPackageInLock(
 ) !bool {
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -73,7 +73,7 @@ fn isPackageInZep(
     const target_path = try std.fs.path.join(
         self.ctx.allocator,
         &.{
-            Constants.Extras.package_files.zep_folder,
+            Constants.Default.package_files.zep_folder,
             package_name,
         },
     );
@@ -118,7 +118,7 @@ fn isPackageCorrupt(
         self.ctx.allocator,
         "{s}/{s}",
         .{
-            Constants.Extras.package_files.zep_folder,
+            Constants.Default.package_files.zep_folder,
             package_name,
         },
     );
@@ -145,7 +145,7 @@ fn uninstallPrevious(
 
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -202,7 +202,7 @@ pub fn install(
     try self.setPackage(package);
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
 
     defer lock.deinit();
@@ -284,7 +284,7 @@ fn setPackage(
     const relative_symbolic_link_path = try std.fs.path.join(
         self.ctx.allocator,
         &.{
-            Constants.Extras.package_files.zep_folder,
+            Constants.Default.package_files.zep_folder,
             package.package_name,
         },
     );
@@ -320,7 +320,7 @@ pub fn installAll(self: *Installer) anyerror!void {
 
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
     for (lock.value.root.packages) |package_id| {

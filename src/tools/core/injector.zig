@@ -133,7 +133,7 @@ fn shouldInject(
 pub fn initInjector(self: *Injector) !void {
     var lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -146,9 +146,9 @@ pub fn initInjector(self: *Injector) !void {
         try snippets.append(self.allocator, try self.renderInjector(name, pkg.root_file));
     }
 
-    try Fs.deleteFileIfExists(Constants.Extras.package_files.injector);
+    try Fs.deleteFileIfExists(Constants.Default.package_files.injector);
 
-    var file = try Fs.openOrCreateFile(Constants.Extras.package_files.injector);
+    var file = try Fs.openOrCreateFile(Constants.Default.package_files.injector);
     defer file.close();
 
     const header =
@@ -183,7 +183,7 @@ fn importModule(
 ) !inject_method {
     const lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
 
@@ -270,7 +270,7 @@ fn parseModuleDefinition(
 pub fn injectIntoBuildZig(self: *Injector) !void {
     var lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
     );
     defer lock.deinit();
     const included_modules = lock.value.included_modules;
@@ -465,7 +465,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
     lock.value.excluded_modules = new_excluded_modules.items;
     try self.manifest.writeManifest(
         Structs.ZepFiles.Lock,
-        Constants.Extras.package_files.lock,
+        Constants.Default.package_files.lock,
         lock.value,
     );
 
