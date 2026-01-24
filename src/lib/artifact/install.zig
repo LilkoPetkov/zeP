@@ -77,7 +77,7 @@ fn fetchData(
     } else {
         try self.ctx.printer.append("Data found in cache!\n\n", .{}, .{});
     }
-    try self.ctx.printer.append("Decompressing.\n", .{}, .{});
+    try self.ctx.printer.append("Decompressing...\n", .{}, .{});
 
     // Open the downloaded file
     var compressed_file = try Fs.openOrCreateFile(target_path);
@@ -303,7 +303,7 @@ fn decompressXz(
             self.ctx.printer.pop(1);
         }
 
-        var chunk: [4096]u8 = undefined;
+        var chunk: [Constants.Default.kb * 16]u8 = undefined;
         const bytes_read = try decompressed_reader.read(chunk[0..]);
         progress += bytes_read;
 
@@ -318,7 +318,7 @@ fn decompressXz(
     }
     var r = std.Io.Reader.fixed(try buf.toOwnedSlice(self.ctx.allocator));
     try self.ctx.printer.append(
-        "\rDecompressed!\n",
+        "\nDecompressed!\n",
         .{},
         .{},
     );
