@@ -16,25 +16,25 @@
     ],
     "dev_packages": [],
     "build": {
-      "entry": "/src/main.zig",
+      "entry": "src/main.zig",
       "target": "x86_64-windows"
     }
   },
   "packages": [
-    {
-      "name": "mvzr@0.3.7",
-      "hash": "c3c797c0b6dda78ee206be823bbd505c612d533816fd7b12435ed1ae20ec0597",
-      "source": "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.zip",
-      "zig_version": "0.15.0",
-      "root_file": "/src/mvzr.zig",
-      "packages": []
-    },
     {
       "name": "logly@0.1.0",
       "hash": "144f509d7acf6abd810aff6fd2b68376bdd3d75dd38dc6ad48dad394aa991334",
       "source": "https://github.com/muhammad-fiaz/logly.zig/archive/refs/tags/0.1.0.zip",
       "zig_version": "0.15.1",
       "root_file": "/src/logly.zig",
+      "packages": []
+    },
+    {
+      "name": "mvzr@0.3.7",
+      "hash": "c3c797c0b6dda78ee206be823bbd505c612d533816fd7b12435ed1ae20ec0597",
+      "source": "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.zip",
+      "zig_version": "0.15.0",
+      "root_file": "/src/mvzr.zig",
       "packages": []
     }
   ],
