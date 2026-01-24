@@ -40,14 +40,12 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     var printer = Printer.init(alloc) catch {
         return error.OutOfMemory;
     };
-    try printer.append("\n", .{}, .{});
 
     var manifest = Manifest.init(alloc, paths);
     const fetcher = Fetch.init(alloc, paths, manifest);
 
     const compressor = Compressor.init(
         alloc,
-        printer,
         paths,
     );
 
@@ -93,7 +91,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
 
     const zep_version_exists = Fs.existsFile(paths.zep_manifest);
     if (!zep_version_exists) {
-        try printer.append("\nzep appears to be running outside fitting directory. Run '$ zep zep install'?\n", .{}, .{});
+        try printer.append("zep appears to be running outside fitting directory. Run '$ zep zep install'?\n", .{}, .{});
         const answer = try Prompt.input(
             alloc,
             &printer,
@@ -101,8 +99,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             .{},
         );
         if (answer.len == 0 or
-            std.mem.startsWith(u8, answer, "y") or
-            std.mem.startsWith(u8, answer, "Y"))
+            !std.mem.startsWith(u8, answer, "n") or
+            !std.mem.startsWith(u8, answer, "N"))
         {
             try logger.info("Installing latest zep version...", @src());
 
