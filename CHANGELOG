@@ -19,6 +19,8 @@ Removed clap.zig from dependecies, as it was giving more trouble than needed.
 Verbosity can be specified
 During Installation progress is displayed [zig/zep installations]
 Added Cache control for artifacts (Zig/Zep)
+Printing Changes
+Command name changes (added aliases aswell)
 
 1.0.2 (Jan 11th, 2026)
 Testing added [/tests]
