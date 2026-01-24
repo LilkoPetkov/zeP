@@ -17,7 +17,8 @@ When creating a new package, most data is taken from the .lock file instead of b
 Responses for y/N answers; "Ok.".
 Removed clap.zig from dependecies, as it was giving more trouble than needed.
 Verbosity can be specified
-During Installation progress is displayed [zep installations]
+During Installation progress is displayed [zig/zep installations]
+Added Cache control for artifacts (Zig/Zep)
 
 1.0.2 (Jan 11th, 2026)
 Testing added [/tests]
@@ -35,6 +36,6 @@ Fixed init bug
 Removed important files/folders from the filters [/src/constants/extras.zig]
 
 1.0.0 (Jan 9th, 2026)
-Errors imporved
+Errors improved
 Logging added
 Docs updated
