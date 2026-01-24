@@ -210,7 +210,7 @@ fn getSize(self: *Cache) !u64 {
 pub fn size(self: *Cache) !void {
     try self.ctx.logger.info("Getting Cache Size", @src());
 
-    try self.ctx.printer.append("\nGetting cache size...\n", .{}, .{});
+    try self.ctx.printer.append("Getting cache size...\n", .{}, .{});
     const cache_size = try self.getSize();
     try self.ctx.printer.append("Size:\n{d} Bytes\n{d} KB\n{d} MB\n\n", .{ cache_size, cache_size / 1024, cache_size / 1024 / 1024 }, .{});
 }
