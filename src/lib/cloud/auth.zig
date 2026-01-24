@@ -17,7 +17,7 @@ const Context = @import("context");
 const mvzr = @import("mvzr");
 
 fn verifyEmail(a: []const u8) bool {
-    const email_patt = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
+    const email_patt = "^[A-Za-z0-9\\.]+@([A-Za-z0-9]+\\.)+[a-z]{2,4}$";
     const email_regex = mvzr.compile(email_patt).?;
     return email_regex.isMatch(a);
 }
@@ -333,7 +333,7 @@ pub fn login(self: *Auth) !void {
         return error.AlreadyAuthed;
     }
 
-    try self.ctx.printer.append("Login:\n\n", .{}, .{
+    try self.ctx.printer.append("Login:\n", .{}, .{
         .color = .yellow,
         .weight = .bold,
     });
