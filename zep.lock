@@ -51,6 +51,8 @@
     "zep_test_module",
     "structs_mod",
     "ios_mod",
-    "cores_mod"
+    "clis_mod",
+    "cores_mod",
+    "zep_test_module"
   ]
 }
