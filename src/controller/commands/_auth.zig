@@ -101,8 +101,34 @@ fn authLogout(ctx: *Context, auth: *Auth) !void {
     };
 }
 
-fn authWhoami(_: *Context, auth: *Auth) !void {
-    try auth.whoami();
+fn authWhoami(ctx: *Context, auth: *Auth) !void {
+    auth.whoami() catch |err| {
+        switch (err) {
+            error.NotAuthed => {
+                try ctx.logger.err("Not Authenticated", @src());
+                try ctx.printer.append(
+                    "Not authenticated.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            error.FetchFailed => {
+                try ctx.logger.err("Fetch Failed", @src());
+                try ctx.printer.append(
+                    "Fetching whoami failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+            else => {
+                try ctx.printer.append(
+                    "Whoami failed.\n",
+                    .{},
+                    .{ .color = .bright_red },
+                );
+            },
+        }
+    };
     return;
 }
 
