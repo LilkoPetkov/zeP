@@ -100,7 +100,7 @@ pub fn requestPackage(self: *CustomPackage) !void {
     );
     defer self.ctx.allocator.free(custom_package_path);
     if (Fs.existsFile(custom_package_path)) {
-        try self.ctx.printer.append("-- PACKAGE EXISTS [ADD VERSION MODE] --\n\n", .{}, .{
+        try self.ctx.printer.append("Add version [package exists]:\n\n", .{}, .{
             .color = .yellow,
             .weight = .bold,
         });
@@ -160,7 +160,7 @@ fn addVersionToPackage(self: *CustomPackage, custom_package_path: []const u8, ve
     const versions = parsed.value.versions;
     for (versions) |v| {
         if (std.mem.eql(u8, v.version, version.version)) {
-            try self.ctx.printer.append("\nSpecified version already in use!\nOverwriting...\n", .{}, .{ .color = .red });
+            try self.ctx.printer.append("Specified version already in use!\nOverwriting...\n", .{}, .{ .color = .red });
             continue;
         }
         try versions_array.append(self.ctx.allocator, v);

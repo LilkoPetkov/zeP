@@ -405,7 +405,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
         self.printer.pop(module_count * 2); // pop the prompt, aswell as the answer
         try self.printer.clearLines(module_count);
 
-        try self.printer.append("\nzeP import plan:\n\n", .{}, .{ .color = .blue, .weight = .bold });
+        try self.printer.append("zeP import plan:\n\n", .{}, .{ .color = .blue, .weight = .bold });
 
         try self.printer.append("Will import:\n", .{}, .{});
         var inc_diff = false;

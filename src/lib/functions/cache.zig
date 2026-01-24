@@ -131,7 +131,7 @@ pub fn clean(self: *Cache, name: ?[]const u8) !void {
 
     var opened_cached_iter = opened_cached.iterate();
 
-    try self.ctx.printer.append("\nCleaning cache:\n", .{}, .{});
+    try self.ctx.printer.append("Cleaning cache:\n", .{}, .{});
 
     const UNITS = [5][]const u8{ "B", "KB", "MB", "GB", "TB" };
     var unit_depth: u8 = 0;

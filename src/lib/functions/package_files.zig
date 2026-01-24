@@ -17,7 +17,7 @@ ctx: *Context,
 
 pub fn init(ctx: *Context) !PackageFiles {
     if (!Fs.existsFile(Constants.Default.package_files.lock)) {
-        try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
+        try ctx.printer.append("No zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
 

@@ -90,9 +90,7 @@ fn extractZip(self: *Downloader, extract_path: []const u8, path: []const u8) !vo
     var extract_directory = try Fs.openOrCreateDir(TEMPORARY_DIRECTORY_PATH);
     defer extract_directory.close();
     defer {
-        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {
-            self.ctx.printer.append("\nFailed to delete temp directory!\n", .{}, .{ .color = .red }) catch {};
-        };
+        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
     }
 
     var extract_file = try Fs.openFile(extract_path);

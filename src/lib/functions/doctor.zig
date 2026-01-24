@@ -79,6 +79,6 @@ pub fn doctor(
     }
 
     if (is_there_issues and !fix_issues) {
-        try ctx.printer.append("\nRun\n $ zep doctor --fix\n\nTo fix the mentioned issues automatically.\n\n", .{}, .{});
+        try ctx.printer.append("Run\n $ zep doctor --fix\n\nTo fix the mentioned issues automatically.\n\n", .{}, .{});
     }
 }

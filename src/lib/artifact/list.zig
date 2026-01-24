@@ -41,7 +41,7 @@ fn getVersionFromPath(_: *ArtifactLister, path: []const u8) []const u8 {
 pub fn listVersions(self: *ArtifactLister, artifact_type: Structs.Extras.ArtifactType) !void {
     try self.ctx.logger.infof("Listing {s}", .{if (artifact_type == .zig) "zig" else "zep"}, @src());
 
-    try self.ctx.printer.append("\nAvailable Artifact Versions:\n", .{}, .{});
+    try self.ctx.printer.append("Available Artifact Versions:\n", .{}, .{});
 
     const versions_directory = try std.fs.path.join(self.ctx.allocator, &.{
         if (artifact_type == .zig) self.ctx.paths.zig_root else self.ctx.paths.zep_root,

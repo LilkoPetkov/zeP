@@ -37,7 +37,7 @@ pub fn init(
         switch (err) {
             else => {
                 try ctx.printer.append("Zig is not installed!\nExiting!\n\n", .{}, .{ .color = .red });
-                try ctx.printer.append("\nSUGGESTION:\n", .{}, .{ .color = .blue });
+                try ctx.printer.append("SUGGESTION:\n", .{}, .{ .color = .blue });
                 try ctx.printer.append(" - Install zig\n $ zep zig install <version>\n\n", .{}, .{});
             },
         }

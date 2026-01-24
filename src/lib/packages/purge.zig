@@ -65,6 +65,6 @@ pub fn purge(ctx: *Context) !void {
         std.Thread.sleep(std.time.ms_per_s * 100);
     }
 
-    try ctx.printer.append("\nPurged packages!\n", .{}, .{ .verbosity = 0, .color = .green });
+    try ctx.printer.append("Purged packages!\n", .{}, .{ .verbosity = 0, .color = .green });
     Locales.VERBOSITY_MODE = previous_verbosity;
 }

@@ -38,7 +38,7 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
         defer ctx.allocator.free(artifact_path);
         if (!Fs.existsFile(artifact_path)) {
             try ctx.printer.append(
-                "\n{s} file does not exists! {s}\n",
+                "{s} file does not exists! {s}\n",
                 .{
                     if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
                 },
@@ -77,7 +77,7 @@ pub fn updateLink(artifact_type: Structs.Extras.ArtifactType, ctx: *Context) !vo
 
         if (!Fs.existsFile(artifact_path)) {
             try ctx.printer.append(
-                "\n{s} file does not exists! {s}\n",
+                "{s} file does not exists! {s}\n",
                 .{
                     if (artifact_type == .zig) "Zig" else "Zep", artifact_path,
                 },

@@ -17,7 +17,7 @@ ctx: *Context,
 
 pub fn init(ctx: *Context) !Command {
     if (!Fs.existsFile(Constants.Default.package_files.lock)) {
-        try ctx.printer.append("\nNo zep.lock file!\n", .{}, .{ .color = .red });
+        try ctx.printer.append("No zep.lock file!\n", .{}, .{ .color = .red });
         return error.ManifestNotFound;
     }
 
@@ -175,11 +175,11 @@ pub fn run(self: *Command, key: []const u8) !void {
             var exec_cmd = std.process.Child.init(args.items, self.ctx.allocator);
             _ = exec_cmd.spawnAndWait() catch {};
 
-            try self.ctx.printer.append("\nFinished executing!\n", .{}, .{ .color = .green });
+            try self.ctx.printer.append("Finished executing!\n", .{}, .{ .color = .green });
             return;
         }
         continue;
     }
-    try self.ctx.printer.append("\nCommand not found!\n", .{}, .{ .color = .red });
+    try self.ctx.printer.append("Command not found!\n", .{}, .{ .color = .red });
     return;
 }
