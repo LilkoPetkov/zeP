@@ -39,8 +39,8 @@ pub fn dispatcher(ctx: *Context, c: []const u8) !void {
         .version => {},
         else => {
             try ctx.printer.append(
-                "zeP {s}\n\n",
-                .{Constants.Default.version},
+                "zeP {s}+{s}\n\n",
+                .{ Constants.Default.version, Constants.Default.commit },
                 .{
                     .color = .bright_black,
                     .weight = .dim,
