@@ -82,7 +82,9 @@ pub fn init(
 }
 
 pub fn commitInit(self: *Init) !void {
-    try self.ctx.printer.append("Initing Zep project...\n", .{}, .{});
+    try self.ctx.printer.append("Initing Zep project...\n", .{}, .{
+        .verbosity = 2,
+    });
 
     try self.createFolders();
     try self.createFiles();
@@ -95,7 +97,10 @@ pub fn commitInit(self: *Init) !void {
         self.zig_version,
     );
 
-    try self.ctx.printer.append("Finished initing!\n\n", .{}, .{ .color = .green });
+    try self.ctx.printer.append("Finished initing!\n\n", .{}, .{
+        .color = .green,
+        .verbosity = 2,
+    });
 }
 
 fn createFolders(_: *Init) !void {

@@ -347,7 +347,7 @@ pub fn installAll(self: *Installer) anyerror!void {
                     try self.ctx.printer.append(
                         "  ! [ERROR] Failed to install - {s} [{any}]...\n",
                         .{ package_id, err },
-                        .{ .verbosity = 0 },
+                        .{ .verbosity = 0, .color = .red },
                     );
                 },
             }

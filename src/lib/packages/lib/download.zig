@@ -59,7 +59,9 @@ fn downloadAndExtract(
     if (fetched.status == .not_found)
         return error.NotFound;
 
-    try self.ctx.printer.append("Extracting...\n", .{}, .{});
+    try self.ctx.printer.append("Extracting...\n", .{}, .{
+        .verbosity = 3,
+    });
     if (archive_type == .zip) {
         try self.extractZip(extract_path, out_path);
     } else {
@@ -134,7 +136,9 @@ fn fetchPackage(
     defer self.ctx.allocator.free(path);
     if (Fs.existsDir(path)) return;
 
-    try self.ctx.printer.append("Fetching package... [{s}]\n", .{url}, .{});
+    try self.ctx.printer.append("Fetching package... [{s}]\n", .{url}, .{
+        .verbosity = 2,
+    });
     var split = std.mem.splitAny(u8, package_id, "@");
     const package_name = split.first();
     const package_version = split.next() orelse "";
@@ -183,7 +187,9 @@ pub fn downloadPackage(
 
     const exists = try self.doesPackageExist(package_id);
     if (exists) {
-        try self.ctx.printer.append(" > PACKAGE ALREADY EXISTS!\n", .{}, .{});
+        try self.ctx.printer.append(" > PACKAGE ALREADY EXISTS!\n", .{}, .{
+            .verbosity = 2,
+        });
         return;
     }
 
@@ -197,10 +203,18 @@ pub fn downloadPackage(
             .{},
             .{
                 .color = .green,
+                .verbosity = 2,
             },
         );
         self.cacher.getPackageFromCache(package_id) catch {
-            try self.ctx.printer.append(" ! CACHE FAILED\n\n", .{}, .{ .color = .red });
+            try self.ctx.printer.append(
+                " ! CACHE FAILED\n\n",
+                .{},
+                .{
+                    .color = .red,
+                    .verbosity = 2,
+                },
+            );
         };
     } else {
         try self.ctx.printer.append(
@@ -208,6 +222,7 @@ pub fn downloadPackage(
             .{},
             .{
                 .color = .bright_red,
+                .verbosity = 2,
             },
         );
         try self.fetchPackage(

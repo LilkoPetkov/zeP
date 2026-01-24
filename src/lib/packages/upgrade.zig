@@ -56,7 +56,7 @@ pub fn upgrade(
                     try self.ctx.printer.append(
                         "  ! [ERROR] Failed to upgrade - {s} [{any}]...\n",
                         .{ name, err },
-                        .{ .verbosity = 0 },
+                        .{ .verbosity = 0, .color = .red },
                     );
                 },
             }

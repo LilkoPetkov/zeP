@@ -73,18 +73,25 @@ fn fetchData(
         const time = read / std.time.ns_per_s;
         try self.ctx.printer.append("Took {d} seconds to download file.\n\n", .{time}, .{
             .color = .bright_black,
+            .verbosity = 2,
         });
     } else {
-        try self.ctx.printer.append("Data found in cache!\n\n", .{}, .{});
+        try self.ctx.printer.append("Data found in cache!\n\n", .{}, .{
+            .verbosity = 2,
+        });
     }
-    try self.ctx.printer.append("Decompressing...\n", .{}, .{});
+    try self.ctx.printer.append("Decompressing...\n", .{}, .{
+        .verbosity = 2,
+    });
 
     // Open the downloaded file
     var compressed_file = try Fs.openOrCreateFile(target_path);
     defer compressed_file.close();
 
     try self.ctx.logger.infof("Extracting compressed data from {s}...", .{tarball}, @src());
-    try self.ctx.printer.append("Extracting data...\n", .{}, .{});
+    try self.ctx.printer.append("Extracting data...\n", .{}, .{
+        .verbosity = 2,
+    });
 
     const decompressed_directory = try std.fs.path.join(
         self.ctx.allocator,
@@ -259,7 +266,7 @@ fn decompressZip(
         "Extracted {s} => {s}!\n",
         .{ extract_target, new_target },
         .{
-            .verbosity = 2,
+            .verbosity = 3,
         },
     );
     try std.fs.cwd().rename(extract_target, new_target);
@@ -335,7 +342,9 @@ fn decompressXz(
         .allocator = self.ctx.allocator,
     };
 
-    try self.ctx.printer.append("Piping Tar to File system!\n", .{}, .{});
+    try self.ctx.printer.append("Piping Tar to File system!\n", .{}, .{
+        .verbosity = 2,
+    });
     try std.tar.pipeToFileSystem(
         dir,
         &r,
@@ -354,7 +363,7 @@ fn decompressXz(
         "Extracted {s} => {s}!\n",
         .{ extract_target, new_target },
         .{
-            .verbosity = 2,
+            .verbosity = 3,
         },
     );
 
@@ -416,6 +425,7 @@ pub fn install(
 
     try self.ctx.printer.append("Manifest Up to Date!\n", .{}, .{
         .color = .green,
+        .verbosity = 2,
     });
 
     try self.ctx.printer.append("Switching to installed version...\n", .{}, .{

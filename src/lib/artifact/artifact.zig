@@ -110,7 +110,9 @@ pub fn getVersion(self: *Artifact, target_version: []const u8, target: []const u
     try self.ctx.printer.append(
         "Getting version {s}, with target {s}...\n",
         .{ target_version, target },
-        .{},
+        .{
+            .verbosity = 2,
+        },
     );
 
     const version_data = try self.fetchVersion(target_version);

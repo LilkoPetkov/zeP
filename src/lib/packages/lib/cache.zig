@@ -110,7 +110,9 @@ pub fn getPackageFromCache(
 pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
     try self.ctx.logger.info("Setting Cache", @src());
 
-    try self.ctx.printer.append("Package not cached...\n", .{}, .{});
+    try self.ctx.printer.append("Package not cached...\n", .{}, .{
+        .verbosity = 3,
+    });
 
     const target_folder = try std.fs.path.join(
         self.ctx.allocator,
@@ -121,10 +123,15 @@ pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
     );
     defer self.ctx.allocator.free(target_folder);
 
-    try self.ctx.printer.append("Caching now...\n", .{}, .{});
+    try self.ctx.printer.append("Caching now...\n", .{}, .{
+        .verbosity = 3,
+    });
     const compress_path = try self.cacheFilePath(package_id);
     try self.ctx.compressor.compress(target_folder, compress_path);
-    try self.ctx.printer.append(" > PACKAGE CACHED!\n\n", .{}, .{ .color = .green });
+    try self.ctx.printer.append(" > PACKAGE CACHED!\n\n", .{}, .{
+        .color = .green,
+        .verbosity = 3,
+    });
 }
 
 pub fn deletePackageFromCache(

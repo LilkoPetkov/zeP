@@ -65,7 +65,9 @@ pub fn createZigProject(
         zig_version = child.stdout[0 .. child.stdout.len - 1];
     }
 
-    try printer.append("Initing Zig project...\n", .{}, .{});
+    try printer.append("Initing Zig project...\n", .{}, .{
+        .verbosity = 2,
+    });
 
     const zig_main =
         \\
