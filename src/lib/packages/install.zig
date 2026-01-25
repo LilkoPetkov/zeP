@@ -319,7 +319,7 @@ pub fn installAll(self: *Installer) anyerror!void {
     defer lock.deinit();
     for (lock.value.root.packages) |package_id| {
         try self.ctx.printer.append(
-            " > Installing - {s}...\n",
+            " > Installing - {s} ",
             .{package_id},
             .{ .verbosity = 0 },
         );
@@ -345,21 +345,17 @@ pub fn installAll(self: *Installer) anyerror!void {
                     );
                 },
             }
+            continue;
         };
 
         try self.ctx.printer.append(
-            " >> done!\n\n",
+            " >> done!\n",
             .{},
             .{ .verbosity = 0, .color = .green },
         );
     }
     try self.ctx.printer.append(
-        "\n",
-        .{},
-        .{ .verbosity = 0 },
-    );
-    try self.ctx.printer.append(
-        "Installed all!\n",
+        "\nInstalled all!\n",
         .{},
         .{ .verbosity = 0, .color = .green },
     );

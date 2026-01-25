@@ -31,7 +31,7 @@ pub fn purge(ctx: *Context) !void {
         return;
     }
 
-    try ctx.printer.append("Purging packages...\n", .{}, .{});
+    try ctx.printer.append("\nPurging packages...\n", .{}, .{});
 
     const previous_verbosity = Locales.VERBOSITY_MODE;
     Locales.VERBOSITY_MODE = 0;
@@ -52,7 +52,7 @@ pub fn purge(ctx: *Context) !void {
     for (lock.value.root.packages) |package_id| {
         var split = std.mem.splitScalar(u8, package_id, '@');
         const package_name = split.first();
-        try ctx.printer.append(" > Uninstalling - {s}...\n", .{package_id}, .{ .verbosity = 0 });
+        try ctx.printer.append(" > Uninstalling - {s} ", .{package_id}, .{ .verbosity = 0 });
         uninstaller.uninstall(package_name) catch {
             try ctx.printer.append(" >> failed!\n", .{}, .{ .verbosity = 0, .color = .red });
             std.Thread.sleep(std.time.ms_per_s * 100);
@@ -65,6 +65,6 @@ pub fn purge(ctx: *Context) !void {
         std.Thread.sleep(std.time.ms_per_s * 100);
     }
 
-    try ctx.printer.append("Purged packages!\n", .{}, .{ .verbosity = 0, .color = .green });
+    try ctx.printer.append("\nPurged packages!\n", .{}, .{ .verbosity = 0, .color = .green });
     Locales.VERBOSITY_MODE = previous_verbosity;
 }
