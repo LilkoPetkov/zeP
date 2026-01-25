@@ -124,7 +124,6 @@ fn fetchPackage(
     self: *Downloader,
     package_id: []const u8,
     url: []const u8,
-    install_unverified_packages: bool,
 ) !void {
     try self.ctx.logger.infof("Fetching Package {s}", .{url}, @src());
 
@@ -143,7 +142,7 @@ fn fetchPackage(
     const package_name = split.first();
     const package_version = split.next() orelse "";
 
-    if (install_unverified_packages) {
+    if (self.ctx.fetcher.install_unverified_packages) {
         const u = resolveCloudUrl(self.ctx, package_name, package_version);
         if (u) |cloud_url| {
             try self.downloadAndExtract(
@@ -181,7 +180,6 @@ pub fn downloadPackage(
     self: *Downloader,
     package_id: []const u8,
     url: []const u8,
-    install_unverified_packages: bool,
 ) !void {
     try self.ctx.logger.infof("Downloading Package {s}", .{package_id}, @src());
 
@@ -228,7 +226,6 @@ pub fn downloadPackage(
         try self.fetchPackage(
             package_id,
             url,
-            install_unverified_packages,
         );
         self.cacher.setPackageToCache(package_id) catch {
             try self.ctx.printer.append(" ! CACHING FAILED\n\n", .{}, .{ .color = .red });

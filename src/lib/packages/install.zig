@@ -19,7 +19,6 @@ const Context = @import("context");
 ctx: *Context,
 downloader: Downloader,
 force_inject: bool = false,
-install_unverified_packages: bool = false,
 
 pub fn init(ctx: *Context) Installer {
     const downloader = Downloader.init(ctx);
@@ -175,6 +174,13 @@ pub fn install(
     package_version: ?[]const u8,
 ) !void {
     try self.ctx.logger.info("Installing Package", @src());
+    try self.ctx.printer.append(
+        "Installing Package {s}\n",
+        .{package_name},
+        .{
+            .verbosity = 3,
+        },
+    );
     const v = package_version orelse "";
     blk: {
         if (v.len == 0) break :blk;
@@ -185,7 +191,14 @@ pub fn install(
     }
 
     try self.ctx.logger.infof("Getting Package...", .{}, @src());
-    self.ctx.fetcher.install_unverified_packages = self.install_unverified_packages;
+    try self.ctx.printer.append(
+        "Getting Package version {s}\n",
+        .{package_version orelse "/ (latest)"},
+        .{
+            .verbosity = 3,
+        },
+    );
+
     var package = try Package.init(
         self.ctx,
         package_name,
@@ -193,6 +206,15 @@ pub fn install(
     );
     try self.ctx.logger.infof("Package received!", .{}, @src());
     defer package.deinit();
+
+    try self.ctx.printer.append(
+        "Found package {s}\n\n",
+        .{package.package.version},
+        .{
+            .verbosity = 3,
+        },
+    );
+
     if (v.len == 0) {
         if (try self.isPackageInstalled(package.id)) return error.AlreadyInstalled;
     }
@@ -246,7 +268,6 @@ pub fn install(
     try self.downloader.downloadPackage(
         package.id,
         parsed.url,
-        self.install_unverified_packages,
     );
 
     try self.ctx.printer.append("Successfully installed - {s}\n\n", .{package.package_name}, .{ .color = .green });

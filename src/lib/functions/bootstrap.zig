@@ -57,13 +57,14 @@ pub fn bootstrap(
     );
 
     try ctx.logger.info("Installing packages...", @src());
+
+    var installer = Installer.init(ctx);
+    defer installer.deinit();
+    ctx.fetcher.install_unverified_packages = true;
     for (pkgs) |pkg| {
         var p = std.mem.splitScalar(u8, pkg, '@');
         const package_name = p.first();
         const package_version = p.next();
-
-        var installer = Installer.init(ctx);
-        installer.install_unverified_packages = true;
 
         installer.install(
             package_name,

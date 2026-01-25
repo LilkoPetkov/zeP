@@ -122,18 +122,11 @@ pub fn init(
         package_version,
     );
 
-    // Create hash
+    // Create id
     const id = try std.fmt.allocPrint(ctx.allocator, "{s}@{s}", .{
         package_name,
         version.version,
     });
-
-    const hash = try Hash.hashDataByUrl(
-        ctx.allocator,
-        version.url,
-        ctx.logger,
-    );
-    try ctx.logger.infof("Hash found! [{s}]", .{hash}, @src());
 
     return Package{
         .ctx = ctx,

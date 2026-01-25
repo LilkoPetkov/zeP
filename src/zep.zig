@@ -130,7 +130,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             const prev_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
             var installer = Installer.init(&ctx);
-            installer.install_unverified_packages = true;
+            ctx.fetcher.install_unverified_packages = true;
 
             try installer.installAll();
             Locales.VERBOSITY_MODE = prev_verbosity;

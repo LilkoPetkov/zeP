@@ -49,10 +49,13 @@ pub fn purge(ctx: *Context) !void {
     var uninstaller = Uninstaller.init(
         ctx,
     );
+    defer uninstaller.deinit();
+
     for (lock.value.root.packages) |package_id| {
+        try ctx.printer.append(" > Uninstalling - {s} ", .{package_id}, .{ .verbosity = 0 });
+
         var split = std.mem.splitScalar(u8, package_id, '@');
         const package_name = split.first();
-        try ctx.printer.append(" > Uninstalling - {s} ", .{package_id}, .{ .verbosity = 0 });
         uninstaller.uninstall(package_name) catch {
             try ctx.printer.append(" >> failed!\n", .{}, .{ .verbosity = 0, .color = .red });
             std.Thread.sleep(std.time.ms_per_s * 100);
