@@ -21,8 +21,7 @@ fn install(ctx: *Context) !void {
         return error.InvalidArguments;
     }
 
-    installer.install_unverified_packages = install_args.unverified;
-
+    ctx.fetcher.install_unverified_packages = install_args.unverified;
     defer installer.deinit();
 
     if (target) |package| {
