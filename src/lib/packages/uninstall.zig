@@ -4,6 +4,7 @@ pub const Uninstaller = @This();
 
 const Constants = @import("constants");
 const Structs = @import("structs");
+const Package = @import("package");
 
 const Fs = @import("io").Fs;
 const Injector = @import("core").Injector;
@@ -51,15 +52,16 @@ pub fn uninstall(
         return error.NotInstalled;
     }
 
-    const package_id = try std.fmt.allocPrint(
-        self.ctx.allocator,
-        "{s}@{s}",
-        .{ package_name, package_version },
+    var package = try Package.init(
+        self.ctx,
+        package_name,
+        package_version,
     );
-    defer self.ctx.allocator.free(package_id);
+    defer package.deinit();
 
     try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{});
-    try self.ctx.manifest.lockRemove(package_id);
+    try package.lockRemove();
+
     var injector = Injector.init(
         self.ctx.allocator,
         &self.ctx.printer,
@@ -91,11 +93,8 @@ pub fn uninstall(
         // ! as the package can ONLY be deleted,
         // ! if no other project uses it
         // !
-        try self.ctx.manifest.removePathFromManifest(
-            package_id,
-            absolute_path,
-        );
+        try package.removePathFromManifest(absolute_path);
     }
-    try self.ctx.manifest.lockRemove(package_id);
+    try package.lockRemove();
     try self.ctx.printer.append("Successfully deleted - {s}\n\n", .{package_name}, .{ .color = .green });
 }

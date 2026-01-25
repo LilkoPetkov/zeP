@@ -9,6 +9,7 @@ const Logger = @import("logger").logly.Logger;
 const Fs = @import("io").Fs;
 const Printer = @import("cli").Printer;
 const Hash = @import("core").Hash;
+const Json = @import("core").Json;
 
 const Context = @import("context").Context;
 
@@ -195,4 +196,250 @@ pub fn deletePackage(
     if (Fs.existsDir(path)) {
         try Fs.deleteTreeIfExists(path);
     }
+}
+
+pub fn addPathToManifest(
+    self: *Package,
+    linked_path: []const u8,
+) !void {
+    var package_manifest = try self.ctx.manifest.readManifest(
+        Structs.Manifests.Packages,
+        self.ctx.paths.pkg_manifest,
+    );
+    defer package_manifest.deinit();
+
+    var list = try std.ArrayList(Structs.Manifests.PackagePaths).initCapacity(self.ctx.allocator, 10);
+    defer list.deinit(self.ctx.allocator);
+
+    var list_path = try std.ArrayList([]const u8).initCapacity(self.ctx.allocator, 10);
+    defer list_path.deinit(self.ctx.allocator);
+
+    for (package_manifest.value.packages) |p| {
+        if (std.mem.eql(u8, p.name, self.id)) {
+            for (p.paths) |path| try list_path.append(self.ctx.allocator, path);
+            continue;
+        }
+        try list.append(self.ctx.allocator, p);
+    }
+
+    if (!stringInArray(list_path.items, linked_path)) {
+        try list_path.append(self.ctx.allocator, linked_path);
+    }
+
+    try list.append(self.ctx.allocator, Structs.Manifests.PackagePaths{
+        .name = self.id,
+        .paths = list_path.items,
+    });
+
+    package_manifest.value.packages = list.items;
+
+    try Json.writePretty(
+        self.ctx.allocator,
+        self.ctx.paths.pkg_manifest,
+        package_manifest.value,
+    );
+}
+
+pub fn removePathFromManifest(
+    self: *Package,
+    linked_path: []const u8,
+) !void {
+    var package_manifest = try self.ctx.manifest.readManifest(
+        Structs.Manifests.Packages,
+        self.ctx.paths.pkg_manifest,
+    );
+    defer package_manifest.deinit();
+
+    var list = try std.ArrayList(Structs.Manifests.PackagePaths).initCapacity(self.ctx.allocator, 10);
+    defer list.deinit(self.ctx.allocator);
+
+    var list_path = try std.ArrayList([]const u8).initCapacity(self.ctx.allocator, 10);
+    defer list_path.deinit(self.ctx.allocator);
+
+    for (package_manifest.value.packages) |package_paths| {
+        if (std.mem.eql(u8, package_paths.name, self.id)) {
+            for (package_paths.paths) |path| {
+                if (std.mem.eql(u8, path, linked_path)) {
+                    continue;
+                }
+                try list_path.append(self.ctx.allocator, path);
+            }
+            continue;
+        }
+        try list.append(self.ctx.allocator, package_paths);
+    }
+
+    if (list_path.items.len > 0) {
+        try list.append(self.ctx.allocator, Structs.Manifests.PackagePaths{
+            .name = self.id,
+            .paths = list_path.items,
+        });
+    } else {
+        const package_path = try std.fmt.allocPrint(
+            self.ctx.allocator,
+            "{s}/{s}/",
+            .{ self.ctx.paths.pkg_root, self.id },
+        );
+        defer self.ctx.allocator.free(package_path);
+
+        if (Fs.existsDir(package_path)) {
+            Fs.deleteTreeIfExists(package_path) catch {};
+        }
+    }
+
+    package_manifest.value.packages = list.items;
+    try Json.writePretty(self.ctx.allocator, self.ctx.paths.pkg_manifest, package_manifest.value);
+}
+
+pub fn lockAdd(self: *Package) !void {
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Default.package_files.lock,
+    );
+    defer lock.deinit();
+
+    const new_entry = Structs.ZepFiles.Package{
+        .name = self.id,
+        .hash = self.package.sha256sum,
+        .source = self.package.url,
+        .zig_version = self.package.zig_version,
+        .root_file = self.package.root_file,
+    };
+
+    lock.value.packages = try filterOut(
+        self.ctx.allocator,
+        lock.value.packages,
+        self.id,
+        Structs.ZepFiles.Package,
+        struct {
+            fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
+                return std.mem.startsWith(u8, item.name, needle);
+            }
+        }.match,
+    );
+
+    lock.value.packages = try appendUnique(
+        Structs.ZepFiles.Package,
+        lock.value.packages,
+        new_entry,
+        self.ctx.allocator,
+        struct {
+            fn match(item: Structs.ZepFiles.Package, needle: Structs.ZepFiles.Package) bool {
+                return std.mem.startsWith(u8, item.name, needle.name);
+            }
+        }.match,
+    );
+
+    lock.value.root.packages = try filterOut(
+        self.ctx.allocator,
+        lock.value.root.packages,
+        self.id,
+        []const u8,
+        struct {
+            fn match(a: []const u8, b: []const u8) bool {
+                return std.mem.startsWith(u8, a, b); // first remove the previous package Name
+            }
+        }.match,
+    );
+
+    lock.value.root.packages = try appendUnique(
+        []const u8,
+        lock.value.root.packages,
+        new_entry.name,
+        self.ctx.allocator,
+        struct {
+            fn match(a: []const u8, b: []const u8) bool {
+                return std.mem.startsWith(u8, a, b);
+            }
+        }.match,
+    );
+
+    try Json.writePretty(
+        self.ctx.allocator,
+        Constants.Default.package_files.lock,
+        lock.value,
+    );
+}
+
+pub fn lockRemove(self: *Package) !void {
+    var lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Default.package_files.lock,
+    );
+    defer lock.deinit();
+
+    lock.value.packages = try filterOut(
+        self.ctx.allocator,
+        lock.value.packages,
+        self.id,
+        Structs.ZepFiles.Package,
+        struct {
+            fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
+                return std.mem.eql(u8, item.name, needle);
+            }
+        }.match,
+    );
+
+    lock.value.root.packages = try filterOut(
+        self.ctx.allocator,
+        lock.value.root.packages,
+        self.id,
+        []const u8,
+        struct {
+            fn match(item: []const u8, needle: []const u8) bool {
+                return std.mem.eql(u8, item, needle);
+            }
+        }.match,
+    );
+
+    try Json.writePretty(
+        self.ctx.allocator,
+        Constants.Default.package_files.lock,
+        lock.value,
+    );
+}
+
+fn appendUnique(
+    comptime T: type,
+    list: []const T,
+    new_item: T,
+    allocator: std.mem.Allocator,
+    matchFn: fn (a: T, b: T) bool,
+) ![]T {
+    var arr = try std.ArrayList(T).initCapacity(allocator, 10);
+    defer arr.deinit(allocator);
+
+    for (list) |item| {
+        try arr.append(allocator, item);
+        if (matchFn(item, new_item))
+            return arr.toOwnedSlice(allocator);
+    }
+
+    try arr.append(allocator, new_item);
+    return arr.toOwnedSlice(allocator);
+}
+
+fn filterOut(
+    allocator: std.mem.Allocator,
+    list: anytype,
+    filter: []const u8,
+    comptime T: type,
+    matchFn: fn (a: T, b: []const u8) bool,
+) ![]T {
+    var out = try std.ArrayList(T).initCapacity(allocator, 10);
+    defer out.deinit(allocator);
+
+    for (list) |item| {
+        if (!matchFn(item, filter))
+            try out.append(allocator, item);
+    }
+
+    return out.toOwnedSlice(allocator);
+}
+
+fn stringInArray(haystack: [][]const u8, needle: []const u8) bool {
+    for (haystack) |h| {
+        if (std.mem.eql(u8, h, needle)) return true;
+    }
+    return false;
 }

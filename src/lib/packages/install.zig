@@ -199,7 +199,7 @@ pub fn install(
     const parsed = package.package;
     try self.uninstallPrevious(package);
 
-    try self.setPackage(package);
+    try self.setPackage(&package);
     const lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
@@ -254,13 +254,10 @@ pub fn install(
 
 fn setPackage(
     self: *Installer,
-    package: Package,
+    package: *Package,
 ) !void {
     try self.ctx.logger.info("Setting Package...", @src());
-    try self.ctx.manifest.lockAdd(
-        package.id,
-        package.package,
-    );
+    try package.lockAdd();
 
     var injector = Injector.init(
         self.ctx.allocator,
@@ -304,10 +301,7 @@ fn setPackage(
     );
     defer self.ctx.allocator.free(absolute_symbolic_link_path);
     try std.fs.cwd().symLink(target_path, relative_symbolic_link_path, .{ .is_directory = true });
-    self.ctx.manifest.addPathToManifest(
-        package.id,
-        absolute_symbolic_link_path,
-    ) catch {
+    package.addPathToManifest(absolute_symbolic_link_path) catch {
         return error.AddingToManifestFailed;
     };
 }
