@@ -43,7 +43,7 @@ pub fn upgrade(self: *Upgrader) !void {
 
         // if no version was specified it gets the
         // latest version
-        var p = try installer.resolvePackage(
+        var p = installer.resolvePackage(
             name,
             null,
         ) catch |err| {
