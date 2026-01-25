@@ -81,7 +81,7 @@ pub fn init(
     };
 }
 
-pub fn commitInit(self: *Init) !void {
+pub fn _init(self: *Init) !void {
     try self.ctx.printer.append("Initing Zep project...\n", .{}, .{
         .verbosity = 2,
     });

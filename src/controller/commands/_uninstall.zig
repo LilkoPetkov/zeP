@@ -22,10 +22,7 @@ fn uninstall(ctx: *Context) !void {
             package_version,
         );
         defer p.deinit();
-        p.deletePackage(
-            ctx.paths,
-            uninstall_args.force,
-        ) catch |err| {
+        p.uninstallFromDisk(uninstall_args.force) catch |err| {
             switch (err) {
                 error.InUse => {
                     try ctx.printer.append("WARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package}, .{ .color = .red });

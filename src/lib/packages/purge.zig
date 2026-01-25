@@ -41,7 +41,7 @@ pub fn purge(ctx: *Context) !void {
             ctx,
             true,
         );
-        try initer.commitInit();
+        try initer._init();
         try ctx.printer.append("Nothing to uninstall.\n", .{}, .{});
         return;
     }

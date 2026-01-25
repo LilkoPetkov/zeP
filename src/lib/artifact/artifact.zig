@@ -335,7 +335,12 @@ pub fn listCache(self: *Artifact) !void {
     try self.cacher.list();
 }
 pub fn cleanCache(self: *Artifact, version: ?[]const u8) !void {
-    try self.cacher.clean(version);
+    if (version) |v| {
+        try self.cacher.cleanOne(v);
+        return;
+    }
+
+    try self.cacher.cleanAll();
 }
 pub fn sizeCache(self: *Artifact) !void {
     try self.cacher.size();

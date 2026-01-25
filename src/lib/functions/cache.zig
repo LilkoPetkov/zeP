@@ -53,7 +53,7 @@ pub fn list(self: *Cache) !void {
     try self.ctx.printer.append("\n", .{}, .{});
 }
 
-fn cleanSingle(self: *Cache, name: []const u8) !void {
+fn cleanOne(self: *Cache, name: []const u8) !void {
     try self.ctx.logger.infof("Cleaing Single {s}", .{name}, @src());
 
     const cached_path = self.ctx.paths.cached;
@@ -116,11 +116,11 @@ fn cleanSingle(self: *Cache, name: []const u8) !void {
     try self.ctx.printer.append("\nRemoved: {d} cached packages ({d} failed)\n", .{ data_found, failed_deletion }, .{});
 }
 
-pub fn clean(self: *Cache, name: ?[]const u8) !void {
+pub fn cleanAll(self: *Cache, name: ?[]const u8) !void {
     try self.ctx.logger.info("Cleaning Cache", @src());
 
     if (name) |n| {
-        try self.cleanSingle(n);
+        try self.cleanOne(n);
         return;
     }
 

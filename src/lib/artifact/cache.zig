@@ -63,15 +63,15 @@ pub fn list(self: *ArtifactCache) !void {
         defer version_directory.close();
 
         var version_iterator = version_directory.iterate();
-        var has_targets: bool = false;
+        var found_targets: bool = false;
 
         while (try version_iterator.next()) |version_entry| {
-            has_targets = true;
+            found_targets = true;
             const target_name = try self.ctx.allocator.dupe(u8, version_entry.name);
             try self.ctx.printer.append(" > {s}\n", .{target_name}, .{});
         }
 
-        if (!has_targets) {
+        if (!found_targets) {
             try self.ctx.printer.append(" NOTHING CACHED\n", .{}, .{ .color = .red });
         }
     }
@@ -81,7 +81,7 @@ pub fn list(self: *ArtifactCache) !void {
     try self.ctx.printer.append("\n", .{}, .{});
 }
 
-fn cleanSingle(self: *ArtifactCache, version: []const u8) !void {
+pub fn cleanOne(self: *ArtifactCache, version: []const u8) !void {
     try self.ctx.logger.infof("Cleaing Single Artifact {s}", .{version}, @src());
     const cached_path = try std.fs.path.join(self.ctx.allocator, &.{
         if (self.artifact_type == .zig) self.ctx.paths.zig_root else self.ctx.paths.zep_root,
@@ -118,13 +118,8 @@ fn cleanSingle(self: *ArtifactCache, version: []const u8) !void {
     try self.ctx.printer.append("Removed: {d} cached artifacts ({d} failed)\n", .{ data_found, failed_deletion }, .{});
 }
 
-pub fn clean(self: *ArtifactCache, version: ?[]const u8) !void {
+pub fn cleanAll(self: *ArtifactCache) !void {
     try self.ctx.logger.info("Cleaning ArtifactCache", @src());
-
-    if (version) |n| {
-        try self.cleanSingle(n);
-        return;
-    }
 
     const cached_path = try std.fs.path.join(self.ctx.allocator, &.{
         if (self.artifact_type == .zig) self.ctx.paths.zig_root else self.ctx.paths.zep_root,

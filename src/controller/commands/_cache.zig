@@ -5,7 +5,7 @@ const Context = @import("context");
 
 fn cacheClean(ctx: *Context, cache: *Cache) !void {
     const cache_name = if (ctx.cmds.len < 4) null else ctx.cmds[3];
-    try cache.clean(cache_name);
+    try cache.cleanAll(cache_name);
     return;
 }
 

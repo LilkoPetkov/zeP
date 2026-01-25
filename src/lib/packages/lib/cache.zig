@@ -6,7 +6,7 @@ const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
 
-const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
+const TEMP_DIR = ".zep/tmp";
 
 const Context = @import("context");
 
@@ -20,7 +20,7 @@ pub fn init(ctx: *Context) Cacher {
 
 pub fn deinit(_: *Cacher) void {}
 
-fn cacheFilePath(
+fn cachedArchivePath(
     self: *Cacher,
     package_id: []const u8,
 ) ![]u8 {
@@ -42,7 +42,7 @@ fn cacheFilePath(
     return cache_fp;
 }
 
-fn extractPath(
+fn installPath(
     self: *Cacher,
     package_id: []const u8,
 ) ![]u8 {
@@ -57,14 +57,14 @@ fn extractPath(
     return extract_p;
 }
 
-fn tmpOutputPath(
+fn tempExtractPath(
     self: *Cacher,
     package_id: []const u8,
 ) ![]u8 {
     const tmp_p = try std.fs.path.join(
         self.ctx.allocator,
         &.{
-            TEMPORARY_DIRECTORY_PATH,
+            TEMP_DIR,
             package_id,
         },
     );
@@ -72,42 +72,42 @@ fn tmpOutputPath(
     return tmp_p;
 }
 
-pub fn isPackageCached(
+pub fn isCached(
     self: *Cacher,
     package_id: []const u8,
 ) !bool {
     try self.ctx.logger.info("Checking Cache", @src());
 
-    const path = try self.cacheFilePath(
+    const path = try self.cachedArchivePath(
         package_id,
     );
     return Fs.existsFile(path);
 }
 
-pub fn getPackageFromCache(
+pub fn restore(
     self: *Cacher,
     package_id: []const u8,
 ) !void {
     try self.ctx.logger.info("Getting Cache", @src());
 
-    const temporary_output_path = try self.tmpOutputPath(package_id);
+    const temporary_output_path = try self.tempExtractPath(package_id);
     var temporary_directory = try Fs.openOrCreateDir(temporary_output_path);
     defer {
         temporary_directory.close();
-        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
+        Fs.deleteTreeIfExists(TEMP_DIR) catch {};
         self.ctx.allocator.free(temporary_output_path);
     }
 
-    const cache_path = try self.cacheFilePath(package_id);
+    const cache_path = try self.cachedArchivePath(package_id);
     defer self.ctx.allocator.free(cache_path);
 
-    const extract_path = try self.extractPath(package_id);
+    const extract_path = try self.installPath(package_id);
     defer self.ctx.allocator.free(extract_path);
 
     try self.ctx.compressor.decompress(cache_path, extract_path);
 }
 
-pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
+pub fn store(self: *Cacher, package_id: []const u8) !void {
     try self.ctx.logger.info("Setting Cache", @src());
 
     try self.ctx.printer.append("Package not cached...\n", .{}, .{
@@ -126,7 +126,7 @@ pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
     try self.ctx.printer.append("Caching now...\n", .{}, .{
         .verbosity = 3,
     });
-    const compress_path = try self.cacheFilePath(package_id);
+    const compress_path = try self.cachedArchivePath(package_id);
     try self.ctx.compressor.compress(target_folder, compress_path);
     try self.ctx.printer.append(" > PACKAGE CACHED!\n\n", .{}, .{
         .color = .green,
@@ -134,7 +134,7 @@ pub fn setPackageToCache(self: *Cacher, package_id: []const u8) !void {
     });
 }
 
-pub fn deletePackageFromCache(
+pub fn remove(
     self: *Cacher,
     package_id: []const u8,
 ) !void {

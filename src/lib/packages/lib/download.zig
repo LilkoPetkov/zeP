@@ -194,7 +194,7 @@ pub fn downloadPackage(
     try self.ctx.printer.append("Checking Cache...\n", .{}, .{
         .verbosity = 2,
     });
-    const is_cached = try self.cacher.isPackageCached(package_id);
+    const is_cached = try self.cacher.isCached(package_id);
     if (is_cached) {
         try self.ctx.printer.append(
             " > CACHE HIT!\n\n",
@@ -204,7 +204,7 @@ pub fn downloadPackage(
                 .verbosity = 2,
             },
         );
-        self.cacher.getPackageFromCache(package_id) catch {
+        self.cacher.restore(package_id) catch {
             try self.ctx.printer.append(
                 " ! CACHE FAILED\n\n",
                 .{},
@@ -227,7 +227,7 @@ pub fn downloadPackage(
             package_id,
             url,
         );
-        self.cacher.setPackageToCache(package_id) catch {
+        self.cacher.store(package_id) catch {
             try self.ctx.printer.append(" ! CACHING FAILED\n\n", .{}, .{ .color = .red });
         };
     }

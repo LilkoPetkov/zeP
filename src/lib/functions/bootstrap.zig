@@ -44,7 +44,7 @@ pub fn bootstrap(
     );
 
     try ctx.logger.info("Committing Init...", @src());
-    try initer.commitInit();
+    try initer._init();
     try ctx.printer.append("\n", .{}, .{});
 
     try ctx.printer.append(
@@ -62,14 +62,17 @@ pub fn bootstrap(
     defer installer.deinit();
     ctx.fetcher.install_unverified_packages = true;
     for (pkgs) |pkg| {
-        var p = std.mem.splitScalar(u8, pkg, '@');
-        const package_name = p.first();
-        const package_version = p.next();
+        var p_split = std.mem.splitScalar(u8, pkg, '@');
+        const package_name = p_split.first();
+        const package_version = p_split.next();
 
-        installer.install(
+        var p = try installer.resolvePackage(
             package_name,
             package_version,
-        ) catch |err| {
+        );
+        defer p.deinit();
+
+        installer.installOne(&p) catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("{s} already installed.\n", .{package_name}, .{});

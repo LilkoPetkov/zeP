@@ -28,7 +28,14 @@ fn install(ctx: *Context) !void {
         var split = std.mem.splitScalar(u8, package, '@');
         const package_name = split.first();
         const package_version = split.next();
-        installer.install(package_name, package_version) catch |err| {
+
+        var p = try installer.resolvePackage(
+            package_name,
+            package_version,
+        );
+        defer p.deinit();
+
+        installer.installOne(&p) catch |err| {
             try ctx.logger.errorf("Installing Failed error={any}", .{err}, @src());
 
             switch (err) {

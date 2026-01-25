@@ -64,13 +64,13 @@ pub fn pruneVersions(self: *ArtifactPruner, artifact_type: Structs.Extras.Artifa
         defer version_directory.close();
 
         var version_iterator = version_directory.iterate();
-        var has_targets: bool = false;
+        var found_targets: bool = false;
         while (try version_iterator.next()) |_| {
-            has_targets = true;
+            found_targets = true;
             break;
         }
 
-        if (!has_targets) {
+        if (!found_targets) {
             try Fs.deleteTreeIfExists(version_path);
         }
     }

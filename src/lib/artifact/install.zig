@@ -27,7 +27,7 @@ pub fn deinit(_: *ArtifactInstaller) void {
     // currently no deinit required
 }
 
-fn fetchData(
+fn fetch(
     self: *ArtifactInstaller,
     name: []const u8,
     tarball: []const u8,
@@ -68,7 +68,7 @@ fn fetchData(
     // Download if not cached
     if (!Fs.existsFile(target_path)) {
         var timer = try std.time.Timer.start();
-        try self.downloadFile(tarball, target_path);
+        try self.download(tarball, target_path);
         const read = timer.read();
         const time = read / std.time.ns_per_s;
         try self.ctx.printer.append("Took {d} seconds to download file.\n\n", .{time}, .{
@@ -136,7 +136,7 @@ fn fetchData(
     }
 }
 
-fn downloadFile(self: *ArtifactInstaller, url: []const u8, out_path: []const u8) !void {
+fn download(self: *ArtifactInstaller, url: []const u8, out_path: []const u8) !void {
     try self.ctx.logger.infof("Downloading URL {s}.", .{url}, @src());
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
@@ -399,7 +399,7 @@ pub fn install(
 ) !void {
     try self.ctx.logger.infof("Installing {s}", .{target}, @src());
 
-    try self.fetchData(name, tarball, version, target, artifact_type);
+    try self.fetch(name, tarball, version, target, artifact_type);
     try self.ctx.printer.append("Modifying Manifest...\n", .{}, .{ .verbosity = 2 });
 
     const path = try std.fs.path.join(self.ctx.allocator, &.{

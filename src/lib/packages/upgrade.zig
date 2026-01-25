@@ -19,20 +19,21 @@ pub fn init(ctx: *Context) Upgrader {
 
 pub fn deinit(_: *Upgrader) void {}
 
-pub fn upgrade(
-    self: *Upgrader,
-) !void {
+pub fn upgrade(self: *Upgrader) !void {
     try self.ctx.logger.info("Upgrading packages...", @src());
 
     const prev_verbosity = Locales.VERBOSITY_MODE;
     Locales.VERBOSITY_MODE = 0;
 
-    const lock = try self.ctx.manifest.readManifest(Structs.ZepFiles.Lock, Constants.Default.package_files.lock);
+    const lock = try self.ctx.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Default.package_files.lock,
+    );
     defer lock.deinit();
 
     var installer = Installer.init(self.ctx);
-    for (lock.value.packages) |p| {
-        var p_split = std.mem.splitAny(u8, p.name, "@");
+    for (lock.value.packages) |package| {
+        var p_split = std.mem.splitAny(u8, package.name, "@");
         const name = p_split.first();
         try self.ctx.printer.append(
             " > Upgrading - {s}...\n",
@@ -42,7 +43,10 @@ pub fn upgrade(
 
         // if no version was specified it gets the
         // latest version
-        installer.install(name, null) catch |err| {
+        var p = try installer.resolvePackage(
+            name,
+            null,
+        ) catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
                     try self.ctx.printer.append(
@@ -58,9 +62,20 @@ pub fn upgrade(
                         .{ name, err },
                         .{ .verbosity = 0, .color = .red },
                     );
+                    continue;
                 },
             }
         };
+
+        defer p.deinit();
+        installer.installOne(&p) catch |err| {
+            try self.ctx.printer.append(
+                "  ! [ERROR] Failed to upgrade - {s} [{any}]...\n",
+                .{ name, err },
+                .{ .verbosity = 0, .color = .red },
+            );
+        };
+
         try self.ctx.printer.append(
             " >> upgraded!\n",
             .{},

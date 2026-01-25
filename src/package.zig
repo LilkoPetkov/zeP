@@ -30,6 +30,7 @@ fn resolveVersion(
             .{ package_name, v },
         );
         defer ctx.allocator.free(id);
+
         for (lock.value.packages) |p| {
             if (!std.mem.eql(u8, p.name, id)) continue;
             try ctx.logger.info("Package found in .lock...", @src());
@@ -47,7 +48,10 @@ fn resolveVersion(
     try ctx.printer.append("Finding the package...\n", .{}, .{
         .verbosity = 3,
     });
-    const parsed_package = try ctx.fetcher.fetchPackage(package_name, ctx.logger);
+    const parsed_package = try ctx.fetcher.fetchPackage(
+        package_name,
+        ctx.logger,
+    );
     defer parsed_package.deinit();
     try ctx.logger.infof("Package fetched!", .{}, @src());
 
@@ -106,10 +110,10 @@ fn resolveVersion(
 /// Hashes are generated on init.
 ctx: *Context,
 
-package_name: []const u8,
 package: Structs.Packages.Version,
 
-id: []u8, // <-- package_name@package_version
+package_name: []const u8, // borrowed
+id: []u8, // package_name@package_version
 
 pub fn init(
     ctx: *Context,
@@ -146,13 +150,10 @@ pub fn deinit(self: *Package) void {
     self.ctx.allocator.free(self.package.zig_version);
 }
 
-fn getPackagePathsAmount(
-    self: *Package,
-    paths: Constants.Paths.Paths,
-) !usize {
+fn registeredPathCount(self: *Package) !usize {
     var manifest = try self.ctx.manifest.readManifest(
         Structs.Manifests.Packages,
-        paths.pkg_manifest,
+        self.ctx.paths.pkg_manifest,
     );
     defer manifest.deinit();
 
@@ -167,21 +168,20 @@ fn getPackagePathsAmount(
     return package_paths_amount;
 }
 
-pub fn deletePackage(
+pub fn uninstallFromDisk(
     self: *Package,
-    paths: Constants.Paths.Paths,
     force: bool,
 ) !void {
     const path = try std.fmt.allocPrint(
         self.ctx.allocator,
         "{s}/{s}",
-        .{ paths.pkg_root, self.id },
+        .{ self.ctx.paths.pkg_root, self.id },
     );
     defer self.ctx.allocator.free(path);
 
     if (!Fs.existsDir(path)) return error.NotInstalled;
 
-    const amount = try self.getPackagePathsAmount(paths);
+    const amount = try self.registeredPathCount();
     if (amount > 0 and !force) {
         return error.InUse;
     }
@@ -204,7 +204,10 @@ pub fn addPathToManifest(
     var list = try std.ArrayList(Structs.Manifests.PackagePaths).initCapacity(self.ctx.allocator, 10);
     defer list.deinit(self.ctx.allocator);
 
-    var list_path = try std.ArrayList([]const u8).initCapacity(self.ctx.allocator, 10);
+    var list_path = try std.ArrayList([]const u8).initCapacity(
+        self.ctx.allocator,
+        10,
+    );
     defer list_path.deinit(self.ctx.allocator);
 
     for (package_manifest.value.packages) |p| {
@@ -215,7 +218,14 @@ pub fn addPathToManifest(
         try list.append(self.ctx.allocator, p);
     }
 
-    if (!stringInArray(list_path.items, linked_path)) {
+    var is_in_path = false;
+    for (list_path.items) |p| {
+        if (std.mem.eql(u8, p, linked_path)) {
+            is_in_path = true;
+            break;
+        }
+    }
+    if (!is_in_path) {
         try list_path.append(self.ctx.allocator, linked_path);
     }
 
@@ -284,7 +294,7 @@ pub fn removePathFromManifest(
     try Json.writePretty(self.ctx.allocator, self.ctx.paths.pkg_manifest, package_manifest.value);
 }
 
-pub fn lockAdd(self: *Package) !void {
+pub fn lockRegister(self: *Package) !void {
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
@@ -354,7 +364,7 @@ pub fn lockAdd(self: *Package) !void {
     );
 }
 
-pub fn lockRemove(self: *Package) !void {
+pub fn lockUnregister(self: *Package) !void {
     var lock = try self.ctx.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
@@ -428,11 +438,4 @@ fn filterOut(
     }
 
     return out.toOwnedSlice(allocator);
-}
-
-fn stringInArray(haystack: [][]const u8, needle: []const u8) bool {
-    for (haystack) |h| {
-        if (std.mem.eql(u8, h, needle)) return true;
-    }
-    return false;
 }

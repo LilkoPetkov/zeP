@@ -43,5 +43,5 @@ pub fn new(
     initer.name = name;
     initer.zig_version = zig_version;
 
-    try initer.commitInit();
+    try initer._init();
 }

@@ -60,7 +60,7 @@ pub fn uninstall(
     defer package.deinit();
 
     try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{});
-    try package.lockRemove();
+    try package.lockUnregister();
 
     var injector = Injector.init(
         self.ctx.allocator,
@@ -95,6 +95,6 @@ pub fn uninstall(
         // !
         try package.removePathFromManifest(absolute_path);
     }
-    try package.lockRemove();
+    try package.lockUnregister();
     try self.ctx.printer.append("Successfully deleted - {s}\n\n", .{package_name}, .{ .color = .green });
 }

@@ -6,7 +6,7 @@ const Context = @import("context");
 
 fn init(ctx: *Context) !void {
     var i = try Init.init(ctx, false);
-    try i.commitInit();
+    try i._init();
     return;
 }
 
