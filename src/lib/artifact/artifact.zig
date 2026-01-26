@@ -223,10 +223,6 @@ pub fn uninstall(
         target,
     }, @src());
 
-    const version = try self.getVersion(target_version, target);
-    if (!Fs.existsDir(version.path)) {
-        return error.VersionNotInstalled;
-    }
     try self.ctx.printer.append(
         "[{s}] Uninstalling version: {s}\nWith target: {s}\n\n",
         .{
@@ -237,41 +233,38 @@ pub fn uninstall(
         .{},
     );
 
-    const version_dir = try std.fs.path.join(
+    const versions_dir = try std.fs.path.join(
         self.ctx.allocator,
         &.{
             if (self.artifact_type == .zig) self.ctx.paths.zig_root else self.ctx.paths.zep_root,
             "d",
-            version.version,
+            target_version,
         },
     );
-    const version_opened_dir = try Fs.openDir(version_dir);
-    var version_iterator = version_opened_dir.iterate();
-    var version_dir_includes_folders = false;
-    while (try version_iterator.next()) |_| {
-        version_dir_includes_folders = true;
-        break;
-    }
+    defer self.ctx.allocator.free(versions_dir);
+    const target_dir = try std.fs.path.join(
+        self.ctx.allocator,
+        &.{
+            versions_dir,
+            target,
+        },
+    );
+    defer self.ctx.allocator.free(target_dir);
+
     const manifest = try self.ctx.manifest.readManifest(
         Structs.Manifests.Artifact,
         if (self.artifact_type == .zig) self.ctx.paths.zig_manifest else self.ctx.paths.zep_manifest,
     );
     defer manifest.deinit();
 
-    if (std.mem.containsAtLeast(u8, manifest.value.name, 1, version.version)) {
+    if (std.mem.containsAtLeast(u8, manifest.value.name, 1, target_version)) {
         try self.ctx.logger.info("Target version is selected | Attempting switch", @src());
-        const latest = try self.switcher.getLatestVersionExcept(self.artifact_type, version.version);
+        const latest = try self.switcher.getLatestVersionExcept(self.artifact_type, target_version);
         try self.switchVersion(latest.version_name, latest.target_name);
         try self.ctx.logger.info("Switch completed.", @src());
     }
 
-    if (version_dir_includes_folders) {
-        try self.uninstaller.uninstall(version.path);
-    } else {
-        try self.uninstaller.uninstall(version.path);
-        try Fs.deleteTreeIfExists(version_dir);
-    }
-
+    try self.uninstaller.uninstall(target_dir);
     try self.pruner.pruneVersions(self.artifact_type);
     return;
 }
