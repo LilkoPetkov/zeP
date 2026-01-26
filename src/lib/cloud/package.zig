@@ -125,7 +125,6 @@ pub fn delete(self: *Package) !void {
     defer self.ctx.allocator.free(url);
     const delete_package_response = self.ctx.fetcher.fetch(
         url,
-        &client,
         .{
             .method = .DELETE,
             .headers = &.{
@@ -245,7 +244,6 @@ pub fn create(self: *Package) !void {
     defer client.deinit();
     const package_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/package",
-        &client,
         .{
             .headers = &.{
                 std.http.Header{

@@ -117,7 +117,6 @@ pub fn delete(self: *Release) !void {
     );
     const delete_release_response = self.ctx.fetcher.fetch(
         url,
-        &client,
         .{
             .method = .DELETE,
             .headers = &.{
@@ -200,10 +199,10 @@ pub fn list(self: *Release) !void {
     try self.ctx.printer.append("\n", .{}, .{});
 }
 
-const TEMPORARY_DIRECTORY_PATH = ".zep/.ZEPtmp";
-const TEMPORARY_FILE = "pkg.tar.zstd";
+const TEMP_DIR = ".zep/tmp";
+const TEMP_FILE = "pkg.tar.zstd";
 fn compressPackage(self: *Release) ![]const u8 {
-    const output = TEMPORARY_DIRECTORY_PATH ++ "/" ++ TEMPORARY_FILE;
+    const output = TEMP_DIR ++ "/" ++ TEMP_FILE;
     try self.ctx.compressor.compress(".", output);
 
     try self.ctx.printer.append(
@@ -371,7 +370,7 @@ pub fn create(self: *Release) !void {
 
     const archive = try self.compressPackage();
     defer {
-        Fs.deleteTreeIfExists(TEMPORARY_DIRECTORY_PATH) catch {};
+        Fs.deleteTreeIfExists(TEMP_DIR) catch {};
     }
     const file = try Fs.openFile(archive);
     defer file.close();

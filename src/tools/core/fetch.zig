@@ -4,6 +4,7 @@ pub const Fetch = @This();
 
 const Logger = @import("logger");
 const Constants = @import("constants");
+const Locales = @import("locales");
 const Structs = @import("structs");
 
 const Fs = @import("io").Fs;
@@ -14,29 +15,35 @@ const Manifest = @import("manifest.zig");
 allocator: std.mem.Allocator,
 paths: Constants.Paths.Paths,
 manifest: Manifest,
-install_unverified_packages: bool = false,
+
+client: std.http.Client,
 
 pub fn init(
     allocator: std.mem.Allocator,
     paths: Constants.Paths.Paths,
     manifest: Manifest,
 ) Fetch {
+    const client = std.http.Client{ .allocator = allocator };
     return Fetch{
         .allocator = allocator,
         .paths = paths,
         .manifest = manifest,
+        .client = client,
     };
+}
+
+pub fn deinit(self: *Fetch) !void {
+    self.client.deinit();
 }
 
 pub fn fetch(
     self: *Fetch,
     url: []const u8,
-    client: *std.http.Client,
     options: Structs.Fetch.FetchOptions,
 ) !std.json.Parsed(std.json.Value) {
     var body = std.Io.Writer.Allocating.init(self.allocator);
     defer body.deinit();
-    const res = try client.fetch(.{
+    const res = try self.client.fetch(.{
         .location = .{ .url = url },
         .method = options.method,
         .payload = options.payload,
@@ -66,11 +73,8 @@ fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.Package {
     );
     defer self.allocator.free(url);
 
-    var client = std.http.Client{ .allocator = self.allocator };
-    defer client.deinit();
     const get = try self.fetch(
         url,
-        &client,
         .{
             .method = .GET,
         },
@@ -116,11 +120,8 @@ pub fn fetchPackages(self: *Fetch) !std.ArrayList(Structs.Fetch.Package) {
     }
 
     const url = Constants.Default.zep_url ++ "/api/v1/packages";
-    var client = std.http.Client{ .allocator = self.allocator };
-    defer client.deinit();
     const get = try self.fetch(
         url,
-        &client,
         .{
             .method = .GET,
             .headers = &.{
@@ -186,12 +187,8 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
         .{name},
     );
     defer self.allocator.free(url);
-
-    var client = std.http.Client{ .allocator = self.allocator };
-    defer client.deinit();
     const get = try self.fetch(
         url,
-        &client,
         .{
             .method = .GET,
             .headers = &.{
@@ -247,35 +244,46 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
     return releases;
 }
 
-fn fetchFromPackage(
+fn fetchFromZep(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.Package) {
+) !Structs.Packages.Package {
     _ = logger;
-    var releases = try self.fetchReleases(package_name);
-    defer releases.deinit(self.allocator);
-    const package = try self._fetchPackage(package_name);
-
-    const stringified = try std.json.Stringify.valueAlloc(self.allocator, .{
-        .author = package.UserID,
-        .name = package.Name,
-        .docs = package.Docs,
-        .versions = releases.items,
-    }, .{});
-    return std.json.parseFromSlice(
-        Structs.Packages.Package,
+    const releases = try self.fetchReleases(package_name);
+    var versions = try std.ArrayList(Structs.Packages.Version).initCapacity(
         self.allocator,
-        stringified,
-        .{ .allocate = .alloc_always },
+        releases.items.len,
     );
+    defer versions.deinit(self.allocator);
+
+    for (releases.items) |r| {
+        try versions.append(self.allocator, Structs.Packages.Version{
+            .root_file = r.RootFile,
+            .sha256sum = r.Hash,
+            .url = r.Url,
+            .version = r.Release,
+            .zig_version = r.ZigVersion,
+        });
+    }
+
+    const fetched = try self._fetchPackage(package_name);
+    var package = Structs.Packages.Package{
+        .author = fetched.UserID,
+        .name = fetched.Name,
+        .docs = fetched.Docs,
+        .versions = versions.items,
+    };
+
+    const duped = try package.dupPackage(self.allocator);
+    return duped;
 }
 
 fn fetchFromUrl(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.Package) {
+) !Structs.Packages.Package {
     const url = try std.fmt.allocPrint(
         self.allocator,
         Constants.Default.zep_url ++ "/packages/{s}.json",
@@ -284,11 +292,8 @@ fn fetchFromUrl(
     defer self.allocator.free(url);
     try logger.infof("Fetching from url... {s}", .{url}, @src());
 
-    var client = std.http.Client{ .allocator = self.allocator };
-    defer client.deinit();
-
     var body = std.Io.Writer.Allocating.init(self.allocator);
-    const res = client.fetch(.{
+    const res = self.client.fetch(.{
         .location = .{ .url = url },
         .method = .GET,
         .response_writer = &body.writer,
@@ -300,18 +305,22 @@ fn fetchFromUrl(
     if (res.status == .not_found) return error.PackageNotFound;
 
     const data = body.written();
-    return std.json.parseFromSlice(
+    var package: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(
         Structs.Packages.Package,
         self.allocator,
         data,
         .{ .allocate = .alloc_always },
     );
+    defer package.deinit();
+
+    const duped = try package.value.dupPackage(self.allocator);
+    return duped;
 }
 
 fn loadFromLocal(
     self: *Fetch,
     package_name: []const u8,
-) !std.json.Parsed(Structs.Packages.Package) {
+) !Structs.Packages.Package {
     const path = try std.fmt.allocPrint(
         self.allocator,
         "{s}/{s}.json",
@@ -321,22 +330,26 @@ fn loadFromLocal(
 
     if (!Fs.existsFile(path)) return error.PackageNotFound;
 
-    return Json.parseJsonFromFile(
+    var package: std.json.Parsed(Structs.Packages.Package) = try Json.parseJsonFromFile(
         self.allocator,
         Structs.Packages.Package,
         path,
         Constants.Default.mb * 10,
     );
+    defer package.deinit();
+
+    const duped = try package.value.dupPackage(self.allocator);
+    return duped;
 }
 
 pub fn fetchPackage(
     self: *Fetch,
     package_name: []const u8,
     logger: *Logger.logly.Logger,
-) !std.json.Parsed(Structs.Packages.Package) {
-    if (self.install_unverified_packages) {
-        try logger.info("Fetching via package...", @src());
-        if (self.fetchFromPackage(package_name, logger)) |pkg| {
+) !Structs.Packages.Package {
+    if (Locales.INSTALL_UNVERIFIED_PACKAGES) {
+        try logger.info("Fetching via zep.run packages...", @src());
+        if (self.fetchFromZep(package_name, logger)) |pkg| {
             return pkg;
         } else |_| {}
     }

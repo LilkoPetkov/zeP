@@ -8,10 +8,13 @@ pub fn list(
 ) !void {
     try ctx.logger.info("Listing Package", @src());
 
-    const parsed_package = try ctx.fetcher.fetchPackage(package_name, ctx.logger);
-    defer parsed_package.deinit();
+    var package = try ctx.fetcher.fetchPackage(
+        package_name,
+        ctx.logger,
+    );
+    defer package.deinit(ctx.allocator);
 
-    const versions = parsed_package.value.versions;
+    const versions = package.versions;
     try ctx.printer.append("Available versions for {s}:\n", .{package_name}, .{});
     if (versions.len == 0) {
         try ctx.printer.append("  NO VERSIONS FOUND!\n\n", .{}, .{ .color = .red });

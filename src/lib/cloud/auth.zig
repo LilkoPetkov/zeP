@@ -74,7 +74,6 @@ fn getUserData(self: *Auth) !Structs.Fetch.User {
 
     const get = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/whoami",
-        &client,
         .{
             .method = .GET,
             .headers = &.{
@@ -172,7 +171,6 @@ pub fn register(self: *Auth) !void {
         defer self.ctx.allocator.free(url);
         const get = self.ctx.fetcher.fetch(
             url,
-            &client,
             .{ .method = .GET },
         ) catch |err| {
             switch (err) {
@@ -231,7 +229,6 @@ pub fn register(self: *Auth) !void {
 
     const register_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/register",
-        &client,
         .{
             .headers = &.{
                 std.http.Header{
@@ -284,7 +281,6 @@ pub fn register(self: *Auth) !void {
 
     const verify_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/verify",
-        &client,
         .{
             .headers = &.{
                 std.http.Header{
@@ -377,7 +373,6 @@ pub fn login(self: *Auth) !void {
     defer client.deinit();
     const login_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/login",
-        &client,
         .{
             .headers = &.{
                 std.http.Header{
@@ -425,7 +420,6 @@ pub fn logout(self: *Auth) !void {
     defer client.deinit();
     const logout_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/logout",
-        &client,
         .{
             .method = .GET,
             .headers = &.{

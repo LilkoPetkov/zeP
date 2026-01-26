@@ -2,12 +2,10 @@ const std = @import("std");
 
 pub const Cacher = @This();
 
-const Constants = @import("constants");
-
-const Fs = @import("io").Fs;
-
 const TEMP_DIR = ".zep/tmp";
 
+const Constants = @import("constants");
+const Fs = @import("io").Fs;
 const Context = @import("context");
 
 ctx: *Context,

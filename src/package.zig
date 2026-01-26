@@ -56,11 +56,11 @@ fn resolveFromFetch(
     try ctx.printer.append("Finding the package...\n", .{}, .{
         .verbosity = 3,
     });
-    const parsed_package = try ctx.fetcher.fetchPackage(
+    var package = try ctx.fetcher.fetchPackage(
         package_name,
         ctx.logger,
     );
-    defer parsed_package.deinit();
+    defer package.deinit(ctx.allocator);
     try ctx.logger.infof("Package fetched!", .{}, @src());
 
     try ctx.printer.append(
@@ -72,7 +72,7 @@ fn resolveFromFetch(
         },
     );
 
-    const versions = parsed_package.value.versions;
+    const versions = package.versions;
     if (versions.len == 0) {
         try ctx.logger.err("Fetching package has no version...", @src());
         ctx.printer.append("Package has no version!\n", .{}, .{ .color = .red }) catch {};

@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub const Compressor = @This();
 
-const Logger = @import("logger");
 const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
@@ -197,4 +196,46 @@ pub fn decompress(self: *Compressor, zstd_path: []const u8, extract_path: []cons
             else => return err,
         }
     };
+}
+
+pub fn decompressZ(self: *Compressor, zip_path: []const u8, extract_path: []const u8) !void {
+    const TEMP_DIR = try std.fmt.allocPrint(
+        self.allocator,
+        "{s}/tmp/",
+        .{self.paths.base},
+    );
+
+    var temp_extract_directory = try Fs.openOrCreateDir(TEMP_DIR);
+    defer temp_extract_directory.close();
+    defer {
+        Fs.deleteTreeIfExists(TEMP_DIR) catch {};
+    }
+
+    var zip_file = try Fs.openFile(zip_path);
+    defer zip_file.close();
+    var reader_buf: [Constants.Default.kb * 16]u8 = undefined;
+    var reader = zip_file.reader(&reader_buf);
+
+    var diagnostics = std.zip.Diagnostics{
+        .allocator = self.allocator,
+    };
+
+    defer diagnostics.deinit();
+    try std.zip.extract(
+        temp_extract_directory,
+        &reader,
+        .{ .diagnostics = &diagnostics },
+    );
+
+    const temp_extract_target = try std.fmt.allocPrint(
+        self.allocator,
+        "{s}/{s}",
+        .{
+            TEMP_DIR,
+            diagnostics.root_dir,
+        },
+    );
+    defer self.allocator.free(temp_extract_target);
+
+    try std.fs.cwd().rename(temp_extract_target, extract_path);
 }

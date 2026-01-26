@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Locales = @import("locales");
 const Constants = @import("constants");
 const Structs = @import("structs");
 
@@ -60,7 +61,7 @@ pub fn bootstrap(
 
     var installer = Installer.init(ctx);
     defer installer.deinit();
-    ctx.fetcher.install_unverified_packages = true;
+    Locales.INSTALL_UNVERIFIED_PACKAGES = true;
     for (pkgs) |pkg| {
         var p_split = std.mem.splitScalar(u8, pkg, '@');
         const package_name = p_split.first();

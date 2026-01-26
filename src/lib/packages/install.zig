@@ -60,7 +60,7 @@ fn isLocked(
 
     var match = false;
     for (lock.value.root.packages) |pkg| {
-        if (std.mem.eql(u8, pkg, package_id)) match = true;
+        if (std.mem.startsWith(u8, pkg, package_id)) match = true;
     }
     return match;
 }
@@ -217,12 +217,11 @@ pub fn resolvePackage(
     }
 
     try self.ctx.logger.infof("Getting Package...", .{}, @src());
-    var package = try Package.init(
+    const package = try Package.init(
         self.ctx,
         package_name,
         package_version,
     );
-    defer package.deinit();
 
     try self.ctx.logger.infof("Package received!", .{}, @src());
 
@@ -240,7 +239,7 @@ pub fn installOne(
     self: *Installer,
     package: *Package,
 ) !void {
-    try self.ctx.logger.info("Installing Package", @src());
+    try self.ctx.logger.info("Installing Package...", @src());
     try self.ctx.printer.append(
         "Installing Package {s}\n",
         .{package.package_name},
@@ -249,9 +248,19 @@ pub fn installOne(
         },
     );
 
-    var uninstaller = Uninstaller.init(self.ctx);
-    defer uninstaller.deinit();
-    try uninstaller.uninstall(package.package_name);
+    blk: {
+        if (!try self.isLocked(package.package_name)) break :blk;
+        if (try self.isLocked(package.package.name)) break :blk;
+        var uninstaller = Uninstaller.init(self.ctx);
+        defer uninstaller.deinit();
+        uninstaller.uninstall(package.package_name) catch |err| {
+            switch (err) {
+                error.NotInstalled => break :blk,
+                else => return err,
+            }
+        };
+        break :blk;
+    }
 
     try self.linkPackage(package);
 
@@ -299,7 +308,7 @@ pub fn installOne(
         return error.HashMismatch;
     }
 
-    try self.downloader.downloadPackage(
+    try self.downloader.installPackage(
         package.package.name,
         parsed.source,
     );

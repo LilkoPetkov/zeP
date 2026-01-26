@@ -129,10 +129,11 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             try Fs.deleteFileIfExists(Constants.Default.package_files.lock);
             const prev_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
-            var installer = Installer.init(&ctx);
-            ctx.fetcher.install_unverified_packages = true;
+            Locales.INSTALL_UNVERIFIED_PACKAGES = true;
 
+            var installer = Installer.init(&ctx);
             try installer.installAll();
+
             Locales.VERBOSITY_MODE = prev_verbosity;
             try printer.append("Fixed.\n\n", .{}, .{ .color = .green });
         }

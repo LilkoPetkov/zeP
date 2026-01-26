@@ -2,13 +2,14 @@ const std = @import("std");
 
 const Installer = @import("../../lib/packages/install.zig");
 
+const Locales = @import("locales");
 const Context = @import("context");
 const Args = @import("args");
 
 fn install(ctx: *Context) !void {
     const install_args = Args.parseInstall(ctx.options);
 
-    const target = if (ctx.cmds.len < 3) null else ctx.cmds[2]; // package name;
+    const package_query = if (ctx.cmds.len < 3) null else ctx.cmds[2]; // package name;
     var installer = Installer.init(ctx);
     installer.force_inject = install_args.inject;
 
@@ -21,21 +22,21 @@ fn install(ctx: *Context) !void {
         return error.InvalidArguments;
     }
 
-    ctx.fetcher.install_unverified_packages = install_args.unverified;
+    Locales.INSTALL_UNVERIFIED_PACKAGES = install_args.unverified;
     defer installer.deinit();
 
-    if (target) |package| {
-        var split = std.mem.splitScalar(u8, package, '@');
+    if (package_query) |query| {
+        var split = std.mem.splitScalar(u8, query, '@');
         const package_name = split.first();
         const package_version = split.next();
 
-        var p = try installer.resolvePackage(
+        var package = try installer.resolvePackage(
             package_name,
             package_version,
         );
-        defer p.deinit();
+        defer package.deinit();
 
-        installer.installOne(&p) catch |err| {
+        installer.installOne(&package) catch |err| {
             try ctx.logger.errorf("Installing Failed error={any}", .{err}, @src());
 
             switch (err) {
@@ -56,7 +57,7 @@ fn install(ctx: *Context) !void {
                     );
                 },
                 else => {
-                    try ctx.printer.append("Installing {s} has failed... {any}\n\n", .{ package, err }, .{ .color = .red });
+                    try ctx.printer.append("Installing {s} has failed... {any}\n\n", .{ package.package_name, err }, .{ .color = .red });
                 },
             }
         };
