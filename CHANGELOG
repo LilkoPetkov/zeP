@@ -1,4 +1,4 @@
-1.1.0 (Jan 22nd, 2026)
+1.1.0 (Jan 26th, 2026)
 Moved the root folder to ~/.zep instead (added migrate function)
 Removed artifact pruning, uninstall does it by default after each uninstallation
 API Route changes
