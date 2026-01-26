@@ -166,7 +166,7 @@ fn linkPackage(
         "{s}/{s}",
         .{
             self.ctx.paths.pkg_root,
-            package.id,
+            package.package.name,
         },
     );
     defer self.ctx.allocator.free(target_path);
@@ -217,17 +217,19 @@ pub fn resolvePackage(
     }
 
     try self.ctx.logger.infof("Getting Package...", .{}, @src());
-    const package = try Package.init(
+    var package = try Package.init(
         self.ctx,
         package_name,
         package_version,
     );
+    defer package.deinit();
+
     try self.ctx.logger.infof("Package received!", .{}, @src());
 
     if (v.len == 0) {
-        if (try self.isInstalled(package.id)) return error.AlreadyInstalled;
-        if (try self.isCorrupt(package.id)) {
-            try self.fixCorrupt(package.id);
+        if (try self.isInstalled(package.package.name)) return error.AlreadyInstalled;
+        if (try self.isCorrupt(package.package.name)) {
+            try self.fixCorrupt(package.package.name);
         }
     }
 
@@ -277,7 +279,7 @@ pub fn installOne(
         );
         try self.ctx.printer.append(
             "{s} Zig Version: {s}\n",
-            .{ package.id, parsed.zig_version },
+            .{ package.package.name, parsed.zig_version },
             .{ .verbosity = 2 },
         );
         try self.ctx.printer.append(
@@ -288,7 +290,7 @@ pub fn installOne(
     }
     try self.ctx.logger.infof("Checking Hash...", .{}, @src());
     try self.ctx.printer.append("Checking Hash...\n", .{}, .{ .verbosity = 2 });
-    if (std.mem.eql(u8, package.package.sha256sum, parsed.sha256sum)) {
+    if (std.mem.eql(u8, package.package.hash, parsed.hash)) {
         try self.ctx.printer.append(" > HASH IDENTICAL\n\n", .{}, .{
             .color = .green,
             .verbosity = 2,
@@ -298,8 +300,8 @@ pub fn installOne(
     }
 
     try self.downloader.downloadPackage(
-        package.id,
-        parsed.url,
+        package.package.name,
+        parsed.source,
     );
 
     try self.ctx.printer.append("Successfully installed - {s}\n\n", .{package.package_name}, .{ .color = .green });

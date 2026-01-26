@@ -9,27 +9,27 @@ const Args = @import("args");
 fn uninstall(ctx: *Context) !void {
     if (ctx.cmds.len < 3) return error.UninstallMissingArguments;
 
-    const package = ctx.cmds[2]; // package name;
-    var split = std.mem.splitScalar(u8, package, '@');
+    const package_query = ctx.cmds[2]; // package name;
+    var split = std.mem.splitScalar(u8, package_query, '@');
     const package_name = split.first();
     const package_version = split.next();
 
     const uninstall_args = Args.parseUninstall(ctx.options);
     if (uninstall_args.global) {
-        var p = try Package.init(
+        var package = try Package.init(
             ctx,
             package_name,
             package_version,
         );
-        defer p.deinit();
-        p.uninstallFromDisk(uninstall_args.force) catch |err| {
+        defer package.deinit();
+        package.uninstallFromDisk(uninstall_args.force) catch |err| {
             switch (err) {
                 error.InUse => {
-                    try ctx.printer.append("WARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package}, .{ .color = .red });
+                    try ctx.printer.append("WARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package_query}, .{ .color = .red });
                     try ctx.printer.append("Use - if you do not care\n $ zep uninstall [target]@[version] -g -f\n\n", .{}, .{ .color = .yellow });
                 },
                 error.NotInstalled => {
-                    try ctx.printer.append("[{s}] Not installed\n\n", .{package}, .{ .color = .red });
+                    try ctx.printer.append("[{s}] Not installed\n\n", .{package_query}, .{ .color = .red });
                     return;
                 },
                 else => {
@@ -39,7 +39,11 @@ fn uninstall(ctx: *Context) !void {
             }
         };
         if (uninstall_args.force) {
-            try ctx.printer.append("[{s}] Package deleted consequences ignored.\n\n", .{package}, .{ .color = .green });
+            try ctx.printer.append(
+                "[{s}] Package deleted consequences ignored.\n\n",
+                .{package_query},
+                .{ .color = .green },
+            );
         }
         return;
     }
