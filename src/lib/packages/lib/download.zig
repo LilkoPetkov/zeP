@@ -52,7 +52,6 @@ fn extractArchive(
 
 fn downloadArchive(
     self: *Downloader,
-    package_id: []const u8,
     url: []const u8,
 ) ![]const u8 {
     try self.ctx.logger.infof("Fetching Package {s}", .{url}, @src());
@@ -60,20 +59,16 @@ fn downloadArchive(
     try self.ctx.printer.append("Fetching package... [{s}]\n", .{url}, .{
         .verbosity = 2,
     });
-    var split = std.mem.splitAny(u8, package_id, "@");
-    const package_name = split.first();
-    const package_version = split.next() orelse "";
-
-    const target_url = if (!Locales.INSTALL_UNVERIFIED_PACKAGES) url else self.findCloudReleaseUrl(package_name, package_version) orelse url;
 
     var client = std.http.Client{ .allocator = self.ctx.allocator };
     defer client.deinit();
 
-    const is_zip = std.mem.endsWith(u8, target_url, ".zip");
+    const is_zip = std.mem.endsWith(u8, url, ".zip");
     const install_path = if (is_zip) TEMP_DIR ++ "/tmp.zip" else "/tmp.tar.zstd";
     errdefer {
         Fs.deleteTreeIfExists(install_path) catch {};
     }
+    try self.ctx.logger.infof("Install Path {s}", .{install_path}, @src());
 
     var file = try Fs.openOrCreateFile(install_path);
     defer file.close();
@@ -93,29 +88,16 @@ fn downloadArchive(
     return install_path;
 }
 
-fn findCloudReleaseUrl(
-    self: *Downloader,
-    name: []const u8,
-    version: []const u8,
-) ?[]const u8 {
-    var releases = self.ctx.fetcher.fetchReleases(name) catch return null;
-    defer releases.deinit(self.ctx.allocator);
-
-    for (releases.items) |r| {
-        if (std.mem.eql(u8, r.Release, version)) {
-            return r.Url;
-        }
-    }
-    return null;
-}
-
 fn hasInstalledPackage(
     self: *Downloader,
     package_id: []const u8,
 ) !bool {
     const path = try std.fs.path.join(
         self.ctx.allocator,
-        &.{ self.ctx.paths.pkg_root, package_id },
+        &.{
+            self.ctx.paths.pkg_root,
+            package_id,
+        },
     );
     defer self.ctx.allocator.free(path);
 
@@ -131,7 +113,10 @@ pub fn installPackage(
 
     const out_path = try std.fs.path.join(
         self.ctx.allocator,
-        &.{ self.ctx.paths.pkg_root, package_id },
+        &.{
+            self.ctx.paths.pkg_root,
+            package_id,
+        },
     );
     defer self.ctx.allocator.free(out_path);
     if (Fs.existsDir(out_path)) {
@@ -199,10 +184,7 @@ pub fn installPackage(
             },
         );
 
-        const install_path = try self.downloadArchive(
-            package_id,
-            url,
-        );
+        const install_path = try self.downloadArchive(url);
         const is_zip = std.mem.endsWith(u8, install_path, ".zip");
         try self.extractArchive(
             if (is_zip) ArchiveType.zip else ArchiveType.tar_zstd,

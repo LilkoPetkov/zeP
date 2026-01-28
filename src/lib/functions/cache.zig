@@ -26,7 +26,7 @@ pub fn deinit(_: *Cache) void {}
 pub fn list(self: *Cache) !void {
     try self.ctx.logger.info("Listing Cache", @src());
 
-    const cached_path = self.ctx.paths.cached;
+    const cached_path = self.ctx.paths.pkg_cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
     defer opened_cached.close();
@@ -56,7 +56,7 @@ pub fn list(self: *Cache) !void {
 fn cleanOne(self: *Cache, name: []const u8) !void {
     try self.ctx.logger.infof("Cleaing Single {s}", .{name}, @src());
 
-    const cached_path = self.ctx.paths.cached;
+    const cached_path = self.ctx.paths.pkg_cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
     defer opened_cached.close();
@@ -124,7 +124,7 @@ pub fn cleanAll(self: *Cache, name: ?[]const u8) !void {
         return;
     }
 
-    const cached_path = self.ctx.paths.cached;
+    const cached_path = self.ctx.paths.pkg_cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
     defer opened_cached.close();
@@ -185,7 +185,7 @@ pub fn cleanAll(self: *Cache, name: ?[]const u8) !void {
 }
 
 fn getSize(self: *Cache) !u64 {
-    const cached_path = self.ctx.paths.cached;
+    const cached_path = self.ctx.paths.pkg_cached;
 
     var opened_cached = try Fs.openOrCreateDir(cached_path);
     defer opened_cached.close();

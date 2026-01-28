@@ -89,13 +89,12 @@ pub fn migratePaths(ctx: *Context) !void {
         );
         defer manifest.deinit();
         for (manifest.value.packages) |package| {
-            const package_name = package.name;
             const new_package_path = try std.fs.path.join(
                 ctx.allocator,
                 &.{
                     newbase,
                     "pkg",
-                    package_name,
+                    package.name,
                 },
             );
             if (!Fs.existsDir(new_package_path)) continue;

@@ -59,21 +59,18 @@ pub fn bootstrap(
 
     try ctx.logger.info("Installing packages...", @src());
 
-    var installer = Installer.init(ctx);
+    var installer = Installer.init(ctx, .zep);
     defer installer.deinit();
-    Locales.INSTALL_UNVERIFIED_PACKAGES = true;
     for (pkgs) |pkg| {
         var p_split = std.mem.splitScalar(u8, pkg, '@');
         const package_name = p_split.first();
         const package_version = p_split.next();
 
-        var p = try installer.resolvePackage(
+        installer.installOne(
             package_name,
             package_version,
-        );
-        defer p.deinit();
-
-        installer.installOne(&p) catch |err| {
+            true,
+        ) catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
                     try ctx.printer.append("{s} already installed.\n", .{package_name}, .{});

@@ -5,6 +5,9 @@ pub const zep_url = "https://zep.run";
 pub const zep_download_index = zep_url ++ "/download.json";
 pub const zig_download_index = "https://ziglang.org/download/index.json";
 
+pub const github_api = "https://api.github.com";
+pub const gitlab_api = "https://gitlab.com/api/v4";
+
 pub const kb = 1024;
 pub const mb = kb * kb;
 

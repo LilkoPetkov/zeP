@@ -32,7 +32,7 @@ fn cachedArchivePath(
     const cache_fp = try std.fs.path.join(
         self.ctx.allocator,
         &.{
-            self.ctx.paths.cached,
+            self.ctx.paths.pkg_cached,
             zstd_id,
         },
     );
@@ -142,7 +142,7 @@ pub fn remove(
         self.ctx.allocator,
         "{s}/{s}.tar.zstd",
         .{
-            self.ctx.paths.cached,
+            self.ctx.paths.pkg_cached,
             package_id,
         },
     );

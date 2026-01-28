@@ -58,13 +58,13 @@ pub fn build(builder: *std.Build) void {
     clis_mod.addImport("locales", locales_mod);
 
     const cores_mod = builder.createModule(.{ .root_source_file = builder.path("src/tools/core/_index.zig") });
+    __zepinj__.imp(builder, cores_mod);
     cores_mod.addImport("io", ios_mod);
     cores_mod.addImport("cli", clis_mod);
     cores_mod.addImport("constants", constants_mod);
     cores_mod.addImport("locales", locales_mod);
     cores_mod.addImport("structs", structs_mod);
     cores_mod.addImport("logger", loggers_mod);
-
     cores_mod.addIncludePath(.{
         .cwd_relative = "vendor/zstd/lib",
     });
@@ -81,8 +81,16 @@ pub fn build(builder: *std.Build) void {
     context_mod.addImport("logger", loggers_mod);
     context_mod.addImport("args", args_mod);
 
+    const resolver_mod = builder.createModule(.{ .root_source_file = builder.path("src/resolver.zig") });
+    resolver_mod.addImport("constants", constants_mod);
+    resolver_mod.addImport("loggers", loggers_mod);
+    resolver_mod.addImport("structs", structs_mod);
+    resolver_mod.addImport("io", ios_mod);
+    resolver_mod.addImport("cli", clis_mod);
+    resolver_mod.addImport("core", cores_mod);
+    resolver_mod.addImport("context", context_mod);
+
     const package_mod = builder.createModule(.{ .root_source_file = builder.path("src/package.zig") });
-    __zepinj__.imp(builder, package_mod);
     package_mod.addImport("constants", constants_mod);
     package_mod.addImport("loggers", loggers_mod);
     package_mod.addImport("structs", structs_mod);
@@ -90,6 +98,7 @@ pub fn build(builder: *std.Build) void {
     package_mod.addImport("cli", clis_mod);
     package_mod.addImport("core", cores_mod);
     package_mod.addImport("context", context_mod);
+    package_mod.addImport("resolver", resolver_mod);
 
     const zstd = builder.addLibrary(.{
         .name = "zstd",
@@ -99,7 +108,6 @@ pub fn build(builder: *std.Build) void {
             .link_libc = true,
         }),
     });
-
     zstd.addIncludePath(.{
         .cwd_relative = "vendor/zstd/lib",
     });
@@ -123,6 +131,7 @@ pub fn build(builder: *std.Build) void {
     zep_executeable_module.addImport("context", context_mod);
     zep_executeable_module.addImport("args", args_mod);
     zep_executeable_module.addImport("package", package_mod);
+    zep_executeable_module.addImport("resolver", resolver_mod);
 
     const testing_modules = [5]Modules{
         .{ .name = "constants", .module = constants_mod },

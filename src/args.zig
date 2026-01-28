@@ -102,29 +102,31 @@ pub fn parseUninstall(
 
 const InstallArgs = struct {
     inject: bool,
-    unverified: bool,
+    zep: bool,
     github: bool,
     codeberg: bool,
     gitlab: bool,
+    local: bool,
 };
 pub fn parseInstall(
     args: [][]const u8,
 ) InstallArgs {
     var inject: bool = false;
-    var unverified: bool = false;
+    var zep: bool = false;
     var github: bool = false;
     var codeberg: bool = false;
     var gitlab: bool = false;
+    var local: bool = false;
     for (args) |arg| {
         if (std.mem.startsWith(u8, arg, "--inject") or
             std.mem.startsWith(u8, arg, "-I"))
         {
             inject = true;
         }
-        if (std.mem.startsWith(u8, arg, "--unverified") or
-            std.mem.startsWith(u8, arg, "-U"))
+        if (std.mem.startsWith(u8, arg, "--zep") or
+            std.mem.startsWith(u8, arg, "-Z"))
         {
-            unverified = true;
+            zep = true;
         }
         if (std.mem.startsWith(u8, arg, "--github") or
             std.mem.startsWith(u8, arg, "-GH"))
@@ -141,14 +143,20 @@ pub fn parseInstall(
         {
             gitlab = true;
         }
+        if (std.mem.startsWith(u8, arg, "--local") or
+            std.mem.startsWith(u8, arg, "-L"))
+        {
+            local = true;
+        }
     }
 
     return InstallArgs{
         .inject = inject,
-        .unverified = unverified,
+        .zep = zep,
         .github = github,
         .codeberg = codeberg,
         .gitlab = gitlab,
+        .local = local,
     };
 }
 

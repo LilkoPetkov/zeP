@@ -41,6 +41,12 @@ pub fn openFile(path: []const u8) !std.fs.File {
     return f;
 }
 
+/// Checks if a File exists and creates it if it does not [NO PATH]
+pub fn fileTruncate(path: []const u8) !std.fs.File {
+    const f = try std.fs.cwd().createFile(path, std.fs.File.CreateFlags{ .read = true, .truncate = true });
+    return f;
+}
+
 /// Checks if a Dir exists and creates it if it does not [THE WHOLE PATH]
 pub fn openOrCreateDir(path: []const u8) !std.fs.Dir {
     if (!existsDir(path)) {

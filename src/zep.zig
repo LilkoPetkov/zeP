@@ -67,10 +67,12 @@ pub fn start(alloc: std.mem.Allocator) !Context {
     };
     try Migrate.migratePaths(&ctx);
 
-    const create_paths = [5][]const u8{
+    const create_paths = [7][]const u8{
         paths.base,
         paths.zep_root,
         paths.cached,
+        paths.pkg_cached,
+        paths.meta_cached,
         paths.pkg_root,
         paths.zig_root,
     };
@@ -129,9 +131,8 @@ pub fn start(alloc: std.mem.Allocator) !Context {
             try Fs.deleteFileIfExists(Constants.Default.package_files.lock);
             const prev_verbosity = Locales.VERBOSITY_MODE;
             Locales.VERBOSITY_MODE = 0;
-            Locales.INSTALL_UNVERIFIED_PACKAGES = true;
 
-            var installer = Installer.init(&ctx);
+            var installer = Installer.init(&ctx, .zep);
             try installer.installAll();
 
             Locales.VERBOSITY_MODE = prev_verbosity;

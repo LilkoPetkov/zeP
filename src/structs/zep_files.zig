@@ -1,3 +1,4 @@
+const Extras = @import("extras.zig");
 const Constants = @import("constants");
 const builtin = @import("builtin");
 
@@ -31,11 +32,13 @@ pub const Root = struct {
 
 pub const Package = struct {
     name: []const u8,
+    version: []const u8,
     hash: []const u8,
     source: []const u8,
     zig_version: []const u8,
     root_file: []const u8,
-    packages: []Package = &[_]Package{},
+    namespace: Extras.InstallType = .zep,
+    packages: [][]const u8 = &[_][]const u8{},
 };
 
 pub const Lock = struct {

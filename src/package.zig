@@ -12,145 +12,7 @@ const Hash = @import("core").Hash;
 const Json = @import("core").Json;
 
 const Context = @import("context").Context;
-
-fn resolveFromLock(
-    ctx: *Context,
-    package_name: []const u8,
-    package_version: []const u8,
-) !?Structs.ZepFiles.Package {
-    const lock = try ctx.manifest.readManifest(
-        Structs.ZepFiles.Lock,
-        Constants.Default.package_files.lock,
-    );
-    defer lock.deinit();
-    const id = try std.fmt.allocPrint(
-        ctx.allocator,
-        "{s}@{s}",
-        .{ package_name, package_version },
-    );
-    defer ctx.allocator.free(id);
-
-    for (lock.value.packages) |p| {
-        if (!std.mem.eql(u8, p.name, id)) continue;
-        try ctx.logger.info("Package found in .lock...", @src());
-
-        return Structs.ZepFiles.Package{
-            .name = try ctx.allocator.dupe(u8, id),
-            .source = try ctx.allocator.dupe(u8, p.source),
-            .zig_version = try ctx.allocator.dupe(u8, p.zig_version),
-            .root_file = try ctx.allocator.dupe(u8, p.root_file),
-            .hash = try ctx.allocator.dupe(u8, p.hash),
-            .packages = &.{},
-        };
-    }
-
-    return null;
-}
-
-fn resolveFromFetch(
-    ctx: *Context,
-    package_name: []const u8,
-    package_version: ?[]const u8,
-) !Structs.ZepFiles.Package {
-    try ctx.logger.info("Fetching package version...", @src());
-    try ctx.printer.append("Finding the package...\n", .{}, .{
-        .verbosity = 3,
-    });
-    var package = try ctx.fetcher.fetchPackage(
-        package_name,
-        ctx.logger,
-    );
-    defer package.deinit(ctx.allocator);
-    try ctx.logger.infof("Package fetched!", .{}, @src());
-
-    try ctx.printer.append(
-        " > PACKAGE FOUND\n\n",
-        .{},
-        .{
-            .color = .green,
-            .verbosity = 2,
-        },
-    );
-
-    const versions = package.versions;
-    if (versions.len == 0) {
-        try ctx.logger.err("Fetching package has no version...", @src());
-        ctx.printer.append("Package has no version!\n", .{}, .{ .color = .red }) catch {};
-        return error.NoPackageVersion;
-    }
-
-    try ctx.logger.infof("Getting package version!", .{}, @src());
-    try ctx.printer.append(
-        "Fetching package version '{s}'\n",
-        .{package_version orelse "/ (using latest)"},
-        .{
-            .verbosity = 2,
-        },
-    );
-    const target_version = package_version orelse versions[0].version;
-    var check_selected: ?Structs.Packages.Version = null;
-    for (versions) |v| {
-        if (std.mem.eql(u8, v.version, target_version)) {
-            check_selected = v;
-            break;
-        }
-    }
-
-    const v = check_selected orelse return error.NotFound;
-    const id = try std.fmt.allocPrint(
-        ctx.allocator,
-        "{s}@{s}",
-        .{ package_name, v.version },
-    );
-    defer ctx.allocator.free(id);
-
-    const version = Structs.ZepFiles.Package{
-        .name = try ctx.allocator.dupe(u8, id),
-        .source = try ctx.allocator.dupe(u8, v.url),
-        .zig_version = try ctx.allocator.dupe(u8, v.zig_version),
-        .root_file = try ctx.allocator.dupe(u8, v.root_file),
-        .hash = try ctx.allocator.dupe(u8, v.sha256sum),
-        .packages = &.{},
-    };
-
-    return version;
-}
-
-fn resolveVersion(
-    ctx: *Context,
-    package_name: []const u8,
-    package_version: ?[]const u8,
-) !Structs.ZepFiles.Package {
-    if (package_version) |v| {
-        const attempt = try resolveFromLock(
-            ctx,
-            package_name,
-            v,
-        );
-        if (attempt) |a| return a;
-    }
-
-    const version = try resolveFromFetch(
-        ctx,
-        package_name,
-        package_version,
-    );
-
-    var p_split = std.mem.splitScalar(
-        u8,
-        version.name,
-        '@',
-    );
-    _ = p_split.next();
-    const v = p_split.next() orelse "latest";
-
-    try ctx.logger.infof("Package version = {s}!", .{v}, @src());
-    try ctx.printer.append(" > VERSION FOUND!\n\n", .{}, .{
-        .color = .green,
-        .verbosity = 2,
-    });
-    return version;
-}
+const Resolver = @import("resolver");
 
 /// Handles Packages, returns null if package is not found.
 /// Rolls back to latest version if none was specified.
@@ -158,29 +20,34 @@ fn resolveVersion(
 ctx: *Context,
 
 package: Structs.ZepFiles.Package,
-package_name: []const u8, // borrowed
-package_version: []const u8, // borrowed
+package_id: []const u8,
 
 pub fn init(
     ctx: *Context,
     package_name: []const u8,
     package_version: ?[]const u8,
+    install_type: ?Structs.Extras.InstallType,
 ) !Package {
-    const package = try resolveVersion(
-        ctx,
+    var resolver = Resolver.init(ctx);
+    var package = try resolver.resolvePackage(
         package_name,
         package_version,
+        install_type,
     );
+    if (std.mem.endsWith(u8, package.name, ".zig")) {
+        package.name = package.name[0 .. package.name.len - 4]; // remove ".zig"
+    }
 
-    var p_split = std.mem.splitScalar(u8, package.name, '@');
-    _ = p_split.next();
-    const version = p_split.next() orelse "latest";
+    const package_id = try std.fmt.allocPrint(
+        ctx.allocator,
+        "{s}@{s}",
+        .{ package.name, package.version },
+    );
 
     return Package{
         .ctx = ctx,
-        .package_name = package_name,
-        .package_version = version,
         .package = package,
+        .package_id = package_id,
     };
 }
 
@@ -189,7 +56,52 @@ pub fn deinit(self: *Package) void {
     self.ctx.allocator.free(self.package.hash);
     self.ctx.allocator.free(self.package.source);
     self.ctx.allocator.free(self.package.name);
+    self.ctx.allocator.free(self.package.version);
     self.ctx.allocator.free(self.package.zig_version);
+
+    self.ctx.allocator.free(self.package_id);
+}
+
+pub fn updateMetadata(self: *Package) !void {
+    const cached_filename = try std.fmt.allocPrint(
+        self.ctx.allocator,
+        "{s}/{s}+{s}.json",
+        .{ self.ctx.paths.meta_cached, @tagName(self.package.namespace), self.package.name },
+    );
+    defer self.ctx.allocator.free(cached_filename);
+    if (!Fs.existsFile(cached_filename)) return;
+
+    const f = try Fs.openFile(cached_filename);
+    defer f.close();
+    const data = try f.readToEndAlloc(self.ctx.allocator, Constants.Default.kb * 16);
+    defer self.ctx.allocator.free(data);
+
+    var parsed_package: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(
+        Structs.Packages.Package,
+        self.ctx.allocator,
+        data,
+        .{ .allocate = .alloc_always },
+    );
+    defer parsed_package.deinit();
+
+    for (parsed_package.value.versions) |*v| {
+        if (!std.mem.eql(u8, v.version, self.package.version)) continue;
+        v.root_file = self.package.root_file;
+        v.sha256sum = self.package.hash;
+        v.zig_version = self.package.zig_version;
+    }
+
+    const stringified = try std.json.Stringify.valueAlloc(
+        self.ctx.allocator,
+        parsed_package.value,
+        .{},
+    );
+    defer self.ctx.allocator.free(stringified);
+
+    const w = try Fs.fileTruncate(cached_filename);
+    defer w.close();
+    _ = try w.writeAll(stringified);
+    return;
 }
 
 fn registeredPathCount(self: *Package) !usize {
@@ -217,7 +129,7 @@ pub fn uninstallFromDisk(
     const path = try std.fmt.allocPrint(
         self.ctx.allocator,
         "{s}/{s}",
-        .{ self.ctx.paths.pkg_root, self.package.name },
+        .{ self.ctx.paths.pkg_root, self.package_id },
     );
     defer self.ctx.allocator.free(path);
 
@@ -323,7 +235,7 @@ pub fn removePathFromManifest(
         const package_path = try std.fmt.allocPrint(
             self.ctx.allocator,
             "{s}/{s}/",
-            .{ self.ctx.paths.pkg_root, self.package.name },
+            .{ self.ctx.paths.pkg_root, self.package_id },
         );
         defer self.ctx.allocator.free(package_path);
 
@@ -343,18 +255,19 @@ pub fn lockRegister(self: *Package) !void {
     );
     defer lock.deinit();
 
-    const new_entry = Structs.ZepFiles.Package{
+    const new_item = Structs.ZepFiles.Package{
         .name = self.package.name,
+        .version = self.package.version,
+        .namespace = self.package.namespace,
         .hash = self.package.hash,
         .source = self.package.source,
         .zig_version = self.package.zig_version,
         .root_file = self.package.root_file,
+        .packages = self.package.packages,
     };
 
-    lock.value.packages = try filterOut(
-        self.ctx.allocator,
+    lock.value.packages = try self.filterOut(
         lock.value.packages,
-        self.package.name,
         Structs.ZepFiles.Package,
         struct {
             fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
@@ -363,11 +276,10 @@ pub fn lockRegister(self: *Package) !void {
         }.match,
     );
 
-    lock.value.packages = try appendUnique(
+    lock.value.packages = try self.appendUnique(
         Structs.ZepFiles.Package,
         lock.value.packages,
-        new_entry,
-        self.ctx.allocator,
+        new_item,
         struct {
             fn match(item: Structs.ZepFiles.Package, needle: Structs.ZepFiles.Package) bool {
                 return std.mem.startsWith(u8, item.name, needle.name);
@@ -375,10 +287,8 @@ pub fn lockRegister(self: *Package) !void {
         }.match,
     );
 
-    lock.value.root.packages = try filterOut(
-        self.ctx.allocator,
+    lock.value.root.packages = try self.filterOut(
         lock.value.root.packages,
-        self.package.name,
         []const u8,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
@@ -387,11 +297,10 @@ pub fn lockRegister(self: *Package) !void {
         }.match,
     );
 
-    lock.value.root.packages = try appendUnique(
+    lock.value.root.packages = try self.appendUnique(
         []const u8,
         lock.value.root.packages,
-        new_entry.name,
-        self.ctx.allocator,
+        new_item.name,
         struct {
             fn match(a: []const u8, b: []const u8) bool {
                 return std.mem.startsWith(u8, a, b);
@@ -413,10 +322,8 @@ pub fn lockUnregister(self: *Package) !void {
     );
     defer lock.deinit();
 
-    lock.value.packages = try filterOut(
-        self.ctx.allocator,
+    lock.value.packages = try self.filterOut(
         lock.value.packages,
-        self.package.name,
         Structs.ZepFiles.Package,
         struct {
             fn match(item: Structs.ZepFiles.Package, needle: []const u8) bool {
@@ -425,10 +332,8 @@ pub fn lockUnregister(self: *Package) !void {
         }.match,
     );
 
-    lock.value.root.packages = try filterOut(
-        self.ctx.allocator,
+    lock.value.root.packages = try self.filterOut(
         lock.value.root.packages,
-        self.package.name,
         []const u8,
         struct {
             fn match(item: []const u8, needle: []const u8) bool {
@@ -445,39 +350,40 @@ pub fn lockUnregister(self: *Package) !void {
 }
 
 fn appendUnique(
+    self: *Package,
     comptime T: type,
     list: []const T,
     new_item: T,
-    allocator: std.mem.Allocator,
     matchFn: fn (a: T, b: T) bool,
 ) ![]T {
-    var arr = try std.ArrayList(T).initCapacity(allocator, 10);
-    defer arr.deinit(allocator);
+    var arr = try std.ArrayList(T).initCapacity(self.ctx.allocator, 10);
+    defer arr.deinit(self.ctx.allocator);
 
     for (list) |item| {
-        try arr.append(allocator, item);
+        try arr.append(self.ctx.allocator, item);
         if (matchFn(item, new_item))
-            return arr.toOwnedSlice(allocator);
+            return arr.toOwnedSlice(self.ctx.allocator);
     }
 
-    try arr.append(allocator, new_item);
-    return arr.toOwnedSlice(allocator);
+    try arr.append(self.ctx.allocator, new_item);
+    return arr.toOwnedSlice(self.ctx.allocator);
 }
 
 fn filterOut(
-    allocator: std.mem.Allocator,
+    self: *Package,
     list: anytype,
-    filter: []const u8,
     comptime T: type,
     matchFn: fn (a: T, b: []const u8) bool,
 ) ![]T {
-    var out = try std.ArrayList(T).initCapacity(allocator, 10);
-    defer out.deinit(allocator);
+    const filter = self.package.name;
+
+    var out = try std.ArrayList(T).initCapacity(self.ctx.allocator, 10);
+    defer out.deinit(self.ctx.allocator);
 
     for (list) |item| {
         if (!matchFn(item, filter))
-            try out.append(allocator, item);
+            try out.append(self.ctx.allocator, item);
     }
 
-    return out.toOwnedSlice(allocator);
+    return out.toOwnedSlice(self.ctx.allocator);
 }

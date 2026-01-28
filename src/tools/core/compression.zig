@@ -81,8 +81,8 @@ pub fn compress(
         return error.TargetNotFound;
     }
 
-    if (!Fs.existsDir(self.paths.cached)) {
-        _ = try Fs.openOrCreateDir(self.paths.cached);
+    if (!Fs.existsDir(self.paths.pkg_cached)) {
+        _ = try Fs.openOrCreateDir(self.paths.pkg_cached);
     }
 
     const a = try std.fmt.allocPrint(
@@ -94,7 +94,7 @@ pub fn compress(
 
     const archive_path = try std.fs.path.join(
         self.allocator,
-        &.{ self.paths.cached, a },
+        &.{ self.paths.pkg_cached, a },
     );
     try Fs.deleteFileIfExists(archive_path);
 

@@ -31,20 +31,11 @@ pub fn uninstall(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
     );
+
     var package_version: []const u8 = "";
     for (lock.value.packages) |package| {
-        if (std.mem.startsWith(u8, package.name, package_name)) {
-            var split = std.mem.splitScalar(u8, package.name, '@');
-            _ = split.first();
-            const version = split.next();
-            if (version) |v| {
-                package_version = v;
-            } else {
-                return error.NotInstalled;
-            }
-
-            break;
-        }
+        if (!std.mem.startsWith(u8, package.name, package_name)) continue;
+        package_version = package.version;
         continue;
     }
 
@@ -56,6 +47,7 @@ pub fn uninstall(
         self.ctx,
         package_name,
         package_version,
+        null,
     );
     defer package.deinit();
 

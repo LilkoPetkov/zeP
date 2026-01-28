@@ -62,26 +62,61 @@ pub fn init(
     };
 }
 
-fn injector(self: *Injector, package_name: []const u8, path_name: []const u8) ![]u8 {
-    const template = try self.renderInjector(package_name, path_name);
+fn renderImport(
+    self: *Injector,
+    pkg: []const u8,
+    path: []const u8,
+) ![]u8 {
+    return std.fmt.allocPrint(self.allocator,
+        \\   
+        \\      std.Build.Module.Import{{
+        \\              .name = "{s}",
+        \\              .module = b.createModule(.{{
+        \\                  .root_source_file = b.path(".zep/{s}{s}")
+        \\              }}),
+        \\      }},
+        \\
+    , .{
+        pkg, pkg, path,
+    });
+}
 
-    return template;
+fn renderImports(
+    self: *Injector,
+    packages: [][]const u8,
+) ![]u8 {
+    var buffer = try std.ArrayList(u8).initCapacity(self.allocator, 100);
+    const lock = try self.manifest.readManifest(
+        Structs.ZepFiles.Lock,
+        Constants.Default.package_files.lock,
+    );
+    defer lock.deinit();
+    const lock_packages = lock.value.packages;
+    for (lock_packages) |lp| {
+        if (!isInArray(packages, lp.name)) continue;
+        const rendered_import = try self.renderImport(lp.name, lp.root_file);
+        try buffer.appendSlice(self.allocator, rendered_import);
+    }
+
+    return buffer.toOwnedSlice(self.allocator);
 }
 
 fn renderInjector(
     self: *Injector,
     pkg: []const u8,
     path: []const u8,
+    packages: [][]const u8,
 ) ![]u8 {
+    const imports = try self.renderImports(packages);
     return std.fmt.allocPrint(self.allocator,
         \\ // {s} MODULE
-        \\ const {s}Mod = b.createModule(.{{
+        \\ exe.addImport("{s}", b.createModule(.{{
         \\     .root_source_file = b.path(".zep/{s}{s}"),
-        \\ }});
-        \\ exe.addImport("{s}", {s}Mod);
+        \\     .imports = &.{{{s}}},
+        \\ }}));
         \\ // ----------
         \\
-    , .{ pkg, pkg, pkg, path, pkg, pkg });
+    , .{ pkg, pkg, pkg, path, imports });
 }
 
 const inject_method = enum {
@@ -143,7 +178,11 @@ pub fn initInjector(self: *Injector) !void {
     for (lock.value.packages) |pkg| {
         var split = std.mem.splitScalar(u8, pkg.name, '@');
         const name = split.first();
-        try snippets.append(self.allocator, try self.renderInjector(name, pkg.root_file));
+        try snippets.append(self.allocator, try self.renderInjector(
+            name,
+            pkg.root_file,
+            pkg.packages,
+        ));
     }
 
     try Fs.deleteFileIfExists(Constants.Default.package_files.injector);

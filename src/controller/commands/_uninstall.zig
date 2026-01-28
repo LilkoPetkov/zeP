@@ -20,6 +20,7 @@ fn uninstall(ctx: *Context) !void {
             ctx,
             package_name,
             package_version,
+            null,
         );
         defer package.deinit();
         package.uninstallFromDisk(uninstall_args.force) catch |err| {

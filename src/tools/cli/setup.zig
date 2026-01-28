@@ -45,6 +45,8 @@ pub fn setup(
         paths.zep_root,
         paths.bin,
         paths.cached,
+        paths.pkg_cached,
+        paths.meta_cached,
         paths.pkg_root,
         paths.zig_root,
         paths.prebuilt,

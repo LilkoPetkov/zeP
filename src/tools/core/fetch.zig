@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub const Fetch = @This();
 
-const Logger = @import("logger");
 const Constants = @import("constants");
 const Locales = @import("locales");
 const Structs = @import("structs");
@@ -10,6 +9,7 @@ const Structs = @import("structs");
 const Fs = @import("io").Fs;
 const Json = @import("json.zig");
 const Manifest = @import("manifest.zig");
+const Hash = @import("hash.zig");
 
 /// writing into files.
 allocator: std.mem.Allocator,
@@ -65,7 +65,7 @@ pub fn fetch(
     );
 }
 
-fn _fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.Package {
+pub fn fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.Package {
     const url = try std.fmt.allocPrint(
         self.allocator,
         Constants.Default.zep_url ++ "/api/v1/package?name={s}",
@@ -242,127 +242,4 @@ pub fn fetchReleases(self: *Fetch, name: []const u8) !std.ArrayList(Structs.Fetc
     }
 
     return releases;
-}
-
-fn fetchFromZep(
-    self: *Fetch,
-    package_name: []const u8,
-    logger: *Logger.logly.Logger,
-) !Structs.Packages.Package {
-    _ = logger;
-    const releases = try self.fetchReleases(package_name);
-    var versions = try std.ArrayList(Structs.Packages.Version).initCapacity(
-        self.allocator,
-        releases.items.len,
-    );
-    defer versions.deinit(self.allocator);
-
-    for (releases.items) |r| {
-        try versions.append(self.allocator, Structs.Packages.Version{
-            .root_file = r.RootFile,
-            .sha256sum = r.Hash,
-            .url = r.Url,
-            .version = r.Release,
-            .zig_version = r.ZigVersion,
-        });
-    }
-
-    const fetched = try self._fetchPackage(package_name);
-    var package = Structs.Packages.Package{
-        .author = fetched.UserID,
-        .name = fetched.Name,
-        .docs = fetched.Docs,
-        .versions = versions.items,
-    };
-
-    const duped = try package.dupPackage(self.allocator);
-    return duped;
-}
-
-fn fetchFromUrl(
-    self: *Fetch,
-    package_name: []const u8,
-    logger: *Logger.logly.Logger,
-) !Structs.Packages.Package {
-    const url = try std.fmt.allocPrint(
-        self.allocator,
-        Constants.Default.zep_url ++ "/packages/{s}.json",
-        .{package_name},
-    );
-    defer self.allocator.free(url);
-    try logger.infof("Fetching from url... {s}", .{url}, @src());
-
-    var body = std.Io.Writer.Allocating.init(self.allocator);
-    const res = self.client.fetch(.{
-        .location = .{ .url = url },
-        .method = .GET,
-        .response_writer = &body.writer,
-    }) catch |err| {
-        try logger.infof("Error while fetching... {any}", .{err}, @src());
-        return err;
-    };
-    try logger.infof("Fetched with code... {any}", .{res.status}, @src());
-    if (res.status == .not_found) return error.PackageNotFound;
-
-    const data = body.written();
-    var package: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(
-        Structs.Packages.Package,
-        self.allocator,
-        data,
-        .{ .allocate = .alloc_always },
-    );
-    defer package.deinit();
-
-    const duped = try package.value.dupPackage(self.allocator);
-    return duped;
-}
-
-fn loadFromLocal(
-    self: *Fetch,
-    package_name: []const u8,
-) !Structs.Packages.Package {
-    const path = try std.fmt.allocPrint(
-        self.allocator,
-        "{s}/{s}.json",
-        .{ self.paths.custom, package_name },
-    );
-    defer self.allocator.free(path);
-
-    if (!Fs.existsFile(path)) return error.PackageNotFound;
-
-    var package: std.json.Parsed(Structs.Packages.Package) = try Json.parseJsonFromFile(
-        self.allocator,
-        Structs.Packages.Package,
-        path,
-        Constants.Default.mb * 10,
-    );
-    defer package.deinit();
-
-    const duped = try package.value.dupPackage(self.allocator);
-    return duped;
-}
-
-pub fn fetchPackage(
-    self: *Fetch,
-    package_name: []const u8,
-    logger: *Logger.logly.Logger,
-) !Structs.Packages.Package {
-    if (Locales.INSTALL_UNVERIFIED_PACKAGES) {
-        try logger.info("Fetching via zep.run packages...", @src());
-        if (self.fetchFromZep(package_name, logger)) |pkg| {
-            return pkg;
-        } else |_| {}
-    }
-
-    try logger.info("Fetching via url...", @src());
-    if (self.fetchFromUrl(package_name, logger)) |pkg| {
-        return pkg;
-    } else |_| {}
-
-    try logger.info("Fetching via local...", @src());
-    if (self.loadFromLocal(package_name)) |pkg| {
-        return pkg;
-    } else |_| {}
-
-    return error.PackageNotFound;
 }
