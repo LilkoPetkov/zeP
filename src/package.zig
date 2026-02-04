@@ -253,7 +253,7 @@ pub fn lockRegister(self: *Package) !void {
 
     const new_item = Structs.ZepFiles.Package{
         .name = self.package.name,
-        .install = self.package.install,
+        .author = self.package.author,
         .version = self.package.version,
         .namespace = self.package.namespace,
         .hash = self.package.hash,

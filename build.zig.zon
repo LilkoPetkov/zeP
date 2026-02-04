@@ -9,6 +9,9 @@
         .zon = .{
             .path = ".zep/zon.zig",
         },
+        .zstd = .{
+            .path = ".zep/zstd.zig",
+        },
     },
     .fingerprint = 15404275013927620469,
     .minimum_zig_version = "0.15.2",

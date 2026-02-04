@@ -32,10 +32,7 @@ pub const Root = struct {
 
 pub const Package = struct {
     name: []const u8,
-    install: struct {
-        name: []const u8,
-        author: []const u8,
-    },
+    author: []const u8,
     version: []const u8,
     hash: []const u8,
     source: []const u8,

@@ -1,31 +1,6 @@
 const __zepinj__ = @import(".zep/injector.zig");
 const std = @import("std");
 
-fn addCFilesFromDir(
-    b: *std.Build,
-    lib: *std.Build.Step.Compile,
-    dir_path: []const u8,
-) void {
-    var dir = std.fs.cwd().openDir(dir_path, .{
-        .iterate = true,
-    }) catch unreachable;
-    defer dir.close();
-
-    var it = dir.iterate();
-    while (it.next() catch unreachable) |entry| {
-        if (entry.kind != .file) continue;
-        if (!std.mem.endsWith(u8, entry.name, ".c")) continue;
-
-        const full = b.pathJoin(&.{ dir_path, entry.name });
-        lib.addCSourceFile(
-            .{
-                .file = .{ .cwd_relative = full },
-                .flags = &.{"-DZSTD_DISABLE_ASM"},
-            },
-        );
-    }
-}
-
 pub fn build(builder: *std.Build) void {
     const target = builder.standardTargetOptions(.{});
     const optimize = builder.standardOptimizeOption(.{});
@@ -99,27 +74,6 @@ pub fn build(builder: *std.Build) void {
     package_mod.addImport("core", cores_mod);
     package_mod.addImport("context", context_mod);
     package_mod.addImport("resolver", resolver_mod);
-
-    const zstd = builder.addLibrary(.{
-        .name = "zstd",
-        .root_module = builder.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    zstd.addIncludePath(.{
-        .cwd_relative = "vendor/zstd/lib",
-    });
-
-    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/common");
-    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/compress");
-    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/decompress");
-
-    zstd.linkLibC();
-    cores_mod.linkLibrary(zstd);
-    zep_executeable.linkLibrary(zstd);
-    zep_executeable.linkLibC();
 
     zep_executeable_module.addImport("locales", locales_mod);
     zep_executeable_module.addImport("constants", constants_mod);

@@ -11,6 +11,7 @@
     "version": "1.1.0",
     "license": "GPLv3",
     "packages": [
+      "zstd.zig",
       "logly.zig",
       "zon.zig",
       "mvzr"
@@ -23,11 +24,17 @@
   },
   "packages": [
     {
+      "name": "zstd.zig",
+      "author": "muhammad-fiaz",
+      "version": "1.6.0",
+      "hash": "3367116b0bd12f82b2d5e4f04ca59598a37a81b1a04ac275c5c85aa4624307b2",
+      "source": "https://api.github.com/repos/muhammad-fiaz/zstd.zig/zipball/1.6.0#.zip",
+      "zig_version": "0.15.0",
+      "namespace": "github"
+    },
+    {
       "name": "logly.zig",
-      "install": {
-        "name": "logly.zig",
-        "author": "muhammad-fiaz"
-      },
+      "author": "muhammad-fiaz",
       "version": "0.1.6",
       "hash": "dff72fe6b2eae6647cf907b3e19b44cbf1352a23fecf91d6e56fecc41bcace25",
       "source": "https://api.github.com/repos/muhammad-fiaz/logly.zig/zipball/0.1.6#.zip",
@@ -36,10 +43,7 @@
     },
     {
       "name": "zon.zig",
-      "install": {
-        "name": "zon.zig",
-        "author": "muhammad-fiaz"
-      },
+      "author": "muhammad-fiaz",
       "version": "0.0.4",
       "hash": "cdae9f97992fcd323e2123d2dd5bcbfac74dfd4ba134adbc6e6767524b4cb514",
       "source": "https://api.github.com/repos/muhammad-fiaz/zon.zig/zipball/0.0.4#.zip",
@@ -48,10 +52,7 @@
     },
     {
       "name": "mvzr",
-      "install": {
-        "name": "mvzr",
-        "author": "mnemnion"
-      },
+      "author": "mnemnion",
       "version": "v0.3.7",
       "hash": "1c2c70e8ebde29825c09fcb8628d1375de0693282b1de5b1e33ded37097658e6",
       "source": "https://api.github.com/repos/mnemnion/mvzr/zipball/v0.3.7#.zip",

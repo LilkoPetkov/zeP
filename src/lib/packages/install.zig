@@ -341,8 +341,8 @@ pub fn installAll(self: *Installer) anyerror!void {
     for (lock.value.packages) |package| {
         const package_name = switch (package.namespace) {
             .github => try std.fmt.allocPrint(self.ctx.allocator, "{s}/{s}", .{
-                package.install.author,
-                package.install.name,
+                package.author,
+                package.name,
             }),
             else => try self.ctx.allocator.dupe(u8, package.name),
         };

@@ -1,5 +1,9 @@
 const std = @import("std");
 pub fn imp(b: *std.Build, exe: *std.Build.Module) void {
+ // zstd.zig MODULE
+ const zstd_dep = b.dependency("zstd", .{});
+ exe.addImport("zstd", zstd_dep.module("zstd"));
+ // ----------
  // logly.zig MODULE
  const logly_dep = b.dependency("logly", .{});
  exe.addImport("logly", logly_dep.module("logly"));

@@ -36,11 +36,8 @@ fn resolveFromLock(
 
         return Structs.ZepFiles.Package{
             .name = try self.ctx.allocator.dupe(u8, package_name),
-            .install = .{
-                .name = try self.ctx.allocator.dupe(u8, p.install.name),
-                .author = try self.ctx.allocator.dupe(u8, p.install.author),
-            },
             .version = try self.ctx.allocator.dupe(u8, package_version),
+            .author = try self.ctx.allocator.dupe(u8, p.author),
             .source = try self.ctx.allocator.dupe(u8, p.source),
             .zig_version = try self.ctx.allocator.dupe(u8, p.zig_version),
             .hash = try self.ctx.allocator.dupe(u8, p.hash),
@@ -113,10 +110,7 @@ fn resolveFromFetch(
 
     return Structs.ZepFiles.Package{
         .name = try self.ctx.allocator.dupe(u8, package.name),
-        .install = .{
-            .name = try self.ctx.allocator.dupe(u8, package.name),
-            .author = try self.ctx.allocator.dupe(u8, package.author),
-        },
+        .author = try self.ctx.allocator.dupe(u8, package.author),
         .version = try self.ctx.allocator.dupe(u8, v.version),
         .namespace = install_type,
         .source = try self.ctx.allocator.dupe(u8, v.url),
