@@ -20,18 +20,15 @@ const Zon = @import("zon");
 
 ctx: *Context,
 downloader: Downloader,
-install_type: Structs.Extras.InstallType,
 
 pub fn init(
     ctx: *Context,
-    install_type: ?Structs.Extras.InstallType,
 ) Installer {
     const downloader = Downloader.init(ctx);
 
     return Installer{
         .downloader = downloader,
         .ctx = ctx,
-        .install_type = install_type orelse .zep,
     };
 }
 
@@ -211,6 +208,7 @@ pub fn resolvePackage(
     self: *Installer,
     package_name: []const u8,
     package_version: ?[]const u8,
+    install_type: Structs.Extras.InstallType,
 ) !Package {
     const v = package_version orelse "";
     blk: {
@@ -229,7 +227,7 @@ pub fn resolvePackage(
         self.ctx,
         package_name,
         package_version,
-        self.install_type,
+        install_type,
     );
 
     try self.ctx.logger.infof("Package received!", .{}, @src());
@@ -244,151 +242,17 @@ pub fn resolvePackage(
     return package;
 }
 
-fn checkZon(
-    self: *Installer,
-    package: *Package,
-) !void {
-    const path_build_zig_zon = try std.fmt.allocPrint(
-        self.ctx.allocator,
-        "{s}/{s}/build.zig.zon",
-        .{ self.ctx.paths.pkg_root, package.package_id },
-    );
-    if (!Fs.existsFile(path_build_zig_zon)) return;
-
-    var build_zig_zon = try Fs.openFile(path_build_zig_zon);
-    defer build_zig_zon.close();
-    const data = try build_zig_zon.readToEndAlloc(
-        self.ctx.allocator,
-        Constants.Default.mb,
-    );
-    defer self.ctx.allocator.free(data);
-    if (data.len == 0) return;
-
-    var doc = try Zon.parse(self.ctx.allocator, data);
-    defer doc.deinit();
-
-    try self.ctx.logger.info("Checking dependencies", @src());
-    const is_package_dependencies = doc.getObject("dependencies");
-    if (is_package_dependencies) |package_dependencies| {
-        var iter = package_dependencies.entries.iterator();
-        const dependencies = try self.ctx.allocator.alloc(
-            []const u8,
-            package_dependencies.entries.size,
-        );
-        var i: usize = 0;
-        while (iter.next()) |v| {
-            var version: ?[]const u8 = null;
-            const is_hash = v.value_ptr.object.get("hash");
-            if (is_hash) |hash| {
-                var hash_iter = std.mem.splitAny(u8, hash.string, "-");
-                _ = hash_iter.next();
-                version = hash_iter.next();
-            }
-
-            const is_url = v.value_ptr.object.get("url") orelse return error.InvalidZon;
-            var parsed = try parseOwnerRepo(is_url.string);
-            const p = try std.fmt.allocPrint(
-                self.ctx.allocator,
-                "{s}/{s}",
-                .{
-                    parsed.owner, parsed.repo,
-                },
-            );
-
-            const prev_verbosity = Locales.VERBOSITY_MODE;
-            Locales.VERBOSITY_MODE = 0;
-            try self.ctx.printer.append(
-                " Adding dependency {s}\n",
-                .{p},
-                .{ .verbosity = 0 },
-            );
-
-            self.installOne(p, version, false) catch |err| {
-                try self.ctx.printer.append(
-                    " ! Failed to add dependency {s}, with err={any}\n",
-                    .{ p, err },
-                    .{
-                        .verbosity = 0,
-                    },
-                );
-            };
-            Locales.VERBOSITY_MODE = prev_verbosity;
-
-            if (std.mem.endsWith(u8, parsed.repo, ".zig")) {
-                parsed.repo = parsed.repo[0 .. parsed.repo.len - 4]; // remove ".zig"
-            }
-            dependencies[i] = parsed.repo;
-            i += 1;
-        }
-
-        package.package.packages = dependencies;
-    }
-
-    var package_modified = false;
-    blk: {
-        if (!std.mem.eql(u8, "/", package.package.zig_version) and
-            !std.mem.eql(u8, "/", package.package.root_file) and
-            !std.mem.eql(u8, "latest", package.package.version)) break :blk;
-
-        if (std.mem.eql(u8, "/", package.package.zig_version)) {
-            const zig_version = doc.getString("minimum_zig_version") orelse "/";
-            package.package.zig_version = zig_version;
-            package_modified = true;
-        }
-
-        if (std.mem.eql(u8, "latest", package.package.version)) {
-            const version = doc.getString("version") orelse "latest";
-            package.package.version = version;
-            package_modified = true;
-        }
-
-        if (!std.mem.eql(u8, package.package.root_file, "/")) break :blk;
-
-        const assumed_root_file = try std.fmt.allocPrint(
-            self.ctx.allocator,
-            "/src/{s}.zig",
-            .{
-                package.package.name,
-            },
-        );
-
-        if (Locales.VERBOSITY_MODE == 0) {
-            package.package.root_file = assumed_root_file;
-            break :blk;
-        }
-
-        try self.ctx.printer.append(
-            "Root file was not found!\n",
-            .{},
-            .{
-                .color = .red,
-                .verbosity = 0,
-                .weight = .bold,
-            },
-        );
-
-        const root_file = try Prompt.input(
-            self.ctx.allocator,
-            &self.ctx.printer,
-            "(Guessed) Root file: ",
-            .{ .initial_value = assumed_root_file },
-        );
-        package.package.root_file = root_file;
-        try self.ctx.printer.append("\n", .{}, .{ .verbosity = 0 });
-        package_modified = true;
-    }
-    if (package_modified) try package.updateMetadata();
-}
-
 pub fn installOne(
     self: *Installer,
     package_name: []const u8,
     package_version: ?[]const u8,
+    install_type: Structs.Extras.InstallType,
     force_inject: bool,
 ) anyerror!void {
     var package = try self.resolvePackage(
         package_name,
         package_version,
+        install_type,
     );
     defer package.deinit();
 
@@ -426,46 +290,6 @@ pub fn installOne(
         package.package.source,
     );
     try self.ctx.logger.info("Installed.", @src());
-
-    try self.ctx.logger.info("Getting build.zig.zon", @src());
-    try self.checkZon(&package);
-
-    blk: {
-        if (!std.mem.eql(u8, package.package.root_file, "/")) break :blk;
-
-        const assumed_root_file = try std.fmt.allocPrint(
-            self.ctx.allocator,
-            "/src/{s}.zig",
-            .{
-                package.package.name,
-            },
-        );
-
-        if (Locales.VERBOSITY_MODE == 0) {
-            package.package.root_file = assumed_root_file;
-            break :blk;
-        }
-
-        try self.ctx.printer.append(
-            "Root file was not found!\n",
-            .{},
-            .{
-                .color = .red,
-                .verbosity = 0,
-                .weight = .bold,
-            },
-        );
-
-        const root_file = try Prompt.input(
-            self.ctx.allocator,
-            &self.ctx.printer,
-            "(Guessed) Root file: ",
-            .{ .initial_value = assumed_root_file },
-        );
-        package.package.root_file = root_file;
-        try self.ctx.printer.append("\n", .{}, .{ .verbosity = 0 });
-        try package.updateMetadata();
-    }
 
     if (!std.mem.containsAtLeast(u8, package.package.zig_version, 1, lock.value.root.zig_version)) {
         try self.ctx.printer.append("WARNING: ", .{}, .{
@@ -514,20 +338,27 @@ pub fn installAll(self: *Installer) anyerror!void {
     );
     defer lock.deinit();
 
-    for (lock.value.root.packages) |package_id| {
+    for (lock.value.packages) |package| {
+        const package_name = switch (package.namespace) {
+            .github => try std.fmt.allocPrint(self.ctx.allocator, "{s}/{s}", .{
+                package.install.author,
+                package.install.name,
+            }),
+            else => try self.ctx.allocator.dupe(u8, package.name),
+        };
+        defer self.ctx.allocator.free(package_name);
+        const package_version = package.version;
+
         try self.ctx.printer.append(
-            " > Installing - {s} ",
-            .{package_id},
+            " > Installing - {s}@{s} ",
+            .{ package_name, package_version },
             .{ .verbosity = 0 },
         );
-
-        var package_split = std.mem.splitScalar(u8, package_id, '@');
-        const package_name = package_split.first();
-        const package_version = package_split.next();
 
         self.installOne(
             package_name,
             package_version,
+            package.namespace,
             false,
         ) catch |err| {
             switch (err) {
@@ -542,7 +373,7 @@ pub fn installAll(self: *Installer) anyerror!void {
                 else => {
                     try self.ctx.printer.append(
                         "  ! [ERROR] Failed to install - {s} [{any}]...\n",
-                        .{ package_id, err },
+                        .{ package_name, err },
                         .{ .verbosity = 0, .color = .red },
                     );
                 },

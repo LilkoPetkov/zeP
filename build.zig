@@ -70,7 +70,6 @@ pub fn build(builder: *std.Build) void {
     });
 
     const args_mod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
-    __zepinj__.imp(builder, args_mod);
     args_mod.addImport("constants", constants_mod);
 
     const context_mod = builder.createModule(.{ .root_source_file = builder.path("src/context.zig") });
@@ -91,6 +90,7 @@ pub fn build(builder: *std.Build) void {
     resolver_mod.addImport("context", context_mod);
 
     const package_mod = builder.createModule(.{ .root_source_file = builder.path("src/package.zig") });
+    __zepinj__.imp(builder, package_mod);
     package_mod.addImport("constants", constants_mod);
     package_mod.addImport("loggers", loggers_mod);
     package_mod.addImport("structs", structs_mod);

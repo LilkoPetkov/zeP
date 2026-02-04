@@ -13,6 +13,7 @@ const Json = @import("core").Json;
 
 const Context = @import("context").Context;
 const Resolver = @import("resolver");
+const Zon = @import("zon");
 
 /// Handles Packages, returns null if package is not found.
 /// Rolls back to latest version if none was specified.
@@ -29,14 +30,11 @@ pub fn init(
     install_type: ?Structs.Extras.InstallType,
 ) !Package {
     var resolver = Resolver.init(ctx);
-    var package = try resolver.resolvePackage(
+    const package = try resolver.resolvePackage(
         package_name,
         package_version,
         install_type,
     );
-    if (std.mem.endsWith(u8, package.name, ".zig")) {
-        package.name = package.name[0 .. package.name.len - 4]; // remove ".zig"
-    }
 
     const package_id = try std.fmt.allocPrint(
         ctx.allocator,
@@ -52,7 +50,6 @@ pub fn init(
 }
 
 pub fn deinit(self: *Package) void {
-    self.ctx.allocator.free(self.package.root_file);
     self.ctx.allocator.free(self.package.hash);
     self.ctx.allocator.free(self.package.source);
     self.ctx.allocator.free(self.package.name);
@@ -86,7 +83,6 @@ pub fn updateMetadata(self: *Package) !void {
 
     for (parsed_package.value.versions) |*v| {
         if (!std.mem.eql(u8, v.version, self.package.version)) continue;
-        v.root_file = self.package.root_file;
         v.sha256sum = self.package.hash;
         v.zig_version = self.package.zig_version;
     }
@@ -257,13 +253,12 @@ pub fn lockRegister(self: *Package) !void {
 
     const new_item = Structs.ZepFiles.Package{
         .name = self.package.name,
+        .install = self.package.install,
         .version = self.package.version,
         .namespace = self.package.namespace,
         .hash = self.package.hash,
         .source = self.package.source,
         .zig_version = self.package.zig_version,
-        .root_file = self.package.root_file,
-        .packages = self.package.packages,
     };
 
     lock.value.packages = try self.filterOut(
@@ -313,6 +308,33 @@ pub fn lockRegister(self: *Package) !void {
         Constants.Default.package_files.lock,
         lock.value,
     );
+
+    var bzz = try Zon.parseFile(self.ctx.allocator, "build.zig.zon");
+    defer bzz.deinit();
+
+    const p = try std.fmt.allocPrint(self.ctx.allocator, ".zep/{s}", .{self.package.name});
+    defer self.ctx.allocator.free(p);
+
+    var copy_pkg = try self.ctx.allocator.dupe(u8, self.package.name);
+    defer self.ctx.allocator.free(copy_pkg);
+
+    if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
+        copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
+    }
+
+    var dependencies = bzz.getObject("dependencies") orelse return;
+    const s = dependencies.get(copy_pkg);
+    if (s) |_| return;
+
+    var new_pkg = Zon.Value.Object.init(self.ctx.allocator);
+    try new_pkg.set("path", .{ .string = p });
+    try dependencies.insert(copy_pkg, .{
+        .object = new_pkg,
+    });
+
+    const bzz_stringed = try bzz.toString();
+    try Zon.writeFileAtomic(self.ctx.allocator, "build.zig.zon", bzz_stringed);
+    return;
 }
 
 pub fn lockUnregister(self: *Package) !void {
@@ -347,6 +369,23 @@ pub fn lockUnregister(self: *Package) !void {
         Constants.Default.package_files.lock,
         lock.value,
     );
+
+    var bzz = try Zon.parseFile(self.ctx.allocator, "build.zig.zon");
+    defer bzz.deinit();
+
+    var copy_pkg = try self.ctx.allocator.dupe(u8, self.package.name);
+    defer self.ctx.allocator.free(copy_pkg);
+
+    if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
+        copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
+    }
+
+    var dependencies = bzz.getObject("dependencies") orelse return;
+    _ = dependencies.remove(copy_pkg);
+
+    const bzz_stringed = try bzz.toString();
+    try Zon.writeFileAtomic(self.ctx.allocator, "build.zig.zon", bzz_stringed);
+    return;
 }
 
 fn appendUnique(

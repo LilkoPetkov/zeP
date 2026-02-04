@@ -33,7 +33,6 @@ fn info(ctx: *Context) !void {
     try ctx.printer.append("Version: {s}\n", .{package.package.version}, .{});
     try ctx.printer.append("Hash: {s}\n", .{package.package.hash}, .{});
     try ctx.printer.append("Source: {s}\n", .{package.package.source}, .{});
-    try ctx.printer.append("Root File: {s}\n", .{package.package.root_file}, .{});
     try ctx.printer.append("Zig Version: {s}\n\n", .{package.package.zig_version}, .{});
 }
 

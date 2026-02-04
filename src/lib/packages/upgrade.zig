@@ -31,19 +31,31 @@ pub fn upgrade(self: *Upgrader) !void {
     );
     defer lock.deinit();
 
-    var installer = Installer.init(self.ctx, .zep);
+    var installer = Installer.init(self.ctx);
     for (lock.value.packages) |package| {
-        var p_split = std.mem.splitAny(u8, package.name, "@");
-        const name = p_split.first();
+        const package_name = switch (package.namespace) {
+            .github => try std.fmt.allocPrint(self.ctx.allocator, "{s}/{s}", .{
+                package.install.author,
+                package.install.name,
+            }),
+            else => try self.ctx.allocator.dupe(u8, package.name),
+        };
+        defer self.ctx.allocator.free(package_name);
+
         try self.ctx.printer.append(
-            " > Upgrading - {s}...\n",
-            .{name},
+            " > Upgrading - {s}",
+            .{package_name},
             .{ .verbosity = 0 },
         );
 
         // if no version was specified it gets the
         // latest version
-        installer.installOne(package.name, null, false) catch |err| {
+        installer.installOne(
+            package_name,
+            null,
+            package.namespace,
+            false,
+        ) catch |err| {
             switch (err) {
                 error.AlreadyInstalled => {
                     try self.ctx.printer.append(
@@ -56,7 +68,7 @@ pub fn upgrade(self: *Upgrader) !void {
                 else => {
                     try self.ctx.printer.append(
                         "  ! [ERROR] Failed to upgrade - {s} [{any}]...\n",
-                        .{ name, err },
+                        .{ package_name, err },
                         .{ .verbosity = 0, .color = .red },
                     );
                     continue;

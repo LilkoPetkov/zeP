@@ -1,9 +1,18 @@
 .{
-    .name = .zeP,
-    .version = "1.1.0",
-    .fingerprint = 0xd5c6fa828394cf75,
+    .dependencies = .{
+        .logly = .{
+            .path = ".zep/logly.zig",
+        },
+        .mvzr = .{
+            .path = ".zep/mvzr",
+        },
+        .zon = .{
+            .path = ".zep/zon.zig",
+        },
+    },
+    .fingerprint = 15404275013927620469,
     .minimum_zig_version = "0.15.2",
-    .dependencies = .{},
+    .name = .zeP,
     .paths = .{
         ".zep",
         "build.zig",
@@ -11,4 +20,5 @@
         "src",
         "zep.lock",
     },
+    .version = "1.1.0",
 }

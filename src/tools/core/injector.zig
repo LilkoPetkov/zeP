@@ -12,6 +12,7 @@ const Printer = @import("cli").Printer;
 const Manifest = @import("manifest.zig");
 
 const ZigInit = @import("zig_init.zig");
+const Zon = @import("zon");
 
 fn contains(haystack: []const u8, needle: []const u8) bool {
     const haystack_len = haystack.len;
@@ -62,61 +63,24 @@ pub fn init(
     };
 }
 
-fn renderImport(
-    self: *Injector,
-    pkg: []const u8,
-    path: []const u8,
-) ![]u8 {
-    return std.fmt.allocPrint(self.allocator,
-        \\   
-        \\      std.Build.Module.Import{{
-        \\              .name = "{s}",
-        \\              .module = b.createModule(.{{
-        \\                  .root_source_file = b.path(".zep/{s}{s}")
-        \\              }}),
-        \\      }},
-        \\
-    , .{
-        pkg, pkg, path,
-    });
-}
-
-fn renderImports(
-    self: *Injector,
-    packages: [][]const u8,
-) ![]u8 {
-    var buffer = try std.ArrayList(u8).initCapacity(self.allocator, 100);
-    const lock = try self.manifest.readManifest(
-        Structs.ZepFiles.Lock,
-        Constants.Default.package_files.lock,
-    );
-    defer lock.deinit();
-    const lock_packages = lock.value.packages;
-    for (lock_packages) |lp| {
-        if (!isInArray(packages, lp.name)) continue;
-        const rendered_import = try self.renderImport(lp.name, lp.root_file);
-        try buffer.appendSlice(self.allocator, rendered_import);
-    }
-
-    return buffer.toOwnedSlice(self.allocator);
-}
-
 fn renderInjector(
     self: *Injector,
     pkg: []const u8,
-    path: []const u8,
-    packages: [][]const u8,
 ) ![]u8 {
-    const imports = try self.renderImports(packages);
+    var copy_pkg = try self.allocator.dupe(u8, pkg);
+    defer self.allocator.free(copy_pkg);
+
+    if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
+        copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
+    }
+
     return std.fmt.allocPrint(self.allocator,
         \\ // {s} MODULE
-        \\ exe.addImport("{s}", b.createModule(.{{
-        \\     .root_source_file = b.path(".zep/{s}{s}"),
-        \\     .imports = &.{{{s}}},
-        \\ }}));
+        \\ const {s}_dep = b.dependency("{s}", .{{}});
+        \\ exe.addImport("{s}", {s}_dep.module("{s}"));
         \\ // ----------
         \\
-    , .{ pkg, pkg, pkg, path, imports });
+    , .{ pkg, copy_pkg, copy_pkg, copy_pkg, copy_pkg, copy_pkg });
 }
 
 const inject_method = enum {
@@ -176,13 +140,7 @@ pub fn initInjector(self: *Injector) !void {
     defer snippets.deinit(self.allocator);
 
     for (lock.value.packages) |pkg| {
-        var split = std.mem.splitScalar(u8, pkg.name, '@');
-        const name = split.first();
-        try snippets.append(self.allocator, try self.renderInjector(
-            name,
-            pkg.root_file,
-            pkg.packages,
-        ));
+        try snippets.append(self.allocator, try self.renderInjector(pkg.name));
     }
 
     try Fs.deleteFileIfExists(Constants.Default.package_files.injector);

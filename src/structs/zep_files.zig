@@ -32,13 +32,15 @@ pub const Root = struct {
 
 pub const Package = struct {
     name: []const u8,
+    install: struct {
+        name: []const u8,
+        author: []const u8,
+    },
     version: []const u8,
     hash: []const u8,
     source: []const u8,
     zig_version: []const u8,
-    root_file: []const u8,
     namespace: Extras.InstallType = .zep,
-    packages: [][]const u8 = &[_][]const u8{},
 };
 
 pub const Lock = struct {

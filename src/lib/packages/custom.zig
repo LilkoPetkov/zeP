@@ -126,14 +126,14 @@ pub fn requestPackage(self: *CustomPackage) !void {
     var versions = try std.ArrayList(Structs.Packages.Version).initCapacity(self.ctx.allocator, 10);
     try versions.append(self.ctx.allocator, v);
 
-    const pkg = Structs.Packages.Package{
+    const package = Structs.Packages.Package{
         .name = package_name,
         .author = author,
         .docs = "",
         .versions = versions.items,
     };
 
-    try self.addPackage(custom_package_path, pkg);
+    try self.addPackage(custom_package_path, package);
     try self.ctx.printer.append("\nSuccessfully added custom package - {s}\n\n", .{package_name}, .{ .color = .green });
 }
 

@@ -27,7 +27,7 @@ fn install(ctx: *Context) !void {
     if (install_args.codeberg) install_type = Structs.Extras.InstallType.codeberg;
     if (install_args.local) install_type = Structs.Extras.InstallType.local;
 
-    var installer = Installer.init(ctx, install_type);
+    var installer = Installer.init(ctx);
     defer installer.deinit();
 
     if (package_query) |query| {
@@ -38,6 +38,7 @@ fn install(ctx: *Context) !void {
         installer.installOne(
             package_name,
             package_version,
+            install_type,
             install_args.inject,
         ) catch |err| {
             try ctx.logger.errorf("Installing Failed error={any}", .{err}, @src());

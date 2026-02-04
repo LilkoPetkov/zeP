@@ -59,7 +59,7 @@ pub fn bootstrap(
 
     try ctx.logger.info("Installing packages...", @src());
 
-    var installer = Installer.init(ctx, .zep);
+    var installer = Installer.init(ctx);
     defer installer.deinit();
     for (pkgs) |pkg| {
         var p_split = std.mem.splitScalar(u8, pkg, '@');
@@ -69,6 +69,7 @@ pub fn bootstrap(
         installer.installOne(
             package_name,
             package_version,
+            .zep,
             true,
         ) catch |err| {
             switch (err) {

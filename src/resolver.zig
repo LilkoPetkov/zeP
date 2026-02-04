@@ -36,13 +36,15 @@ fn resolveFromLock(
 
         return Structs.ZepFiles.Package{
             .name = try self.ctx.allocator.dupe(u8, package_name),
+            .install = .{
+                .name = try self.ctx.allocator.dupe(u8, p.install.name),
+                .author = try self.ctx.allocator.dupe(u8, p.install.author),
+            },
             .version = try self.ctx.allocator.dupe(u8, package_version),
             .source = try self.ctx.allocator.dupe(u8, p.source),
             .zig_version = try self.ctx.allocator.dupe(u8, p.zig_version),
-            .root_file = try self.ctx.allocator.dupe(u8, p.root_file),
             .hash = try self.ctx.allocator.dupe(u8, p.hash),
             .namespace = .zep,
-            .packages = &.{},
         };
     }
 
@@ -109,18 +111,18 @@ fn resolveFromFetch(
         v.sha256sum = hash;
     }
 
-    const version = Structs.ZepFiles.Package{
+    return Structs.ZepFiles.Package{
         .name = try self.ctx.allocator.dupe(u8, package.name),
+        .install = .{
+            .name = try self.ctx.allocator.dupe(u8, package.name),
+            .author = try self.ctx.allocator.dupe(u8, package.author),
+        },
         .version = try self.ctx.allocator.dupe(u8, v.version),
         .namespace = install_type,
         .source = try self.ctx.allocator.dupe(u8, v.url),
         .zig_version = try self.ctx.allocator.dupe(u8, v.zig_version),
-        .root_file = try self.ctx.allocator.dupe(u8, v.root_file),
         .hash = try self.ctx.allocator.dupe(u8, v.sha256sum),
-        .packages = &.{},
     };
-
-    return version;
 }
 
 pub fn resolvePackage(
@@ -137,12 +139,11 @@ pub fn resolvePackage(
         if (attempt) |a| return a;
     }
 
-    if (install_type == null) return error.MissingType;
-
+    const i_type = install_type orelse return error.MissingType;
     const package = try self.resolveFromFetch(
         package_name,
         package_version,
-        install_type.?,
+        i_type,
     );
 
     try self.ctx.logger.infof("Package version = {s}!", .{package.version}, @src());
