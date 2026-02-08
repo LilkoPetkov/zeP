@@ -47,6 +47,10 @@ pub fn help(ctx: *Context) void {
                 .prebuilt => prebuilt(),
                 .self => self(),
                 .zig => zig(),
+                .add => install(),
+                .install => install(),
+                .remove => uninstall(),
+                .uninstall => uninstall(),
                 else => {
                     break :blk;
                 },
@@ -262,4 +266,31 @@ pub fn zig() void {
     printCmd("zig uninstall <version> <target?>", "Uninstalls specified zig version.");
     printCmd("zig switch <version> <target?>", "Switches to specified, and installed zig version.");
     printCmd("self upgrade <target?>", "Upgrades zig verison to latest.");
+}
+pub fn install() void {
+    std.debug.print(
+        "Usage:\n  add/install <package>@<version?> <install_type?> <inject?>\n\n",
+        .{},
+    );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("<package>", "Depends on the given install type. Either owner/repo (or deeper nested eg. in GitLab), or the plain package_name.");
+    printCmd("<version?>", "The version of said package, default is 'latest'.");
+    printCmd("<install_type?>", "The Installation type / Namespace of package.");
+    printCmd("", "(-GH, --github), (-GL, --gitlab), (-CB, --codeberg), (-Z, --zep), (-L, --local)\n");
+    printCmd("<inject?>", "Specifies, whether or not the injector command should be displayed, default is false. (-I, --inject)");
+}
+
+pub fn uninstall() void {
+    std.debug.print(
+        "Usage:\n  remove/uninstall <package>@<version?> <install_type?> <global?> <force?>\n\n",
+        .{},
+    );
+
+    std.debug.print("{s}{s}Commands:{s}\n", .{ bold, magenta, closer });
+    printCmd("<package>", "[READ help install]");
+    printCmd("<version?>", "[READ help install] => required for global uninstalls");
+    printCmd("<install_type?>", "[READ help install] => required for global uninstalls");
+    printCmd("<global?>", "Specifies, whether or not to delete a package globally. (-G / --global)");
+    printCmd("<force?>", "Forces the uninstallation of a package, even if it is used by other projects. (-F / --force)");
 }
