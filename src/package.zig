@@ -30,7 +30,7 @@ pub fn init(
     install_type: ?Structs.Extras.InstallType,
 ) !Package {
     var resolver = Resolver.init(ctx);
-    const package = try resolver.resolvePackage(
+    var package = try resolver.resolvePackage(
         package_name,
         package_version,
         install_type,
@@ -38,9 +38,37 @@ pub fn init(
 
     const package_id = try std.fmt.allocPrint(
         ctx.allocator,
-        "{s}@{s}",
-        .{ package.name, package.version },
+        "{s}@{s}+{s}+{s}",
+        .{ package.name, package.version, @tagName(package.namespace), package.hash },
     );
+
+    var package_modified = false;
+    blk: {
+        const path_build_zig_zon = try std.fmt.allocPrint(
+            ctx.allocator,
+            "{s}/{s}/build.zig.zon",
+            .{ ctx.paths.pkg_root, package_id },
+        );
+        defer ctx.allocator.free(path_build_zig_zon);
+
+        if (!Fs.existsFile(path_build_zig_zon)) break :blk;
+
+        var doc = try Zon.parseFile(ctx.allocator, path_build_zig_zon);
+        defer doc.deinit();
+
+        if (!std.mem.eql(u8, "/", package.zig_version) and
+            !std.mem.eql(u8, "latest", package.version)) break :blk;
+
+        if (std.mem.eql(u8, "/", package.zig_version)) {
+            const zig_version = doc.getString("minimum_zig_version") orelse "/";
+            package.zig_version = try ctx.allocator.dupe(u8, zig_version);
+            package_modified = true;
+        }
+
+        package_modified = true;
+    }
+
+    if (package_modified) try updateMetadata(ctx, package);
 
     return Package{
         .ctx = ctx,
@@ -59,42 +87,45 @@ pub fn deinit(self: *Package) void {
     self.ctx.allocator.free(self.package_id);
 }
 
-pub fn updateMetadata(self: *Package) !void {
+fn updateMetadata(
+    ctx: *Context,
+    package: Structs.ZepFiles.Package,
+) !void {
     const cached_filename = try std.fmt.allocPrint(
-        self.ctx.allocator,
-        "{s}/{s}+{s}.json",
-        .{ self.ctx.paths.meta_cached, @tagName(self.package.namespace), self.package.name },
+        ctx.allocator,
+        "{s}/{s}+{s}+{s}.json",
+        .{ ctx.paths.meta_cached, @tagName(package.namespace), package.name, package.author },
     );
-    defer self.ctx.allocator.free(cached_filename);
+    defer ctx.allocator.free(cached_filename);
     if (!Fs.existsFile(cached_filename)) return;
 
     const f = try Fs.openFile(cached_filename);
     defer f.close();
-    const data = try f.readToEndAlloc(self.ctx.allocator, Constants.Default.kb * 16);
-    defer self.ctx.allocator.free(data);
+    const data = try f.readToEndAlloc(ctx.allocator, Constants.Default.kb * 16);
+    defer ctx.allocator.free(data);
 
     var parsed_package: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(
         Structs.Packages.Package,
-        self.ctx.allocator,
+        ctx.allocator,
         data,
         .{ .allocate = .alloc_always },
     );
     defer parsed_package.deinit();
 
     for (parsed_package.value.versions) |*v| {
-        if (!std.mem.eql(u8, v.version, self.package.version)) continue;
-        v.sha256sum = self.package.hash;
-        v.zig_version = self.package.zig_version;
+        if (!std.mem.eql(u8, v.version, package.version)) continue;
+        v.sha256sum = package.hash;
+        v.zig_version = package.zig_version;
     }
 
     const stringified = try std.json.Stringify.valueAlloc(
-        self.ctx.allocator,
+        ctx.allocator,
         parsed_package.value,
         .{},
     );
-    defer self.ctx.allocator.free(stringified);
+    defer ctx.allocator.free(stringified);
 
-    const w = try Fs.fileTruncate(cached_filename);
+    const w = try Fs.createFile(cached_filename);
     defer w.close();
     _ = try w.writeAll(stringified);
     return;
@@ -109,7 +140,7 @@ fn registeredPathCount(self: *Package) !usize {
 
     var package_paths_amount: usize = 0;
     for (manifest.value.packages) |package| {
-        if (std.mem.eql(u8, package.name, self.package.name)) {
+        if (std.mem.eql(u8, package.name, self.package_id)) {
             package_paths_amount = package.paths.len;
             break;
         }
@@ -161,7 +192,7 @@ pub fn addPathToManifest(
     defer list_path.deinit(self.ctx.allocator);
 
     for (package_manifest.value.packages) |p| {
-        if (std.mem.eql(u8, p.name, self.package.name)) {
+        if (std.mem.eql(u8, p.name, self.package_id)) {
             for (p.paths) |path| try list_path.append(self.ctx.allocator, path);
             continue;
         }
@@ -180,7 +211,7 @@ pub fn addPathToManifest(
     }
 
     try list.append(self.ctx.allocator, Structs.Manifests.PackagePaths{
-        .name = self.package.name,
+        .name = self.package_id,
         .paths = list_path.items,
     });
 
@@ -210,21 +241,20 @@ pub fn removePathFromManifest(
     defer list_path.deinit(self.ctx.allocator);
 
     for (package_manifest.value.packages) |package_paths| {
-        if (std.mem.eql(u8, package_paths.name, self.package.name)) {
-            for (package_paths.paths) |path| {
-                if (std.mem.eql(u8, path, linked_path)) {
-                    continue;
-                }
-                try list_path.append(self.ctx.allocator, path);
-            }
+        if (!std.mem.eql(u8, package_paths.name, self.package_id)) {
+            try list.append(self.ctx.allocator, package_paths);
             continue;
         }
-        try list.append(self.ctx.allocator, package_paths);
+
+        for (package_paths.paths) |path| {
+            if (std.mem.eql(u8, path, linked_path)) continue;
+            try list_path.append(self.ctx.allocator, path);
+        }
     }
 
     if (list_path.items.len > 0) {
         try list.append(self.ctx.allocator, Structs.Manifests.PackagePaths{
-            .name = self.package.name,
+            .name = self.package_id,
             .paths = list_path.items,
         });
     } else {
@@ -254,6 +284,7 @@ pub fn lockRegister(self: *Package) !void {
     const new_item = Structs.ZepFiles.Package{
         .name = self.package.name,
         .author = self.package.author,
+        .install = self.package.install,
         .version = self.package.version,
         .namespace = self.package.namespace,
         .hash = self.package.hash,
@@ -321,6 +352,12 @@ pub fn lockRegister(self: *Package) !void {
     if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
         copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
     }
+    std.mem.replaceScalar(
+        u8,
+        copy_pkg,
+        '-',
+        '_',
+    );
 
     var dependencies = bzz.getObject("dependencies") orelse return;
     const s = dependencies.get(copy_pkg);
@@ -379,6 +416,12 @@ pub fn lockUnregister(self: *Package) !void {
     if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
         copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
     }
+    std.mem.replaceScalar(
+        u8,
+        copy_pkg,
+        '-',
+        '_',
+    );
 
     var dependencies = bzz.getObject("dependencies") orelse return;
     _ = dependencies.remove(copy_pkg);

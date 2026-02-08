@@ -19,6 +19,16 @@ pub fn existsDir(path: []const u8) bool {
     return true;
 }
 
+/// validates if a Dir exists
+/// => Errors will return false
+pub fn existsSym(path: []const u8) bool {
+    _ = std.fs.cwd().access(path, .{}) catch {
+        return false;
+    };
+
+    return true;
+}
+
 /// Checks if a File exists and creates it if it does not [THE WHOLE PATH]
 pub fn openOrCreateFile(path: []const u8) !std.fs.File {
     if (!existsFile(path)) {
@@ -42,7 +52,7 @@ pub fn openFile(path: []const u8) !std.fs.File {
 }
 
 /// Checks if a File exists and creates it if it does not [NO PATH]
-pub fn fileTruncate(path: []const u8) !std.fs.File {
+pub fn createFile(path: []const u8) !std.fs.File {
     const f = try std.fs.cwd().createFile(path, std.fs.File.CreateFlags{ .read = true, .truncate = true });
     return f;
 }
@@ -88,11 +98,7 @@ pub fn deleteTreeIfExists(path: []const u8) !void {
 
 /// Deletes symlink if it exists
 pub fn deleteSymlinkIfExists(path: []const u8) void {
-    _ = std.fs.cwd().access(path, .{}) catch {
-        std.fs.cwd().deleteDir(path) catch {};
-        std.fs.cwd().deleteFile(path) catch {};
-        return;
-    };
+    if (!existsSym(path)) return;
     std.fs.cwd().deleteDir(path) catch {};
     std.fs.cwd().deleteFile(path) catch {};
 }

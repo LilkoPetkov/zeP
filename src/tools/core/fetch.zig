@@ -65,6 +65,75 @@ pub fn fetch(
     );
 }
 
+pub fn fetchJson(
+    self: *Fetch,
+    url: []const u8,
+    T: type,
+) !std.json.Parsed(T) {
+    var body = std.Io.Writer.Allocating.init(self.allocator);
+    defer body.deinit();
+    const res = try self.client.fetch(.{
+        .location = .{ .url = url },
+        .response_writer = &body.writer,
+    });
+
+    if (res.status == .not_found) {
+        return error.NotFound;
+    }
+    const data = body.written();
+    return std.json.parseFromSlice(
+        T,
+        self.allocator,
+        data,
+        .{
+            .allocate = .alloc_always,
+            .ignore_unknown_fields = true,
+        },
+    );
+}
+
+pub fn fetchRaw(
+    self: *Fetch,
+    url: []const u8,
+) ![]const u8 {
+    var body = std.Io.Writer.Allocating.init(self.allocator);
+    defer body.deinit();
+    const res = try self.client.fetch(.{
+        .location = .{ .url = url },
+        .response_writer = &body.writer,
+    });
+
+    if (res.status == .not_found) {
+        return error.NotFound;
+    }
+
+    const data = try self.allocator.dupe(u8, body.written());
+    return data;
+}
+
+pub fn fetchWrite(
+    self: *Fetch,
+    url: []const u8,
+    path: []const u8,
+) !void {
+    var file = try Fs.openOrCreateFile(path);
+    defer file.close();
+
+    var writer_buf: [Constants.Default.kb]u8 = undefined;
+    var writer = file.writer(&writer_buf);
+    const fetched = try self.client.fetch(.{
+        .location = .{ .url = url },
+        .method = .GET,
+        .response_writer = &writer.interface,
+    });
+    _ = try writer.interface.flush();
+
+    if (fetched.status == .not_found)
+        return error.NotFound;
+
+    return;
+}
+
 pub fn fetchPackage(self: *Fetch, name: []const u8) !Structs.Fetch.Package {
     const url = try std.fmt.allocPrint(
         self.allocator,

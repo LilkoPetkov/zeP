@@ -72,9 +72,6 @@ pub fn delete(self: *Release) !void {
     const package_target = packages.items[package_index];
     try self.ctx.printer.append("Selected: {s}\n\n", .{package_target.Name}, .{ .color = .bright_black });
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
-
     var releases = try self.ctx.fetcher.fetchReleases(package_target.Name);
     defer releases.deinit(self.ctx.allocator);
 

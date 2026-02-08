@@ -66,9 +66,6 @@ pub fn delete(self: *Package) !void {
     const target = packages.items[index];
     const target_id = target.ID;
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
-
     var releases = try self.ctx.fetcher.fetchReleases(target.Name);
     defer releases.deinit(self.ctx.allocator);
     if (releases.items.len != 0) {
@@ -240,8 +237,6 @@ pub fn create(self: *Package) !void {
         },
     };
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
     const package_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/package",
         .{

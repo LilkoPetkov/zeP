@@ -36,6 +36,50 @@ pub fn deinit(self: *Installer) void {
     self.downloader.deinit();
 }
 
+fn parseOwnerRepo(url: []const u8) !struct { owner: []const u8, repo: []const u8 } {
+    var s = url;
+
+    // Step 1: remove known prefixes
+    if (std.mem.startsWith(u8, s, "git+")) {
+        s = s[4..];
+    } else if (std.mem.startsWith(u8, s, "github:")) {
+        s = s[7..];
+    }
+
+    // Step 2: remove protocol for git+ssh or https
+    const proto_sep = std.mem.indexOf(u8, s, ":");
+    if (proto_sep) |i| {
+        if (i != 1) { // ignore 'C:' style Windows paths
+            s = s[(i + 1)..];
+            if (std.mem.startsWith(u8, s, "//")) {
+                s = s[2..];
+            }
+        }
+    }
+
+    // Step 3: trim everything after hash '#' (commit/tag)
+    const hash_idx = std.mem.indexOf(u8, s, "#");
+    if (hash_idx) |i| {
+        s = s[0..i];
+    }
+
+    // Step 4: remove trailing ".git" if present
+    if (std.mem.endsWith(u8, s, ".git")) {
+        s = s[0 .. s.len - 4];
+    }
+
+    // Step 5: split by '/' and get owner/repo
+    var it = std.mem.splitAny(u8, s, "/");
+    _ = it.next();
+
+    var owner: []const u8 = "";
+    var repo: []const u8 = "";
+    if (it.next()) |o| owner = o else return error.InvalidURL;
+    if (it.next()) |r| repo = r else return error.InvalidURL;
+
+    return .{ .owner = owner, .repo = repo };
+}
+
 fn isFetched(
     self: *Installer,
     package_id: []const u8,
@@ -157,13 +201,7 @@ fn linkPackage(
     try self.ctx.logger.info("Linking Package...", @src());
     try package.lockRegister();
 
-    var injector = Injector.init(
-        self.ctx.allocator,
-        &self.ctx.printer,
-        &self.ctx.manifest,
-        force_inject,
-    );
-    try injector.initInjector();
+    try self.ctx.injector.initInjector(force_inject);
 
     // symbolic link
     const target_path = try std.fmt.allocPrint(
@@ -183,9 +221,8 @@ fn linkPackage(
             package.package.name,
         },
     );
-    Fs.deleteTreeIfExists(relative_symbolic_link_path) catch {};
-    Fs.deleteFileIfExists(relative_symbolic_link_path) catch {};
     defer self.ctx.allocator.free(relative_symbolic_link_path);
+    Fs.deleteSymlinkIfExists(relative_symbolic_link_path);
 
     const cwd = try std.fs.cwd().realpathAlloc(self.ctx.allocator, ".");
     defer self.ctx.allocator.free(cwd);
@@ -199,12 +236,10 @@ fn linkPackage(
     );
     defer self.ctx.allocator.free(absolute_symbolic_link_path);
     try std.fs.cwd().symLink(target_path, relative_symbolic_link_path, .{ .is_directory = true });
-    package.addPathToManifest(absolute_symbolic_link_path) catch {
-        return error.AddingToManifestFailed;
-    };
+    try package.addPathToManifest(absolute_symbolic_link_path);
 }
 
-pub fn resolvePackage(
+fn resolvePackage(
     self: *Installer,
     package_name: []const u8,
     package_version: ?[]const u8,
@@ -285,7 +320,7 @@ pub fn installOne(
     defer lock.deinit();
 
     try self.ctx.logger.info("Installing Package via Downloader", @src());
-    try self.downloader.installPackage(
+    try self.downloader.downloadPackage(
         package.package_id,
         package.package.source,
     );
@@ -321,7 +356,7 @@ pub fn installOne(
     try self.linkPackage(&package, force_inject);
     try self.ctx.printer.append(
         "Successfully installed - {s}\n\n",
-        .{package.package_id},
+        .{package.package.name},
         .{ .color = .green },
     );
 }
@@ -338,20 +373,16 @@ pub fn installAll(self: *Installer) anyerror!void {
     );
     defer lock.deinit();
 
+    var failed: u8 = 0;
     for (lock.value.packages) |package| {
-        const package_name = switch (package.namespace) {
-            .github => try std.fmt.allocPrint(self.ctx.allocator, "{s}/{s}", .{
-                package.author,
-                package.name,
-            }),
-            else => try self.ctx.allocator.dupe(u8, package.name),
-        };
-        defer self.ctx.allocator.free(package_name);
-        const package_version = package.version;
+        const package_install = package.install;
+        var package_install_split = std.mem.splitAny(u8, package_install, "@");
+        const package_name = package_install_split.first();
+        const package_version = package_install_split.next();
 
         try self.ctx.printer.append(
-            " > Installing - {s}@{s} ",
-            .{ package_name, package_version },
+            " > Installing - {s}",
+            .{package_install},
             .{ .verbosity = 0 },
         );
 
@@ -371,6 +402,7 @@ pub fn installAll(self: *Installer) anyerror!void {
                     continue;
                 },
                 else => {
+                    failed += 1;
                     try self.ctx.printer.append(
                         "  ! [ERROR] Failed to install - {s} [{any}]...\n",
                         .{ package_name, err },
@@ -388,53 +420,12 @@ pub fn installAll(self: *Installer) anyerror!void {
         );
     }
     try self.ctx.printer.append(
-        "\nInstalled all!\n",
-        .{},
-        .{ .verbosity = 0, .color = .green },
+        "\nInstalled: {d} packages ({d} failed)\n",
+        .{
+            lock.value.packages.len - failed,
+            failed,
+        },
+        .{ .verbosity = 0 },
     );
     Locales.VERBOSITY_MODE = prev_verbosity;
-}
-
-fn parseOwnerRepo(url: []const u8) !struct { owner: []const u8, repo: []const u8 } {
-    var s = url;
-
-    // Step 1: remove known prefixes
-    if (std.mem.startsWith(u8, s, "git+")) {
-        s = s[4..];
-    } else if (std.mem.startsWith(u8, s, "github:")) {
-        s = s[7..];
-    }
-
-    // Step 2: remove protocol for git+ssh or https
-    const proto_sep = std.mem.indexOf(u8, s, ":");
-    if (proto_sep) |i| {
-        if (i != 1) { // ignore 'C:' style Windows paths
-            s = s[(i + 1)..];
-            if (std.mem.startsWith(u8, s, "//")) {
-                s = s[2..];
-            }
-        }
-    }
-
-    // Step 3: trim everything after hash '#' (commit/tag)
-    const hash_idx = std.mem.indexOf(u8, s, "#");
-    if (hash_idx) |i| {
-        s = s[0..i];
-    }
-
-    // Step 4: remove trailing ".git" if present
-    if (std.mem.endsWith(u8, s, ".git")) {
-        s = s[0 .. s.len - 4];
-    }
-
-    // Step 5: split by '/' and get owner/repo
-    var it = std.mem.splitAny(u8, s, "/");
-    _ = it.next();
-
-    var owner: []const u8 = "";
-    var repo: []const u8 = "";
-    if (it.next()) |o| owner = o else return error.InvalidURL;
-    if (it.next()) |r| repo = r else return error.InvalidURL;
-
-    return .{ .owner = owner, .repo = repo };
 }

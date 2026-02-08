@@ -42,24 +42,19 @@ fn indexOf(haystack: [][]const u8, needle: []const u8) ?usize {
     return null;
 }
 
-/// Injects package imports into build.zig.
-/// package_name is required!
 allocator: std.mem.Allocator,
+manifest: Manifest,
 printer: *Printer,
-manifest: *Manifest,
-force_inject: bool,
 
 pub fn init(
     allocator: std.mem.Allocator,
+    manifest: Manifest,
     printer: *Printer,
-    manifest: *Manifest,
-    force_inject: bool,
 ) Injector {
     return Injector{
         .allocator = allocator,
-        .printer = printer,
         .manifest = manifest,
-        .force_inject = force_inject,
+        .printer = printer,
     };
 }
 
@@ -73,6 +68,12 @@ fn renderInjector(
     if (std.mem.endsWith(u8, copy_pkg, ".zig")) {
         copy_pkg = copy_pkg[0 .. copy_pkg.len - 4]; // remove ".zig"
     }
+    std.mem.replaceScalar(
+        u8,
+        copy_pkg,
+        '-',
+        '_',
+    );
 
     return std.fmt.allocPrint(self.allocator,
         \\ // {s} MODULE
@@ -94,8 +95,9 @@ fn shouldInject(
     module: []const u8,
     excluded_modules: [][]const u8,
     included_modules: [][]const u8,
+    force_inject: bool,
 ) !inject_method {
-    if (!self.force_inject) {
+    if (!force_inject) {
         if (isInArray(excluded_modules, module) or
             isInArray(included_modules, module))
             return inject_method.nothing;
@@ -129,7 +131,10 @@ fn shouldInject(
     return inject_method.nothing;
 }
 
-pub fn initInjector(self: *Injector) !void {
+pub fn initInjector(
+    self: *Injector,
+    force_inject: bool,
+) !void {
     var lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
@@ -158,7 +163,7 @@ pub fn initInjector(self: *Injector) !void {
     for (snippets.items) |s| _ = try file.write(s);
     _ = try file.write("}\n");
 
-    try self.injectIntoBuildZig();
+    try self.injectIntoBuildZig(force_inject);
 }
 
 fn findBuildParam(_: *Injector, content: []const u8) ![]const u8 {
@@ -177,6 +182,7 @@ fn importModule(
     new_excluded_modules: *std.ArrayList([]const u8),
     new_included_modules: *std.ArrayList([]const u8),
     module_name: []const u8,
+    force_inject: bool,
 ) !inject_method {
     const lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
@@ -188,6 +194,7 @@ fn importModule(
         module_name,
         lock.value.excluded_modules,
         lock.value.included_modules,
+        force_inject,
     );
     switch (modify_injection) {
         inject_method.add_include => {
@@ -217,11 +224,13 @@ fn maybeInject(
     build_param: []const u8,
     module_name: []const u8,
     new_content: *std.ArrayList([]const u8),
+    force_inject: bool,
 ) !void {
     const imported = try self.importModule(
         new_excluded,
         new_included,
         module_name,
+        force_inject,
     );
 
     const fmt = try std.fmt.allocPrint(
@@ -264,7 +273,10 @@ fn parseModuleDefinition(
     return module_name;
 }
 
-pub fn injectIntoBuildZig(self: *Injector) !void {
+pub fn injectIntoBuildZig(
+    self: *Injector,
+    force_inject: bool,
+) !void {
     var lock = try self.manifest.readManifest(
         Structs.ZepFiles.Lock,
         Constants.Default.package_files.lock,
@@ -274,7 +286,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
     const excluded_modules = lock.value.excluded_modules;
 
     if (included_modules.len != 0 or excluded_modules.len != 0) {
-        if (!self.force_inject) return;
+        if (!force_inject) return;
     }
 
     try ZigInit.createZigProject(self.printer, self.allocator, "myproject", null);
@@ -368,6 +380,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
                 build_param,
                 module,
                 &new_content,
+                force_inject,
             );
 
             current_module = null;
@@ -378,7 +391,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
             line,
             install_prefix,
             excluded_modules,
-            self.force_inject,
+            force_inject,
         ) orelse continue;
 
         current_module = module;
@@ -392,6 +405,7 @@ pub fn injectIntoBuildZig(self: *Injector) !void {
             build_param,
             module,
             &new_content,
+            force_inject,
         );
 
         current_module = null;

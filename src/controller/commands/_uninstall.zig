@@ -3,6 +3,7 @@ const std = @import("std");
 const Uninstaller = @import("../../lib/packages/uninstall.zig");
 const Package = @import("package");
 
+const Structs = @import("structs");
 const Context = @import("context");
 const Args = @import("args");
 
@@ -16,21 +17,69 @@ fn uninstall(ctx: *Context) !void {
 
     const uninstall_args = Args.parseUninstall(ctx.options);
     if (uninstall_args.global) {
-        var package = try Package.init(
+        if (package_version == null) {
+            try ctx.printer.append(
+                "WARNING: For global uninstalls, a version is required.\n\n",
+                .{},
+                .{ .color = .red },
+            );
+            return;
+        }
+
+        // install args are being parsed
+        // to detect which namespace is
+        // target in the global
+        // uninstall
+        // GH/GL/CB/Z/L
+        const install_args = Args.parseInstall(ctx.options);
+        var _uninstall_type: ?Structs.Extras.InstallType = null;
+        if (install_args.zep) _uninstall_type = Structs.Extras.InstallType.zep;
+        if (install_args.github) _uninstall_type = Structs.Extras.InstallType.github;
+        if (install_args.gitlab) _uninstall_type = Structs.Extras.InstallType.gitlab;
+        if (install_args.codeberg) _uninstall_type = Structs.Extras.InstallType.codeberg;
+        if (install_args.local) _uninstall_type = Structs.Extras.InstallType.local;
+
+        if (_uninstall_type == null) {
+            try ctx.printer.append(
+                "WARNING: For global uninstalls, a namespace is required.\n\n",
+                .{},
+                .{ .color = .red },
+            );
+            return;
+        }
+
+        const uninstall_type = _uninstall_type orelse .zep;
+
+        var package = Package.init(
             ctx,
             package_name,
             package_version,
-            null,
-        );
+            uninstall_type,
+        ) catch |err| {
+            switch (err) {
+                error.PackageNotFound => {
+                    try ctx.printer.append(
+                        "{s}@{s} is not on {s}!\nMaybe you forgot to include the author (author/repo)?\n\n",
+                        .{ package_name, package_version orelse "latest", @tagName(uninstall_type) },
+                        .{ .color = .red },
+                    );
+                },
+                else => {
+                    try ctx.printer.append("Something went wrong...\n\n", .{}, .{ .color = .red });
+                },
+            }
+            return;
+        };
         defer package.deinit();
+
         package.uninstallFromDisk(uninstall_args.force) catch |err| {
             switch (err) {
                 error.InUse => {
                     try ctx.printer.append("WARNING: Atleast 1 project is using {s}. Uninstalling it globally now might have serious consequences.\n\n", .{package_query}, .{ .color = .red });
-                    try ctx.printer.append("Use - if you do not care\n $ zep uninstall [target]@[version] -g -f\n\n", .{}, .{ .color = .yellow });
+                    try ctx.printer.append("If you do not care, run\n $ zep uninstall [target]@[version] -G -F\n\n", .{}, .{ .color = .yellow });
                 },
                 error.NotInstalled => {
-                    try ctx.printer.append("[{s}] Not installed\n\n", .{package_query}, .{ .color = .red });
+                    try ctx.printer.append("{s} is not installed\n\n", .{package_query}, .{ .color = .red });
                     return;
                 },
                 else => {
@@ -41,7 +90,7 @@ fn uninstall(ctx: *Context) !void {
         };
         if (uninstall_args.force) {
             try ctx.printer.append(
-                "[{s}] Package deleted consequences ignored.\n\n",
+                "{s} package deleted, consequences ignored.\n\n",
                 .{package_query},
                 .{ .color = .green },
             );
@@ -56,12 +105,12 @@ fn uninstall(ctx: *Context) !void {
         switch (err) {
             error.NotInstalled => {
                 try ctx.printer.append(
-                    "{s} is not installed!\n",
+                    "{s} is not installed in this project.\n",
                     .{package_name},
                     .{ .color = .red },
                 );
                 try ctx.printer.append(
-                    "(locally) => If you wanna uninstall it globally, use\n $ zep global-uninstall {s}@<version>\n\n",
+                    "To uninstall globally, run\n  $ zep uninstall {s}@<version> -G\n\n",
                     .{package_name},
                     .{ .color = .blue },
                 );

@@ -6,6 +6,7 @@ const Manifest = @import("core").Manifest;
 const Json = @import("core").Json;
 const Fetch = @import("core").Fetch;
 const Compressor = @import("core").Compressor;
+const Injector = @import("core").Injector;
 const Logger = @import("logger");
 
 pub const Context = @This();
@@ -16,6 +17,7 @@ manifest: Manifest,
 paths: Constants.Paths.Paths,
 fetcher: Fetch,
 compressor: Compressor,
+injector: Injector,
 logger: *Logger.logly.Logger,
 args: [][:0]u8,
 options: [][]const u8,

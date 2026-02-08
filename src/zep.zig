@@ -13,6 +13,7 @@ const Manifest = @import("core").Manifest;
 const Json = @import("core").Json;
 const Fetch = @import("core").Fetch;
 const Compressor = @import("core").Compressor;
+const Injector = @import("core").Injector;
 const Args = @import("args");
 
 const Installer = @import("lib/packages/install.zig");
@@ -41,12 +42,25 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         return error.OutOfMemory;
     };
 
-    var manifest = Manifest.init(alloc, paths);
-    const fetcher = Fetch.init(alloc, paths, manifest);
+    var manifest = Manifest.init(
+        alloc,
+        paths,
+    );
+    const fetcher = Fetch.init(
+        alloc,
+        paths,
+        manifest,
+    );
 
     const compressor = Compressor.init(
         alloc,
         paths,
+    );
+
+    const injector = Injector.init(
+        alloc,
+        manifest,
+        &printer,
     );
 
     const parsed_args = try Args.parseArgs(alloc, args);
@@ -57,6 +71,7 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         .allocator = alloc,
         .fetcher = fetcher,
         .logger = logger,
+        .injector = injector,
         .manifest = manifest,
         .paths = paths,
         .printer = printer,

@@ -32,61 +32,47 @@ pub fn uninstall(
         Constants.Default.package_files.lock,
     );
 
-    var package_version: []const u8 = "";
+    var target_package: ?Structs.ZepFiles.Package = null;
     for (lock.value.packages) |package| {
         if (!std.mem.startsWith(u8, package.name, package_name)) continue;
-        package_version = package.version;
+        target_package = package;
         continue;
     }
 
-    if (package_version.len == 0) {
-        return error.NotInstalled;
-    }
+    const p = target_package orelse return error.NotInstalled;
 
     var package = try Package.init(
         self.ctx,
         package_name,
-        package_version,
-        null,
+        p.version,
+        p.namespace,
     );
     defer package.deinit();
 
-    try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{});
-    try package.lockUnregister();
-
-    var injector = Injector.init(
-        self.ctx.allocator,
-        &self.ctx.printer,
-        &self.ctx.manifest,
-        false,
-    );
-    try injector.initInjector();
+    try self.ctx.printer.append("Deleting Package...\n[{s}]\n\n", .{package_name}, .{ .verbosity = 1 });
 
     // Remove symbolic link
-    const symbolic_link_path = try std.fs.path.join(
+    const relative_symbolic_link_path = try std.fs.path.join(
         self.ctx.allocator,
         &.{
             Constants.Default.package_files.zep_folder,
             package_name,
         },
     );
-    defer self.ctx.allocator.free(symbolic_link_path);
+    defer self.ctx.allocator.free(relative_symbolic_link_path);
 
-    if (Fs.existsDir(symbolic_link_path)) {
-        Fs.deleteSymlinkIfExists(symbolic_link_path);
+    if (Fs.existsSym(relative_symbolic_link_path)) {
+        Fs.deleteSymlinkIfExists(relative_symbolic_link_path);
 
         const cwd = try std.fs.cwd().realpathAlloc(self.ctx.allocator, ".");
         defer self.ctx.allocator.free(cwd);
 
-        const absolute_path = try std.fs.path.join(self.ctx.allocator, &.{ cwd, symbolic_link_path });
-        defer self.ctx.allocator.free(absolute_path);
+        const absolute_symbolic_link_path = try std.fs.path.join(self.ctx.allocator, &.{ cwd, relative_symbolic_link_path });
+        defer self.ctx.allocator.free(absolute_symbolic_link_path);
 
-        // ! Handles the deletion of the package
-        // ! as the package can ONLY be deleted,
-        // ! if no other project uses it
-        // !
-        try package.removePathFromManifest(absolute_path);
+        try package.removePathFromManifest(absolute_symbolic_link_path);
     }
     try package.lockUnregister();
+    try self.ctx.injector.initInjector(false);
     try self.ctx.printer.append("Successfully deleted - {s}\n\n", .{package_name}, .{ .color = .green });
 }

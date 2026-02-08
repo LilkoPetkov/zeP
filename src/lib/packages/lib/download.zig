@@ -60,35 +60,18 @@ fn downloadArchive(
         .verbosity = 2,
     });
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
-
     const is_zip = std.mem.endsWith(u8, url, ".zip");
     const install_path = if (is_zip) TEMP_DIR ++ "/tmp.zip" else "/tmp.tar.zstd";
     errdefer {
         Fs.deleteTreeIfExists(install_path) catch {};
     }
     try self.ctx.logger.infof("Install Path {s}", .{install_path}, @src());
-
-    var file = try Fs.openOrCreateFile(install_path);
-    defer file.close();
-
-    var writer_buf: [Constants.Default.kb]u8 = undefined;
-    var writer = file.writer(&writer_buf);
-    const fetched = try client.fetch(.{
-        .location = .{ .url = url },
-        .method = .GET,
-        .response_writer = &writer.interface,
-    });
-    _ = try writer.interface.flush();
-
-    if (fetched.status == .not_found)
-        return error.NotFound;
+    try self.ctx.fetcher.fetchWrite(url, install_path);
 
     return install_path;
 }
 
-fn hasInstalledPackage(
+fn isDownloaded(
     self: *Downloader,
     package_id: []const u8,
 ) !bool {
@@ -104,7 +87,7 @@ fn hasInstalledPackage(
     return Fs.existsDir(path);
 }
 
-pub fn installPackage(
+pub fn downloadPackage(
     self: *Downloader,
     package_id: []const u8,
     url: []const u8,
@@ -119,23 +102,14 @@ pub fn installPackage(
         },
     );
     defer self.ctx.allocator.free(out_path);
-    if (Fs.existsDir(out_path)) {
-        self.cacher.store(package_id) catch {
-            try self.ctx.printer.append(
-                " ! CACHING FAILED\n\n",
-                .{},
-                .{ .color = .red },
-            );
-        };
-        return;
-    }
 
-    const exists = try self.hasInstalledPackage(package_id);
+    const exists = try self.isDownloaded(package_id);
     const is_cached = try self.cacher.isCached(package_id);
 
     if (exists) {
-        try self.ctx.printer.append(" > PACKAGE ALREADY EXISTS!\n", .{}, .{
+        try self.ctx.printer.append(" > PACKAGE ALREADY EXISTS!\n\n", .{}, .{
             .verbosity = 2,
+            .color = .bright_green,
         });
         if (is_cached) return;
 

@@ -69,9 +69,6 @@ fn getUserData(self: *Auth) !Structs.Fetch.User {
         return error.NotAuthed;
     }
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
-
     const get = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/whoami",
         .{
@@ -158,9 +155,6 @@ pub fn register(self: *Auth) !void {
             .invalid_error_msg = "invalid email",
         },
     );
-
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
 
     blk: {
         const url = try std.fmt.allocPrint(
@@ -369,8 +363,6 @@ pub fn login(self: *Auth) !void {
     );
     defer self.ctx.allocator.free(login_stringified_payload);
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
     const login_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/login",
         .{
@@ -416,8 +408,6 @@ pub fn logout(self: *Auth) !void {
     manifest.value.token = "";
     try self.ctx.manifest.writeManifest(Structs.Manifests.Auth, self.ctx.paths.auth_manifest, manifest.value);
 
-    var client = std.http.Client{ .allocator = self.ctx.allocator };
-    defer client.deinit();
     const logout_response = self.ctx.fetcher.fetch(
         Constants.Default.zep_url ++ "/api/v1/logout",
         .{
