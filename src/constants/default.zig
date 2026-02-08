@@ -12,8 +12,8 @@ pub const codeberg_api = "https://codeberg.org/api/v1";
 pub const kb = 1024;
 pub const mb = kb * kb;
 
-pub const version = "1.1.0";
-pub const commit = "c522634";
+pub const version = "1.2.0";
+pub const commit = "96aa67d";
 pub const zig_version = "0.15.2";
 
 pub const default_targets = struct {
