@@ -158,7 +158,6 @@ fn resolveFromFetch(
         const hash = try Hash.hashDataByUrl(
             self.ctx.allocator,
             v.url,
-            self.ctx.logger,
         );
         v.sha256sum = hash;
     }

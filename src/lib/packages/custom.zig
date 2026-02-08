@@ -56,7 +56,6 @@ fn promptVersionData(self: *CustomPackage) !Structs.Packages.Version {
     const hash = Hash.hashDataByUrl(
         self.ctx.allocator,
         url,
-        self.ctx.logger,
     ) catch |err| {
         switch (err) {
             else => {

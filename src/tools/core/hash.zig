@@ -1,14 +1,11 @@
 const std = @import("std");
 const Constants = @import("constants");
-const Logger = @import("logger");
 
 /// Get hash from any url
 pub fn hashDataByUrl(
     allocator: std.mem.Allocator,
     url: []const u8,
-    logger: *Logger.logly.Logger,
 ) ![]u8 {
-    try logger.infof("Getting hash from = {s} [{d}]", .{ url, url.len }, @src());
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
@@ -23,7 +20,6 @@ pub fn hashDataByUrl(
         .method = .GET,
         .response_writer = &body.writer,
     });
-    try logger.infof("Fetched with status {any}!", .{fetched.status}, @src());
     if (fetched.status == .not_found) {
         return error.NotFound;
     }
@@ -32,7 +28,6 @@ pub fn hashDataByUrl(
     const hashed = try hashData(
         allocator,
         data,
-        logger,
     );
     return hashed;
 }
@@ -40,10 +35,7 @@ pub fn hashDataByUrl(
 pub fn hashData(
     allocator: std.mem.Allocator,
     data: []const u8,
-    logger: *Logger.logly.Logger,
 ) ![]u8 {
-    try logger.infof("Hashing data now!", .{}, @src());
-
     var hasher = std.crypto.hash.sha2.Sha256.init(.{});
 
     var client = std.http.Client{ .allocator = allocator };
