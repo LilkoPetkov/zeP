@@ -4,4 +4,3 @@ zep-out
 .zig-cache
 .zep/*
 !.zep/injector.zig
-!.zep/.conf
