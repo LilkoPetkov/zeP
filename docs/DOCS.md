@@ -23,7 +23,7 @@ zep install <package-name>@<version> -i # installs into local project (-i inject
 #### **Uninstall a package**
 
 ```bash
-zep uninstall <package-name> -g -f  # deletes from local project (-g global) (-f force)
+zep uninstall <package-name> -G -F  # deletes from local project (-G global) (-F force)
 ```
 
 - Uninstalls package from local project
