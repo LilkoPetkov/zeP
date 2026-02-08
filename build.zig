@@ -40,9 +40,6 @@ pub fn build(builder: *std.Build) void {
     cores_mod.addImport("locales", locales_mod);
     cores_mod.addImport("structs", structs_mod);
     cores_mod.addImport("logger", loggers_mod);
-    cores_mod.addIncludePath(.{
-        .cwd_relative = "vendor/zstd/lib",
-    });
 
     const args_mod = builder.createModule(.{ .root_source_file = builder.path("src/args.zig") });
     args_mod.addImport("constants", constants_mod);
