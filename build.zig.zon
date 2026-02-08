@@ -17,7 +17,6 @@
     .minimum_zig_version = "0.15.2",
     .name = .zeP,
     .paths = .{
-        ".zep",
         "build.zig",
         "build.zig.zon",
         "src",
