@@ -1,8 +1,9 @@
 const std = @import("std");
 const Logger = @import("logger");
 
-const Zstd = @import("zstd");
-const c = Zstd.c;
+const c = @cImport({
+    @cInclude("zstd.h");
+});
 
 pub fn getBound(input: []const u8) usize {
     return c.ZSTD_compressBound(input.len);

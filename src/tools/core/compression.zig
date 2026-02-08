@@ -6,7 +6,7 @@ const Constants = @import("constants");
 
 const Fs = @import("io").Fs;
 
-const zstd = @import("zstd.zig");
+const Zstd = @import("zstd.zig");
 
 fn isInArray(haystack: []const []const u8, needle: []const u8) bool {
     for (haystack) |item| {
@@ -126,10 +126,10 @@ pub fn compress(
     defer self.allocator.free(data);
     _ = try archive_file.readAll(data);
 
-    const bound = zstd.getBound(data);
+    const bound = Zstd.getBound(data);
     var compressed = try self.allocator.alloc(u8, bound);
     defer self.allocator.free(compressed);
-    const written = try zstd.compress(data, &compressed, bound, 3);
+    const written = try Zstd.compress(data, &compressed, bound, 3);
 
     const len = data.len;
     const len_str = try std.fmt.allocPrint(self.allocator, "{d}", .{len});
@@ -178,7 +178,7 @@ pub fn decompress(self: *Compressor, zstd_path: []const u8, extract_path: []cons
 
     var decompressed = try self.allocator.alloc(u8, @intCast(uncompressed_len));
     defer self.allocator.free(decompressed);
-    try zstd.decompress(
+    try Zstd.decompress(
         compressed_data,
         &decompressed,
         @intCast(uncompressed_len),

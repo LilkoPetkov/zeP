@@ -1,6 +1,31 @@
 const __zepinj__ = @import(".zep/injector.zig");
 const std = @import("std");
 
+fn addCFilesFromDir(
+    b: *std.Build,
+    lib: *std.Build.Step.Compile,
+    dir_path: []const u8,
+) void {
+    var dir = std.fs.cwd().openDir(dir_path, .{
+        .iterate = true,
+    }) catch unreachable;
+    defer dir.close();
+
+    var it = dir.iterate();
+    while (it.next() catch unreachable) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.name, ".c")) continue;
+
+        const full = b.pathJoin(&.{ dir_path, entry.name });
+        lib.addCSourceFile(
+            .{
+                .file = .{ .cwd_relative = full },
+                .flags = &.{"-DZSTD_DISABLE_ASM"},
+            },
+        );
+    }
+}
+
 pub fn build(builder: *std.Build) void {
     const target = builder.standardTargetOptions(.{});
     const optimize = builder.standardOptimizeOption(.{});
@@ -15,6 +40,27 @@ pub fn build(builder: *std.Build) void {
         .name = "zep",
         .root_module = zep_executeable_module,
     });
+
+    const zstd = builder.addLibrary(.{
+        .name = "zstd",
+        .root_module = builder.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    zstd.addIncludePath(.{
+        .cwd_relative = "vendor/zstd/lib",
+    });
+
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/common");
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/compress");
+    addCFilesFromDir(builder, zstd, "vendor/zstd/lib/decompress");
+
+    zstd.linkLibC();
+    zep_executeable.linkLibrary(zstd);
+    zep_executeable.linkLibC();
 
     const locales_mod = builder.createModule(.{ .root_source_file = builder.path("src/locales.zig") });
     const constants_mod = builder.createModule(.{ .root_source_file = builder.path("src/constants/_index.zig") });
@@ -34,6 +80,12 @@ pub fn build(builder: *std.Build) void {
 
     const cores_mod = builder.createModule(.{ .root_source_file = builder.path("src/tools/core/_index.zig") });
     __zepinj__.imp(builder, cores_mod);
+
+    cores_mod.addIncludePath(.{
+        .cwd_relative = "vendor/zstd/lib",
+    });
+    cores_mod.linkLibrary(zstd);
+
     cores_mod.addImport("io", ios_mod);
     cores_mod.addImport("cli", clis_mod);
     cores_mod.addImport("constants", constants_mod);

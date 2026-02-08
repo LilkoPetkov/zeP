@@ -13,7 +13,6 @@
     "packages": [
       "zon.zig",
       "logly.zig",
-      "zstd.zig",
       "mvzr"
     ],
     "dev_packages": [],
@@ -41,16 +40,6 @@
       "hash": "dff72fe6b2eae6647cf907b3e19b44cbf1352a23fecf91d6e56fecc41bcace25",
       "source": "https://api.github.com/repos/muhammad-fiaz/logly.zig/zipball/0.1.6#.zip",
       "zig_version": "0.15.1",
-      "namespace": "github"
-    },
-    {
-      "name": "zstd.zig",
-      "author": "muhammad-fiaz",
-      "install": "muhammad-fiaz/zstd.zig@1.6.0",
-      "version": "1.6.0",
-      "hash": "3367116b0bd12f82b2d5e4f04ca59598a37a81b1a04ac275c5c85aa4624307b2",
-      "source": "https://api.github.com/repos/muhammad-fiaz/zstd.zig/zipball/1.6.0#.zip",
-      "zig_version": "0.15.0",
       "namespace": "github"
     },
     {
