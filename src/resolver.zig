@@ -31,7 +31,7 @@ fn loadCached(
     const data = try f.readToEndAlloc(self.ctx.allocator, Constants.Default.mb * 5);
     defer self.ctx.allocator.free(data);
 
-    var parsed = try std.json.parseFromSlice(
+    var parsed: std.json.Parsed(Structs.Packages.Package) = try std.json.parseFromSlice(
         Structs.Packages.Package,
         self.ctx.allocator,
         data,
@@ -245,7 +245,7 @@ fn fetchFromZep(
     return package;
 }
 
-fn fetchFromUrl(
+fn fetchFromZepUrl(
     self: *Resolver,
     package_name: []const u8,
 ) !Structs.Packages.Package {
@@ -565,7 +565,7 @@ pub fn fetchPackage(
     switch (install_type) {
         .zep => {
             const pkg = self.fetchFromZep(package_install) catch {
-                const fallback = try self.fetchFromUrl(package_install);
+                const fallback = try self.fetchFromZepUrl(package_install);
                 return fallback;
             };
             return pkg;
