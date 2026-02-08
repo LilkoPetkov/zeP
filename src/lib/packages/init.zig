@@ -126,13 +126,12 @@ fn createFiles(self: *Init) !void {
 
     const gitignore = ".gitignore";
     const gitignore_main =
-        \\.zig-cache
-        \\
+        \\zig-out
         \\zep-out
         \\
+        \\.zig-cache
         \\.zep
         \\!.zep/injector.zig
-        \\!.zep/.conf
     ;
 
     if (!Fs.existsFile(gitignore)) {
