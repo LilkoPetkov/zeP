@@ -57,12 +57,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         paths,
     );
 
-    const injector = Injector.init(
-        alloc,
-        manifest,
-        &printer,
-    );
-
     const parsed_args = try Args.parseArgs(alloc, args);
     const default = Args.parseDefault(parsed_args.options);
     Locales.VERBOSITY_MODE = @intCast(default.verbosity);
@@ -71,7 +65,6 @@ pub fn start(alloc: std.mem.Allocator) !Context {
         .allocator = alloc,
         .fetcher = fetcher,
         .logger = logger,
-        .injector = injector,
         .manifest = manifest,
         .paths = paths,
         .printer = printer,

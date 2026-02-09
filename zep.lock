@@ -1,19 +1,19 @@
 {
   "schema": 2,
   "root": {
-    "author": "Xerrs",
+    "author": "",
     "tags": [],
     "zig_version": "0.15.2",
-    "repo": "https://github.com/XerWoho/zeP",
-    "name": "zeP",
+    "repo": "",
+    "name": "",
     "cmd": [],
-    "description": "A new package- and version manager for the Zig programming language.",
-    "version": "1.2.0",
-    "license": "GPLv3",
+    "description": "",
+    "version": "0.0.1",
+    "license": "",
     "packages": [
       "zon.zig",
-      "logly.zig",
-      "mvzr"
+      "mvzr",
+      "logly.zig"
     ],
     "dev_packages": [],
     "build": {
@@ -33,22 +33,22 @@
       "namespace": "github"
     },
     {
-      "name": "logly.zig",
-      "author": "muhammad-fiaz",
-      "install": "muhammad-fiaz/logly.zig@0.1.6",
-      "version": "0.1.6",
-      "hash": "dff72fe6b2eae6647cf907b3e19b44cbf1352a23fecf91d6e56fecc41bcace25",
-      "source": "https://api.github.com/repos/muhammad-fiaz/logly.zig/zipball/0.1.6#.zip",
-      "zig_version": "0.15.1",
-      "namespace": "github"
-    },
-    {
       "name": "mvzr",
       "author": "mnemnion",
       "install": "mnemnion/mvzr@v0.3.7",
       "version": "v0.3.7",
       "hash": "1c2c70e8ebde29825c09fcb8628d1375de0693282b1de5b1e33ded37097658e6",
       "source": "https://api.github.com/repos/mnemnion/mvzr/zipball/v0.3.7#.zip",
+      "zig_version": "0.15.1",
+      "namespace": "github"
+    },
+    {
+      "name": "logly.zig",
+      "author": "muhammad-fiaz",
+      "install": "muhammad-fiaz/logly.zig@0.1.0",
+      "version": "0.1.0",
+      "hash": "2eeb49bf156d027f5ffeba9ab05dcd20bbbf3122f671889950f233bf739f8790",
+      "source": "https://api.github.com/repos/muhammad-fiaz/logly.zig/zipball/0.1.0#.zip",
       "zig_version": "0.15.1",
       "namespace": "github"
     }

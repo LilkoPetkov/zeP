@@ -17,7 +17,6 @@ pub fn init(
     config.console = false;
     config.debug_mode = false;
     config.global_console_display = false;
-    config.compression = .{ .algorithm = .zstd };
 
     const logger = try logly.Logger.initWithConfig(alloc, config);
     logger.configure(config);

@@ -73,6 +73,12 @@ pub fn uninstall(
         try package.removePathFromManifest(absolute_symbolic_link_path);
     }
     try package.lockUnregister();
-    try self.ctx.injector.initInjector(false);
+
+    var injector = Injector.init(
+        self.ctx.allocator,
+        self.ctx.manifest,
+        &self.ctx.printer,
+    );
+    try injector.initInjector(false);
     try self.ctx.printer.append("Successfully deleted - {s}\n\n", .{package_name}, .{ .color = .green });
 }

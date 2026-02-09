@@ -5,7 +5,12 @@ const Injector = @import("core").Injector;
 const Context = @import("context");
 
 fn inject(ctx: *Context) !void {
-    try ctx.injector.initInjector(true);
+    var injector = Injector.init(
+        ctx.allocator,
+        ctx.manifest,
+        &ctx.printer,
+    );
+    try injector.initInjector(true);
     return;
 }
 

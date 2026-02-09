@@ -239,7 +239,7 @@ fn decompressZip(
             extracted_files_progress += 1;
             try self.ctx.printer.append(
                 "\rExtracting: ({d} / {d} Files)",
-                .{ (iter.cd_record_count), (extracted_files_progress) },
+                .{ extracted_files_progress, iter.cd_record_count },
                 .{},
             );
 

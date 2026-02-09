@@ -201,7 +201,13 @@ fn linkPackage(
     try self.ctx.logger.info("Linking Package...", @src());
     try package.lockRegister();
 
-    try self.ctx.injector.initInjector(force_inject);
+    var injector = Injector.init(
+        self.ctx.allocator,
+        self.ctx.manifest,
+        &self.ctx.printer,
+    );
+
+    try injector.initInjector(force_inject);
 
     // symbolic link
     const target_path = try std.fmt.allocPrint(
