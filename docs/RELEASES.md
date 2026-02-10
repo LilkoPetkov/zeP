@@ -4,3 +4,4 @@
 - **1.0.1** (2026-01-10) - bug fixes
 - **1.0.2** (2026-01-11) - quality of life improvements
 - **1.1.0** (2026-01-26) - big changes (see [/CHANGELOG.md])
+- **1.2.0** (2026-02-10) - changed philosophy for installation of packages
