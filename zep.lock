@@ -1,15 +1,15 @@
 {
   "schema": 2,
   "root": {
-    "author": "",
+    "author": "Xerrs",
     "tags": [],
     "zig_version": "0.15.2",
-    "repo": "",
-    "name": "",
+    "repo": "https://github.com/XerWoho/zeP",
+    "name": "zeP",
     "cmd": [],
-    "description": "",
-    "version": "0.0.1",
-    "license": "",
+    "description": "A new zig Package manager, and version manager for zig.",
+    "version": "1.0.2",
+    "license": "GPLv3",
     "packages": [
       "zon.zig",
       "mvzr",
