@@ -12,18 +12,16 @@ it is automated, simple, and clean.
 #### **Install a package**
 
 ```bash
-zep install <package-name>@<version> -i # installs into local project (-i inject)
+zep install <package-name>@<version> -I (-GH/-GL/-CB/-Z/-L) # installs into local project
 ```
 
-- Looks in local registry
-- Falls back to custom registry
-- Suggests similar names if incorrect
-- Updates hash & lockfile
+- Looks in specified registry
+- Updates lockfile and build.zig.zon
 
 #### **Uninstall a package**
 
 ```bash
-zep uninstall <package-name> -G -F  # deletes from local project (-G global) (-F force)
+zep uninstall <package-name>@<package-version> <install-type> -G -F  # deletes from local project (-G global) (-F force)
 ```
 
 - Uninstalls package from local project
@@ -41,7 +39,7 @@ zep inject
 #### **Info of a package**
 
 ```bash
-zep package info <package-name>
+zep info <package-name>
 ```
 
 - Returns information about package
@@ -49,7 +47,7 @@ zep package info <package-name>
 #### **List package version**
 
 ```bash
-zep package list <package-name>
+zep list <package-name>
 ```
 
 - Lists available versions of said package
@@ -58,7 +56,7 @@ zep package list <package-name>
 #### **Add a custom package**
 
 ```bash
-zep package add <package-name>
+zep custom add <package-name>
 ```
 
 (if a package is not included in zep.run, you can add your own! [unverified])
@@ -68,7 +66,7 @@ zep package add <package-name>
 #### **Remove a custom package**
 
 ```bash
-zep package remove <package-name>
+zep custom remove <package-name>
 ```
 
 - Removes a custom package
@@ -91,7 +89,7 @@ zep cache list
 - Lists cached items
 
 ```bash
-zep cache clean (package_name@package_version)
+zep cache clean <package_name?@package_version?>
 ```
 
 - Cleans the entire cache
@@ -164,30 +162,54 @@ zep zig switch <version> <target>
 zep zig uninstall <version>
 ```
 
+#### **Upgrade Zig**
+
+```bash
+zep zig upgrade
+```
+
+#### **Zig Cache**
+
+```bash
+zep zig cache [list/size/clean]
+```
+
 ### **Zep Commands**
 
 #### **Install a zeP version**
 
 ```bash
-zep zep install <version>
+zep self install <version>
 ```
 
 #### **List installed zeP versions**
 
 ```bash
-zep zep list
+zep self list
 ```
 
 #### **Switch zeP version** [DO NOT USE FOR zeP => (soft-lock)]
 
 ```bash
-zep zep switch <version>
+zep self switch <version>
 ```
 
 #### **Uninstall a zeP version**
 
 ```bash
-zep zep uninstall <version>
+zep self uninstall <version>
+```
+
+#### **Uprade zeP**
+
+```bash
+zep self upgrade
+```
+
+#### **zeP Cache**
+
+```bash
+zep self cache [list/size/clean]
 ```
 
 ---
@@ -275,48 +297,48 @@ zep doctor (--fix)
 ### **Authentication**
 
 ```bash
-zep register
+zep auth register
 ```
 
 - Register via email, username and password
 
 ```bash
-zep login
+zep auth login
 ```
 
 - Login into zep.run
 
 ```bash
-zep logout
+zep auth logout
 ```
 
 - Logouts and deletes local token
 
 ```bash
-zep whoami
+zep auth whoami
 ```
 
 - Displays user data
 
-### **Project**
+### **Package**
 
 ```bash
-zep project create
+zep package create
 ```
 
-- Creates Project
+- Creates Package
 
 ```bash
-zep project list
+zep package list
 ```
 
-- Lists available projects
+- Lists available packages
 
 ```bash
-zep project delete
+zep package delete
 ```
 
-- Deletes selected project (if valid)
+- Deletes selected package (if valid)
 
 ### **Release**
 
@@ -330,10 +352,18 @@ zep release create
 zep release list
 ```
 
-- Lists available releases (from selected project)
+- Lists available releases (from selected package)
 
 ```bash
 zep release delete
 ```
 
 - Deletes selected release (if valid)
+
+---
+
+For more information, and explanations, run
+
+```
+$ zep help <command?>
+```

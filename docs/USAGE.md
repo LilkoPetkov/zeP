@@ -82,4 +82,5 @@ zep run
 - Versions prior to 0.5 were MIT licensed; starting 0.5, the project uses GPLv3.
 - Versions prior to 0.8 used zeP as executable name; starting 0.8, executables are named zep (with lowercase P).
 - Versions prior to 0.9.0 do not use the semantic version structure.
-- All versions prior 1.0.0 are expected to have bugs, and it is not suggested to use them.
+- Versions prior to 1.0.0 are expected to have bugs, and it is not suggested to use them.
+- Versions prior to 1.1.0 are storing their data in a different folder, migration function might not work as expected.
